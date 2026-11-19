@@ -1,0 +1,346 @@
+/* Estimate Pro BIM — building elements as CAD entities (so select / move / copy / rotate / undo / layers / properties all work),
+   levels, wall joins (L-corners mitred, T-junctions butted), plan representation (cut walls with door / window gaps and symbols),
+   and quantities (IS 1200 style deductions) per element.
+
+   Units: millimetres. A level = { id, name, elev (finished level of the floor, mm), h (floor-to-floor height, mm) }.
+   Element entities (t):
+     wall    { a, b, th, h, base, lvl, mat: "brick"|"block"|"rcc"|"stone", ext: bool, just: "c"|"l"|"r", finI, finE }
+     door / window / opening  { host: wall id, at (mm from wall start along the centre line), w, h, sill, preset, swing: "l"|"r", flip: bool, kind }
+     slab    { pts (outline, ccw), holes: [[…]], th, lvl, off (top offset from level, mm), kind: "floor"|"roof"|"chajja"|"landing" }
+     column  { p, w, d, rot, lvl, h (null = level height), shape: "rect"|"circle", base }
+     beam    { a, b, w, d (depth), lvl, top (offset of top from next floor level / level top, mm) }
+     footing { p, L, B, D, rot, lvl, df (depth of footing bottom below the level, mm), ped: {w, d}, pcc: {off, th}, ws (working space) }
+     roof    { pts, kind: "flat"|"shed"|"gable"|"hip", slope (deg), th, lvl, off, mat: "rcc"|"gi"|"tile"|"puf", over (overhang, mm), dir (deg, for shed / gable ridge) }
+     stair   { p, dir (deg), w, n (risers), R, T, wt (waist), lvl, kind: "straight"|"dogleg", land (landing length) }
+     room    { pts, name, lvl, floor: "vitrified"|…, skirt (mm), ceil: bool }
+     railing { pts, h, lvl } */
+(function () {
+  "use strict";
+  var EP = window.EP = window.EP || {}, G = EP.geom, CAD = EP.cad;
+  var B = EP.bim = EP.bim || {};
+  var TYPES = { wall: 1, door: 1, window: 1, opening: 1, slab: 1, column: 1, beam: 1, footing: 1, roof: 1, stair: 1, room: 1, railing: 1 };
+  B.TYPES = TYPES; B.is = function (e) { return !!(e && TYPES[e.t]); };
+  B.ctx = { doc: null };   // the document being drawn / measured (set by the editor)
+
+  /* ---------- levels ---------- */
+  function defaultBim() {
+    return { levels: [{ id: "L0", name: "Ground floor", elev: 0, h: 3200 }, { id: "L1", name: "First floor", elev: 3200, h: 3200 }, { id: "L2", name: "Roof", elev: 6400, h: 1000 }],
+      cur: "L0", ngl: -450, slabTh: 125, wallTh: 230, wallMat: "brick", showAll: false,
+      rules: { brickDed: 0.1, plasterSmall: 0.5, plasterLarge: 3, lintel: true, lintelD: 150, lintelBear: 150, ws: 300 },
+      steel: { footing: 80, column: 180, beam: 160, slab: 90, stair: 100, lintel: 100 }, map: {} };
+  }
+  B.ensure = function (d) { if (!d.bim) d.bim = defaultBim(); var df = defaultBim(); Object.keys(df).forEach(function (k) { if (d.bim[k] == null) d.bim[k] = df[k]; }); return d.bim; };
+  B.level = function (d, id) { var b = B.ensure(d); return b.levels.filter(function (l) { return l.id === id; })[0] || b.levels[0]; };
+  B.levelAbove = function (d, id) { var b = B.ensure(d), L = b.levels.slice().sort(function (x, y) { return x.elev - y.elev; }), i = L.findIndex(function (l) { return l.id === id; }); return i >= 0 && i + 1 < L.length ? L[i + 1] : null; };
+  /* zone for SOR items: anything standing on a level at or above the ground-floor finished level (0) is "above plinth" */
+  B.below = function (d, lvlId) { var L = B.level(d, lvlId); return L && L.elev < -1 ? "plinth" : "super"; };
+
+  /* ---------- walls: centre line, sides, joins ---------- */
+  function wallLine(w) { var u = G.norm(G.sub(w.b, w.a)), n = G.perp(u), off = w.just === "l" ? -w.th / 2 : w.just === "r" ? w.th / 2 : 0; return { a: G.add(w.a, G.mul(n, off)), b: G.add(w.b, G.mul(n, off)), u: u, n: n, L: G.dist(w.a, w.b) }; }
+  B.wallLine = wallLine;
+  function lineX(p1, d1, p2, d2) { var den = G.cross(d1, d2); if (Math.abs(den) < 1e-9) return null; var t = G.cross(G.sub(p2, p1), d2) / den; return G.add(p1, G.mul(d1, t)); }
+  function walls(doc, lvl) { return doc.d.ents.filter(function (e) { return e.t === "wall" && (lvl == null || e.lvl === lvl); }); }
+  /* end points of a wall after joining with its neighbours: { sL, sR, eL, eR } (L = left of a→b) */
+  function wallPoly(w, all) {
+    var c = wallLine(w), t = w.th / 2, tol = Math.max(5, w.th * 0.6);
+    var res = { sL: G.add(c.a, G.mul(c.n, t)), sR: G.sub(c.a, G.mul(c.n, t)), eL: G.add(c.b, G.mul(c.n, t)), eR: G.sub(c.b, G.mul(c.n, t)), joins: [] };
+    [0, 1].forEach(function (end) {
+      var P = end ? c.b : c.a, d = end ? G.mul(c.u, -1) : c.u, pd = G.perp(d), myL1 = G.add(P, G.mul(pd, t)), myL2 = G.sub(P, G.mul(pd, t)), corner = [], tee = null;
+      all.forEach(function (o) {
+        if (o === w || o.lvl !== w.lvl) return; var oc = wallLine(o), tolO = Math.max(tol, o.th * 0.6);
+        if (G.dist(oc.a, P) < tolO) corner.push({ o: o, c: oc, d: oc.u, P: oc.a });
+        else if (G.dist(oc.b, P) < tolO) corner.push({ o: o, c: oc, d: G.mul(oc.u, -1), P: oc.b });
+        else { var cp = G.closest({ k: "L", a: oc.a, b: oc.b }, P); if (cp.d <= o.th / 2 + tol && cp.t > 0.001 && cp.t < 0.999 && Math.abs(G.dot(c.u, oc.u)) < 0.995) tee = { o: o, c: oc }; }
+      });
+      var X1 = null, X2 = null;
+      if (corner.length === 1) {
+        var k = corner[0], ot = k.o.th / 2, op = G.perp(k.d); if (Math.abs(G.cross(d, k.d)) > 1e-6) {
+          X1 = lineX(myL1, d, G.sub(k.P, G.mul(op, ot)), k.d); X2 = lineX(myL2, d, G.add(k.P, G.mul(op, ot)), k.d);
+          // reject absurd mitres (very sharp angles): fall back to a butt end
+          if (X1 && X2 && (G.dist(X1, P) > 6 * Math.max(t, ot) || G.dist(X2, P) > 6 * Math.max(t, ot))) { X1 = X2 = null; }
+          res.joins.push({ end: end, kind: "L", with: k.o.id });
+        }
+      } else if (!corner.length && tee) {
+        var oc2 = tee.c, side = G.dot(G.sub(end ? c.a : c.b, oc2.a), oc2.n) >= 0 ? 1 : -1, face = G.add(oc2.a, G.mul(oc2.n, side * tee.o.th / 2));
+        X1 = lineX(myL1, d, face, oc2.u); X2 = lineX(myL2, d, face, oc2.u); res.joins.push({ end: end, kind: "T", with: tee.o.id });
+      }
+      if (X1 && X2) { if (!end) { res.sL = X1; res.sR = X2; } else { res.eR = X1; res.eL = X2; } }
+    });
+    return res;
+  }
+  B.wallPoly = function (doc, w) { var cc = doc.c ? doc.c(w) : {}; if (!cc.wp) cc.wp = wallPoly(w, walls(doc, w.lvl)); return cc.wp; };
+  /* openings in a wall: [{ e, s0, s1 (mm along the centre line), z0, z1 (above wall base) }] */
+  B.openings = function (doc, w) {
+    return doc.d.ents.filter(function (o) { return (o.t === "door" || o.t === "window" || o.t === "opening") && o.host === w.id; }).map(function (o) {
+      var z0 = o.t === "door" ? 0 : (o.sill != null ? o.sill : 900); return { e: o, s0: o.at - o.w / 2, s1: o.at + o.w / 2, z0: z0, z1: z0 + o.h };
+    }).sort(function (a, b) { return a.s0 - b.s0; });
+  };
+  function hostOf(doc, o) { var w = doc.get ? doc.get(o.host) : null; return w && w.t === "wall" ? w : null; }
+  B.hostOf = hostOf;
+  /* where a hosted element sits: centre point, direction along the wall, normal */
+  B.place = function (doc, o) { var w = hostOf(doc, o); if (!w) return null; var c = wallLine(w); return { p: G.add(c.a, G.mul(c.u, o.at)), u: c.u, n: c.n, w: w, c: c }; };
+
+  /* ---------- plan representation ---------- */
+  function rot(p, ang) { var cs = Math.cos(ang), sn = Math.sin(ang); return [p[0] * cs - p[1] * sn, p[0] * sn + p[1] * cs]; }
+  function rectAt(p, w, d, angDeg) { var a = (angDeg || 0) * Math.PI / 180; return [[-w / 2, -d / 2], [w / 2, -d / 2], [w / 2, d / 2], [-w / 2, d / 2]].map(function (q) { var r = rot(q, a); return [p[0] + r[0], p[1] + r[1]]; }); }
+  B.rectAt = rectAt;
+  /* lines that draw an element in plan: { segs: [segment], fill: [polygon…] (solid tint), dash: bool } */
+  B.plan = function (doc, e) {
+    if (B.EXT && B.EXT[e.t]) return B.EXT[e.t].plan(doc, e);
+    var out = { segs: [], fill: [], dashed: [] }, L = function (a, b, arr) { (arr || out.segs).push({ k: "L", a: a, b: b }); };
+    if (e.t === "wall") {
+      var P = B.wallPoly(doc, e), c = wallLine(e), ops = B.openings(doc, e);
+      var proj = function (q) { return G.dot(G.sub(q, c.a), c.u); };
+      // each side line, broken at the openings
+      [[P.sL, P.eL], [P.sR, P.eR]].forEach(function (sd) {
+        var s0 = proj(sd[0]), s1 = proj(sd[1]), at = function (s) { return G.lerp(sd[0], sd[1], (s - s0) / ((s1 - s0) || 1)); }, cur = s0;
+        ops.forEach(function (o) { if (o.s1 <= cur || o.s0 >= s1) return; if (o.s0 > cur) L(at(cur), at(o.s0)); cur = Math.max(cur, o.s1); });
+        if (cur < s1) L(at(cur), sd[1]);
+      });
+      L(P.sL, P.sR); L(P.eL, P.eR);
+      ops.forEach(function (o) { var a = G.add(c.a, G.mul(c.u, o.s0)), b = G.add(c.a, G.mul(c.u, o.s1)), h = G.mul(c.n, e.th / 2); L(G.add(a, h), G.sub(a, h)); L(G.add(b, h), G.sub(b, h)); });
+      out.fill.push({ pts: [P.sL, P.eL, P.eR, P.sR], holes: ops.map(function (o) { var a = G.add(c.a, G.mul(c.u, o.s0)), b = G.add(c.a, G.mul(c.u, o.s1)), h = G.mul(c.n, e.th / 2 + 1); return [G.add(a, h), G.add(b, h), G.sub(b, h), G.sub(a, h)]; }) });
+      return out;
+    }
+    if (e.t === "door" || e.t === "window" || e.t === "opening") {
+      var pl = B.place(doc, e); if (!pl) return out; var u = pl.u, n = pl.n, th = pl.w.th, a0 = G.sub(pl.p, G.mul(u, e.w / 2)), b0 = G.add(pl.p, G.mul(u, e.w / 2));
+      if (e.t === "window") { [-0.5, -0.12, 0.12, 0.5].forEach(function (f) { L(G.add(a0, G.mul(n, th * f)), G.add(b0, G.mul(n, th * f))); }); if (e.sill != null && e.sill + e.h > (pl.w.h || 3000) - 1) {} return out; }
+      if (e.t === "opening") { out.dashed.push({ k: "L", a: G.add(a0, G.mul(n, th / 2)), b: G.sub(b0, G.mul(n, th / 2)) }); out.dashed.push({ k: "L", a: G.sub(a0, G.mul(n, th / 2)), b: G.add(b0, G.mul(n, th / 2)) }); return out; }
+      var side = e.flip ? -1 : 1, hinge = e.swing === "r" ? b0 : a0, other = e.swing === "r" ? a0 : b0, leafDir = G.mul(n, side), face = G.add(hinge, G.mul(n, side * th / 2)), leaves = e.kind === "double" ? 2 : 1;
+      if (e.kind === "shutter") { L(G.add(a0, G.mul(n, th * 0.2)), G.add(b0, G.mul(n, th * 0.2))); out.dashed.push({ k: "L", a: G.add(a0, G.mul(n, th * 0.45)), b: G.add(b0, G.mul(n, th * 0.45)) }); return out; }
+      if (e.kind === "sliding") { L(G.add(a0, G.mul(n, side * th * 0.25)), G.add(G.lerp(a0, b0, 0.55), G.mul(n, side * th * 0.25))); L(G.add(G.lerp(a0, b0, 0.45), G.mul(n, -side * th * 0.0)), G.add(b0, G.mul(n, -side * th * 0.0))); return out; }
+      var lw = e.w / leaves;
+      for (var i = 0; i < leaves; i++) {
+        var hg = i === 0 ? hinge : other, fc = G.add(hg, G.mul(n, side * th / 2)), toward = G.norm(G.sub(i === 0 ? other : hinge, hg)), tip = G.add(fc, G.mul(leafDir, lw));
+        L(fc, tip); var a1 = G.ang(fc, G.add(fc, G.mul(toward, lw))), a2 = G.ang(fc, tip), sw = G.an(a2 - a1) < Math.PI ? { s: a1, e: a2 } : { s: a2, e: a1 };
+        out.segs.push({ k: "A", c: fc, r: lw, s: sw.s, e: sw.e });
+      }
+      return out;
+    }
+    if (e.t === "column") {
+      if (e.shape === "circle") { out.segs.push({ k: "A", c: e.p, r: e.w / 2, s: 0, e: G.TAU, full: true }); out.fill.push({ circle: { c: e.p, r: e.w / 2 } }); return out; }
+      var q = rectAt(e.p, e.w, e.d, e.rot); out.segs = G.polySegs(q, true); out.fill.push({ pts: q, holes: [] }); return out;
+    }
+    if (e.t === "beam") { var bl = wallLine({ a: e.a, b: e.b, th: e.w }), h2 = G.mul(bl.n, e.w / 2); out.dashed = G.polySegs([G.add(e.a, h2), G.add(e.b, h2), G.sub(e.b, h2), G.sub(e.a, h2)], true); return out; }
+    if (e.t === "footing") { var f = rectAt(e.p, e.L, e.B, e.rot); out.dashed = G.polySegs(f, true); if (e.pcc) out.dashed = out.dashed.concat(G.polySegs(rectAt(e.p, e.L + 2 * e.pcc.off, e.B + 2 * e.pcc.off, e.rot), true)); if (e.ped) out.segs = G.polySegs(rectAt(e.p, e.ped.w, e.ped.d, e.rot), true); return out; }
+    if (e.t === "slab") { var sl = (e.pts || []).map(function (p) { return [p[0], p[1], 0]; }); out.dashed = G.plineSegs(sl, true); (e.holes || []).forEach(function (h) { out.dashed = out.dashed.concat(G.polySegs(h, true)); var hb = [Infinity, Infinity, -Infinity, -Infinity]; h.forEach(function (p) { G.ext(hb, p); }); L([hb[0], hb[1]], [hb[2], hb[3]], out.dashed); L([hb[0], hb[3]], [hb[2], hb[1]], out.dashed); }); return out; }
+    if (e.t === "roof") {
+      var rp = e.pts || []; out.dashed = G.polySegs(rp, true);
+      if (e.kind === "gable" || e.kind === "hip") { var r = roofRidge(e); if (r) { L(r.a, r.b); if (e.kind === "hip") r.hips.forEach(function (h) { L(h[0], h[1]); }); } }
+      if (e.kind === "shed") { var bb = polyBox(rp), ctr = [(bb[0] + bb[2]) / 2, (bb[1] + bb[3]) / 2], dr = [Math.cos((e.dir || 0) * Math.PI / 180), Math.sin((e.dir || 0) * Math.PI / 180)]; L(G.sub(ctr, G.mul(dr, 600)), G.add(ctr, G.mul(dr, 600))); L(G.add(ctr, G.mul(dr, 600)), G.add(G.add(ctr, G.mul(dr, 400)), G.mul(G.perp(dr), 150))); }
+      return out;
+    }
+    if (e.t === "stair") { var S = stairGeom(e); S.plan.forEach(function (s) { L(s[0], s[1]); }); out.segs.push.apply(out.segs, []); return out; }
+    if (e.t === "room") { out.dashed = G.polySegs(e.pts, true); return out; }
+    if (e.t === "railing") { out.segs = G.polySegs(e.pts, false); return out; }
+    return out;
+  };
+  function polyBox(P) { var b = [Infinity, Infinity, -Infinity, -Infinity]; P.forEach(function (p) { G.ext(b, p); }); return b; }
+  B.polyBox = polyBox;
+  /* gable / hip ridge for a (near) rectangular outline */
+  function roofRidge(e) {
+    var P = e.pts; if (!P || P.length < 4) return null; var bb = polyBox(P), W = bb[2] - bb[0], H = bb[3] - bb[1], along = e.dir != null ? Math.abs(Math.cos(e.dir * Math.PI / 180)) > 0.5 : W >= H, cy = (bb[1] + bb[3]) / 2, cx = (bb[0] + bb[2]) / 2, half = (along ? H : W) / 2;
+    if (along) { var a = [bb[0] + (e.kind === "hip" ? half : 0), cy], b = [bb[2] - (e.kind === "hip" ? half : 0), cy]; return { a: a, b: b, half: half, along: true, hips: [[[bb[0], bb[1]], a], [[bb[0], bb[3]], a], [[bb[2], bb[1]], b], [[bb[2], bb[3]], b]] }; }
+    var a2 = [cx, bb[1] + (e.kind === "hip" ? half : 0)], b2 = [cx, bb[3] - (e.kind === "hip" ? half : 0)]; return { a: a2, b: b2, half: half, along: false, hips: [[[bb[0], bb[1]], a2], [[bb[2], bb[1]], a2], [[bb[0], bb[3]], b2], [[bb[2], bb[3]], b2]] };
+  }
+  B.roofRidge = roofRidge;
+  /* stair: steps along dir from p; dog-leg turns back after a landing */
+  function stairGeom(e) {
+    var dir = (e.dir || 0) * Math.PI / 180, u = [Math.cos(dir), Math.sin(dir)], n = G.perp(u), w = e.w, T = e.T, R = e.R, N = e.n, steps = [], plan = [];
+    var flights = e.kind === "dogleg" ? [Math.ceil(N / 2), Math.floor(N / 2)] : [N], land = e.land || w, z = 0, origin = e.p;
+    flights.forEach(function (cnt, fi) {
+      var treads = cnt - 1, o = fi === 0 ? origin : G.add(G.add(origin, G.mul(u, (flights[0] - 1) * T)), G.mul(n, w + (e.gap || 100))), dirU = fi === 0 ? u : G.mul(u, -1);
+      if (fi === 1) o = G.add(G.add(origin, G.mul(u, (flights[0] - 1) * T)), G.mul(n, w + (e.gap || 100)));
+      for (var i = 0; i < cnt; i++) { var a = G.add(o, G.mul(dirU, i * T)); steps.push({ a: a, u: dirU, n: n, w: w, T: i < treads ? T : (fi === 0 && flights.length > 1 ? land : T), z0: z, z1: z + R, last: i === cnt - 1 }); z += R; }
+      for (var j = 0; j <= treads; j++) { var q = G.add(o, G.mul(dirU, j * T)); plan.push([q, G.add(q, G.mul(n, w))]); }
+      plan.push([o, G.add(o, G.mul(dirU, treads * T))], [G.add(o, G.mul(n, w)), G.add(G.add(o, G.mul(n, w)), G.mul(dirU, treads * T))]);
+    });
+    if (flights.length > 1) { var lo = G.add(origin, G.mul(u, (flights[0] - 1) * T)), lw2 = 2 * w + (e.gap || 100); plan.push([G.add(lo, G.mul(u, land)), G.add(G.add(lo, G.mul(u, land)), G.mul(n, lw2))], [lo, G.add(lo, G.mul(u, land))], [G.add(lo, G.mul(n, lw2)), G.add(G.add(lo, G.mul(n, lw2)), G.mul(u, land))]); }
+    // walking line arrow
+    plan.push([G.add(origin, G.mul(n, w / 2)), G.add(G.add(origin, G.mul(n, w / 2)), G.mul(u, Math.max(T, (flights[0] - 1) * T)))]);
+    return { steps: steps, plan: plan, flights: flights };
+  }
+  B.stairGeom = stairGeom;
+
+  /* room / area detection: walls as solid footprints (door gaps closed), columns; other building elements ignored */
+  B.roomOpts = function (doc) {
+    return { only: function (e) { return !TYPES[e.t] || e.t === "wall" || e.t === "column"; },
+      segs: function (e) { if (e.t === "wall") { var P = B.wallPoly(doc, e); return G.polySegs([P.sL, P.eL, P.eR, P.sR], true); } if (e.t === "column") return e.shape === "circle" ? [{ k: "A", c: e.p, r: e.w / 2, s: 0, e: G.TAU, full: true }] : G.polySegs(rectAt(e.p, e.w, e.d, e.rot), true); return null; } };
+  };
+  /* segments for picking / snapping (all plan lines) */
+  B.segs = function (e) { var doc = B.ctx.doc; if (!doc) return []; var p = B.plan(doc, e); return p.segs.concat(p.dashed); };
+
+  /* ---------- transforms ---------- */
+  B.xform = function (e, M) {
+    if (B.EXT && B.EXT[e.t]) return B.EXT[e.t].xform(e, M);
+    var o = JSON.parse(JSON.stringify(e)), P = function (p) { return G.mApply(M, p); }, det = M[0] * M[3] - M[1] * M[2], rr = Math.atan2(M[1], M[0]) * 180 / Math.PI, sc = Math.sqrt(Math.abs(det));
+    switch (e.t) {
+      case "wall": case "beam": o.a = P(e.a); o.b = P(e.b); if (det < 0 && e.t === "wall" && e.just && e.just !== "c") o.just = e.just === "l" ? "r" : "l"; break;
+      case "slab": case "roof": case "room": case "railing": o.pts = e.pts.map(P); if (e.holes) o.holes = e.holes.map(function (h) { return h.map(P); }); if (e.dir != null) o.dir = det < 0 ? -e.dir + 2 * rr : e.dir + rr; break;
+      case "column": case "footing": o.p = P(e.p); o.rot = (e.rot || 0) + (det < 0 ? -rr : rr); break;
+      case "stair": o.p = P(e.p); o.dir = (e.dir || 0) + rr; break;
+      case "door": case "window": case "opening":
+        var doc = B.ctx.doc, pl = doc && B.place(doc, e); if (!pl) break;
+        var np = P(pl.p), c = pl.c; o.at = Math.max(e.w / 2, Math.min(c.L - e.w / 2, G.dot(G.sub(np, c.a), c.u))); if (det < 0) o.flip = !e.flip; break;
+    }
+    return o;
+  };
+  B.bbox = function (e) { var S = B.segs(e), b = G.bboxSegs(S); if (e.t === "slab" || e.t === "roof" || e.t === "room") e.pts.forEach(function (p) { G.ext(b, p); }); return b; };
+
+  /* ---------- quantities ---------- */
+  function area(P) { return Math.abs(G.plineArea(P.map(function (p) { return [p[0], p[1], 0]; }))); }
+  B.area = area;
+  function wallH(doc, w) { var b = B.ensure(doc.d), L = B.level(doc.d, w.lvl); return w.h != null ? w.h : Math.max(500, L.h - b.slabTh); }
+  B.wallH = wallH;
+  /* returns rows: { k (quantity key), dim: "V"|"A"|"L"|"N"|"M", v (mm³ / mm² / mm / count / kg), label, f (formula text), z: "plinth"|"super" } */
+  B.qty = function (doc, e) {
+    if (B.EXT && B.EXT[e.t]) return B.EXT[e.t].qty(doc, e);
+    var d = doc.d, bs = B.ensure(d), R = bs.rules, rows = [], zone = function (lvl) { return B.below(d, lvl); }, push = function (k, dim, v, label, f, z) { if (v > 1e-9) rows.push({ k: k, dim: dim, v: v, label: label, f: f || "", z: z || zone(e.lvl) }); };
+    var m = function (v) { return (v / 1000).toFixed(3); };
+    /* steel from the modelled bars (BBS) when the element has reinforcement; returns false to fall back to the thumb rule */
+    var rfPush = function (k, what, z) { if (!B.hasRf || !B.hasRf(e)) return false; var br = B.bars(doc, e); if (!br || !br.sets.length) return false; rows.push({ k: k, dim: "M", v: br.kg, label: "Reinforcement — " + what + " (from bars / BBS)", f: br.sets.map(function (x) { return x.nb + "×" + x.dia + "φ " + x.what.toLowerCase(); }).join(", "), z: z || zone(e.lvl), rf: true }); return true; };
+    if (e.t === "wall") {
+      var P = B.wallPoly(doc, e), H = wallH(doc, e), A = area([P.sL, P.eL, P.eR, P.sR]), c = wallLine(e), ops = B.openings(doc, e), vol = A * H, ded = 0, lint = 0, lintV = 0;
+      ops.forEach(function (o) { var oa = (o.s1 - o.s0) * Math.min(o.z1, H) - 0; if (oa / 1e6 > R.brickDed) ded += (o.s1 - o.s0) * (Math.min(o.z1, H) - o.z0) * e.th; if (R.lintel && e.mat !== "rcc" && o.z1 < H - 50) { var ll = (o.s1 - o.s0) + 2 * R.lintelBear; lint += ll; lintV += ll * e.th * R.lintelD; } });
+      var net = vol - ded - lintV, mat = e.mat || "brick";
+      push(mat === "rcc" ? "rcc_wall" : mat === "block" ? "block" : mat === "stone" ? "stone" : "brick", "V", net, (mat === "rcc" ? "RCC wall" : mat === "block" ? "Block masonry" : mat === "stone" ? "Stone masonry" : "Brick masonry") + " " + Math.round(e.th) + " mm", "plan area " + (A / 1e6).toFixed(3) + " m² × h " + m(H) + " m − openings " + (ded / 1e9).toFixed(3) + " m³" + (lintV ? " − lintels " + (lintV / 1e9).toFixed(3) + " m³" : ""));
+      if (mat === "rcc") { push("shut_wall", "A", 2 * c.L * H, "Shuttering — RCC wall (both faces)", "2 × " + m(c.L) + " × " + m(H)); push("steel_wall", "M", net / 1e9 * (bs.steel.column || 150), "Reinforcement — RCC wall (thumb rule " + (bs.steel.column || 150) + " kg/m³)", ""); }
+      if (lintV) { push("rcc_lintel", "V", lintV, "RCC lintels over openings", "Σ(opening + 2 × " + R.lintelBear + " bearing) × " + Math.round(e.th) + " × " + R.lintelD); push("shut_lintel", "A", lint * (2 * R.lintelD + e.th), "Shuttering — lintels", "sides + soffit"); push("steel_lintel", "M", lintV / 1e9 * bs.steel.lintel, "Reinforcement — lintels (thumb rule " + bs.steel.lintel + " kg/m³)", ""); }
+      // plaster on each face (IS 1200: openings ≤ 0.5 m² not deducted; 0.5–3 m² deduct one face, no jambs; > 3 m² deduct both faces, add jambs)
+      var faces = [[P.sL, P.eL], [P.sR, P.eR]], extSide = B.extSide(doc, e); var finA = e.fin && B.finArea ? B.finArea(doc, e, ops, H) : [0, 0];
+      faces.forEach(function (f, i) {
+        var Lf = G.dist(f[0], f[1]), gross = Lf * H, dd = 0, jamb = 0;
+        ops.forEach(function (o) { var oa = (o.s1 - o.s0) * (Math.min(o.z1, H) - o.z0); if (oa / 1e6 <= R.plasterSmall) return; if (oa / 1e6 <= R.plasterLarge) { if (i === 0) dd += oa; return; } dd += oa; jamb += (2 * (o.z1 - o.z0) + (o.s1 - o.s0)) * e.th / 2; });
+        var isExt = e.ext && extSide === i, net2 = gross - dd + jamb;
+        push(isExt ? "plaster_ext" : "plaster_int", "A", net2, (isExt ? "External plaster / finish" : "Internal plaster") + " — face " + (i ? "B" : "A"), m(Lf) + " × " + m(H) + " − openings" + (jamb ? " + jambs" : ""));
+        push(isExt ? "paint_ext" : "paint_int", "A", Math.max(0, net2 - finA[i]), (isExt ? "Exterior painting" : "Interior painting"), finA[i] ? "plaster area − tiles / cladding" : "same as plaster");
+      });
+      if (e.fin && B.finQty) B.finQty(doc, e, ops, H, function (k, v, label, f) { push(k, "A", v, label, f); });
+      return rows;
+    }
+    if (e.t === "door" || e.t === "window" || e.t === "opening") {
+      if (e.t === "opening") return rows;
+      push(e.t === "door" ? (e.mat === "steel" ? "door_steel" : e.mat === "pvc" ? "door_pvc" : e.mat === "al" ? "door_al" : "door_flush") : (e.mat === "upvc" ? "win_upvc" : "win_al"), "A", e.w * e.h, (e.t === "door" ? "Door shutter " : "Window ") + (e.preset || "") + " " + Math.round(e.w) + "×" + Math.round(e.h), m(e.w) + " × " + m(e.h));
+      if (e.t === "door") push("door_frame", "L", 2 * e.h + e.w, "Door frame (running length) " + (e.preset || ""), "2 × " + m(e.h) + " + " + m(e.w));
+      push(e.t === "door" ? "count_door" : "count_window", "N", 1, (e.t === "door" ? "Doors " : "Windows ") + (e.preset || ""), "1 no.");
+      return rows;
+    }
+    if (e.t === "slab") {
+      var Ap = area(e.pts) - (e.holes || []).reduce(function (s, h) { return s + area(h); }, 0), per = G.segsLength(G.polySegs(e.pts, true)), z = zone(e.lvl);
+      push("rcc_slab", "V", Ap * e.th, (e.kind === "chajja" ? "RCC chajja / sunshade" : "RCC slab") + " " + Math.round(e.th) + " mm", (Ap / 1e6).toFixed(3) + " m² × " + m(e.th), z);
+      push("shut_slab", "A", Ap + per * e.th, "Shuttering — slab soffit + edges", "soffit " + (Ap / 1e6).toFixed(3) + " m² + edge " + m(per) + " × " + m(e.th), z);
+      if (!rfPush("steel_slab", "slab", z)) push("steel_slab", "M", Ap * e.th / 1e9 * bs.steel.slab, "Reinforcement — slab (thumb rule " + bs.steel.slab + " kg/m³)", "", z);
+      if (e.kind !== "chajja") push("ceiling_plaster", "A", Ap, "Ceiling plaster (soffit)", "", z);
+      return rows;
+    }
+    if (e.t === "column") {
+      var Lc = B.level(d, e.lvl), Hc = e.h != null ? e.h : Lc.h, Ac = e.shape === "circle" ? Math.PI * e.w * e.w / 4 : e.w * e.d, pc = e.shape === "circle" ? Math.PI * e.w : 2 * (e.w + e.d);
+      push("rcc_col", "V", Ac * Hc, "RCC column " + (e.shape === "circle" ? "Ø" + Math.round(e.w) : Math.round(e.w) + "×" + Math.round(e.d)), (Ac / 1e6).toFixed(4) + " m² × " + m(Hc) + " m");
+      push("shut_col", "A", pc * Hc, "Shuttering — columns", m(pc) + " × " + m(Hc));
+      if (!rfPush("steel_col", "columns")) push("steel_col", "M", Ac * Hc / 1e9 * bs.steel.column, "Reinforcement — columns (thumb rule " + bs.steel.column + " kg/m³)", "");
+      return rows;
+    }
+    if (e.t === "beam") {
+      var Lb = G.dist(e.a, e.b), dd2 = Math.max(0, e.d - bs.slabTh);
+      push("rcc_beam", "V", Lb * e.w * dd2, "RCC beam " + Math.round(e.w) + "×" + Math.round(e.d) + " (below slab)", m(Lb) + " × " + m(e.w) + " × " + m(dd2));
+      push("shut_beam", "A", Lb * (e.w + 2 * dd2), "Shuttering — beams (soffit + sides)", m(Lb) + " × (" + m(e.w) + " + 2 × " + m(dd2) + ")");
+      if (!rfPush("steel_beam", "beams")) push("steel_beam", "M", Lb * e.w * dd2 / 1e9 * bs.steel.beam, "Reinforcement — beams (thumb rule " + bs.steel.beam + " kg/m³)", "");
+      return rows;
+    }
+    if (e.t === "footing") {
+      var lvlF = B.level(d, e.lvl), ngl = bs.ngl, bot = lvlF.elev - e.df, pcc = e.pcc || { off: 150, th: 100 }, ws = e.ws != null ? e.ws : R.ws, depth = ngl - (bot - pcc.th);
+      var eL = e.L + 2 * pcc.off + 2 * ws, eB = e.B + 2 * pcc.off + 2 * ws, exc = eL * eB * Math.max(0, depth), pv = (e.L + 2 * pcc.off) * (e.B + 2 * pcc.off) * pcc.th, fv = e.L * e.B * e.D, pedH = e.ped ? Math.max(0, lvlF.elev - (bot + e.D)) : 0, pedV = e.ped ? e.ped.w * e.ped.d * pedH : 0;
+      push("excavation", "V", exc, "Excavation for footing", m(eL) + " × " + m(eB) + " × depth " + m(depth) + " (incl. " + ws + " mm working space)", "plinth");
+      push("pcc", "V", pv, "PCC 1:4:8 under footing", m(e.L + 2 * pcc.off) + " × " + m(e.B + 2 * pcc.off) + " × " + m(pcc.th), "plinth");
+      push("rcc_found", "V", fv + pedV, "RCC footing" + (e.ped ? " + pedestal" : ""), m(e.L) + " × " + m(e.B) + " × " + m(e.D) + (pedV ? " + " + m(e.ped.w) + " × " + m(e.ped.d) + " × " + m(pedH) : ""), "plinth");
+      push("shut_found", "A", 2 * (e.L + e.B) * e.D + (e.ped ? 2 * (e.ped.w + e.ped.d) * pedH : 0), "Shuttering — footing sides" + (e.ped ? " + pedestal" : ""), "", "plinth");
+      if (!rfPush("steel_found", "footing", "plinth")) push("steel_found", "M", (fv + pedV) / 1e9 * bs.steel.footing, "Reinforcement — footing (thumb rule " + bs.steel.footing + " kg/m³)", "", "plinth");
+      var belowGL = Math.max(0, Math.min(ngl, bot + e.D) - bot); var below = pv + e.L * e.B * Math.min(e.D, belowGL) + (e.ped ? e.ped.w * e.ped.d * Math.max(0, ngl - (bot + e.D)) : 0);
+      push("backfill", "V", Math.max(0, exc - below), "Back-filling with excavated earth", "excavation − PCC − concrete below ground", "plinth");
+      return rows;
+    }
+    if (e.t === "roof") {
+      var Ar = area(e.pts), sl = (e.slope || 0) * Math.PI / 180, slopeA = e.kind === "flat" ? Ar : Ar / Math.cos(sl);
+      if (e.mat === "rcc" || e.kind === "flat") { push("rcc_slab", "V", slopeA * (e.th || 125), "RCC roof slab " + Math.round(e.th || 125) + " mm", (slopeA / 1e6).toFixed(3) + " m² × " + m(e.th || 125)); push("shut_slab", "A", Ar, "Shuttering — roof slab", ""); push("steel_slab", "M", slopeA * (e.th || 125) / 1e9 * bs.steel.slab, "Reinforcement — roof slab (thumb rule)", ""); push("waterproof", "A", Ar, "Roof waterproofing / treatment", ""); }
+      else push(e.mat === "tile" ? "roof_tile" : e.mat === "puf" ? "roof_puf" : "roof_gi", "A", slopeA, (e.mat === "tile" ? "Roof tiles" : e.mat === "puf" ? "PUF insulated roof panels" : "GI / colour-coated roof sheets") + " (on slope)", (Ar / 1e6).toFixed(3) + " m² ÷ cos " + (e.slope || 0) + "°");
+      return rows;
+    }
+    if (e.t === "stair") {
+      var S = stairGeom(e), steps = S.steps.length, run = (e.n - S.flights.length) * e.T, rise = e.n * e.R, incl = Math.hypot(run, rise), stepsV = steps * e.T * e.R / 2 * e.w, waist = incl * e.w * (e.wt || 150), landV = S.flights.length > 1 ? (2 * e.w + (e.gap || 100)) * (e.land || e.w) * (e.wt || 150) : 0;
+      push("rcc_stair", "V", stepsV + waist + landV, "RCC staircase (waist slab + steps" + (landV ? " + landing" : "") + ")", e.n + " risers × " + e.R + " / treads " + e.T + ", width " + e.w);
+      push("shut_stair", "A", incl * e.w + steps * e.R * e.w, "Shuttering — stairs", "");
+      push("stair_finish", "A", steps * (e.T + e.R) * e.w, "Stair finish — treads + risers", "");
+      push("steel_stair", "M", (stepsV + waist + landV) / 1e9 * bs.steel.stair, "Reinforcement — stair (thumb rule)", "");
+      return rows;
+    }
+    if (e.t === "room") {
+      var Aroom = area(e.pts), perR = G.segsLength(G.polySegs(e.pts, true)), lvlR = B.level(d, e.lvl);
+      push("floor_" + (e.floor || "vitrified"), "A", Aroom, "Flooring — " + (e.name || "room") + " (" + (e.floor || "vitrified tiles") + ")", (Aroom / 1e6).toFixed(3) + " m²");
+      if (e.skirt) push("skirting", "A", perR * e.skirt, "Skirting " + e.skirt + " mm — " + (e.name || "room"), m(perR) + " × " + m(e.skirt));
+      if (e.ceil) push("false_ceiling", "A", Aroom, "False ceiling — " + (e.name || "room"), "");
+      if (lvlR.elev <= 0) push("pcc_floor", "V", Aroom * 75, "PCC under floor 75 mm — " + (e.name || "room"), "", "plinth");
+      return rows;
+    }
+    if (e.t === "railing") { push("railing", "L", G.segsLength(G.polySegs(e.pts, false)), "Railing / handrail", ""); return rows; }
+    return rows;
+  };
+  /* which face of an exterior wall is outside: 0 = left face (A), 1 = right face (B) */
+  B.extSide = function (doc, w) {
+    var all = walls(doc, w.lvl), cx = 0, cy = 0, n = 0; all.forEach(function (o) { cx += o.a[0] + o.b[0]; cy += o.a[1] + o.b[1]; n += 2; }); if (!n) return 0;
+    var c = wallLine(w), mid = G.mid(c.a, c.b), toC = G.sub([cx / n, cy / n], mid); return G.dot(toC, c.n) > 0 ? 1 : 0;
+  };
+  B.allQty = function (doc, filter) {
+    var out = []; doc.d.ents.forEach(function (e) { if (!B.is(e) || (filter && !filter(e))) return; B.qty(doc, e).forEach(function (r) { r.id = e.id; r.t = e.t; r.lvl = e.lvl; out.push(r); }); });
+    return out;
+  };
+
+  /* ---------- door / window presets (reference configurations — edit sizes to your specification) ---------- */
+  B.DOORS = [
+    { id: "D1", name: "Main door 1000×2100 (panelled / solid wood)", w: 1000, h: 2100, mat: "wood", kind: "single" },
+    { id: "D2", name: "Room door 900×2100 (flush shutter)", w: 900, h: 2100, mat: "flush", kind: "single" },
+    { id: "D3", name: "Toilet door 750×2100 (PVC / WPC)", w: 750, h: 2100, mat: "pvc", kind: "single" },
+    { id: "D4", name: "Double door 1200×2100", w: 1200, h: 2100, mat: "flush", kind: "double" },
+    { id: "D5", name: "Steel door 1200×2100", w: 1200, h: 2100, mat: "steel", kind: "double" },
+    { id: "D6", name: "Double door 1500×2100 (wood panelled, main entrance)", w: 1500, h: 2100, mat: "wood", kind: "double", style: "panel" },
+    { id: "D7", name: "Double door 1800×2100 (wood panelled, main entrance)", w: 1800, h: 2100, mat: "wood", kind: "double", style: "panel" },
+    { id: "D8", name: "Double door 1500×2400 (wood panelled, tall hall door)", w: 1500, h: 2400, mat: "wood", kind: "double", style: "panel" },
+    { id: "D9", name: "Double door 1800×2100 (flush shutters)", w: 1800, h: 2100, mat: "flush", kind: "double" },
+    { id: "FR1", name: "French door 1500×2100 (glazed, aluminium)", w: 1500, h: 2100, mat: "al", kind: "double", style: "glass" },
+    { id: "FR2", name: "French door 1800×2100 (glazed, aluminium)", w: 1800, h: 2100, mat: "al", kind: "double", style: "glass" },
+    { id: "FR3", name: "French door 1500×2100 (glazed, wood frame)", w: 1500, h: 2100, mat: "wood", kind: "double", style: "glass" },
+    { id: "SG1", name: "Steel grill gate 1800×2100 (double leaf)", w: 1800, h: 2100, mat: "steel", kind: "double", style: "grill" },
+    { id: "SG2", name: "Steel grill gate 1500×2100 (double leaf)", w: 1500, h: 2100, mat: "steel", kind: "double", style: "grill" },
+    { id: "D10", name: "Double door 1200×2100 (aluminium + glass)", w: 1200, h: 2100, mat: "al", kind: "double", style: "glass" },
+    { id: "D11", name: "Bathroom door 700×2000 (PVC / WPC)", w: 700, h: 2000, mat: "pvc", kind: "single" },
+    { id: "D12", name: "Single door 1000×2100 (wood panelled)", w: 1000, h: 2100, mat: "wood", kind: "single", style: "panel" },
+    { id: "D13", name: "Main door 1200×2400 (wood panelled, tall)", w: 1200, h: 2400, mat: "wood", kind: "single", style: "panel" },
+    { id: "D14", name: "Glazed single door 900×2100 (aluminium + glass)", w: 900, h: 2100, mat: "al", kind: "single", style: "glass" },
+    { id: "D15", name: "Steel grill door 1000×2100 (security)", w: 1000, h: 2100, mat: "steel", kind: "single", style: "grill" },
+    { id: "D16", name: "Fire-rated double door 1800×2100 (steel)", w: 1800, h: 2100, mat: "steel", kind: "double" },
+    { id: "RS1", name: "Rolling shutter 3000×3000 (steel, shop front)", w: 3000, h: 3000, mat: "steel", kind: "shutter" },
+    { id: "RS2", name: "Rolling shutter 2400×2400 (steel)", w: 2400, h: 2400, mat: "steel", kind: "shutter" },
+    { id: "SD", name: "Sliding glass door 1800×2100 (aluminium)", w: 1800, h: 2100, mat: "al", kind: "sliding" },
+    { id: "SD2", name: "Sliding glass door 2400×2100 (aluminium)", w: 2400, h: 2100, mat: "al", kind: "sliding" },
+    { id: "FD", name: "Fire-rated steel door 1000×2100", w: 1000, h: 2100, mat: "steel", kind: "single" }
+  ];
+  B.WINDOWS = [
+    { id: "W1", name: "Window 1500×1200, sill 900 (aluminium sliding, 3-track)", w: 1500, h: 1200, sill: 900, mat: "al", kind: "sliding" },
+    { id: "W2", name: "Window 1200×1200, sill 900 (aluminium sliding)", w: 1200, h: 1200, sill: 900, mat: "al", kind: "sliding" },
+    { id: "W3", name: "Window 900×1200, sill 900 (casement)", w: 900, h: 1200, sill: 900, mat: "al", kind: "casement" },
+    { id: "W4", name: "Window 1800×1500, sill 750 (uPVC sliding)", w: 1800, h: 1500, sill: 750, mat: "upvc", kind: "sliding" },
+    { id: "KW", name: "Kitchen window 1000×900, sill 1050", w: 1000, h: 900, sill: 1050, mat: "al", kind: "sliding" },
+    { id: "V1", name: "Ventilator 600×450, sill 1800 (louvered / exhaust)", w: 600, h: 450, sill: 1800, mat: "al", kind: "louvre" },
+    { id: "W5", name: "Window 1200×1500, sill 900 (casement 2-leaf, aluminium)", w: 1200, h: 1500, sill: 900, mat: "al", kind: "casement2" },
+    { id: "W6", name: "Window 1500×1500, sill 900 (casement 2-leaf, uPVC)", w: 1500, h: 1500, sill: 900, mat: "upvc", kind: "casement2" },
+    { id: "W7", name: "Window 1200×1200, sill 900 (teak wood, casement 2-leaf)", w: 1200, h: 1200, sill: 900, mat: "wood", kind: "casement2" },
+    { id: "W8", name: "Window 900×900, sill 1000 (steel grill + glass)", w: 900, h: 900, sill: 1000, mat: "steel", kind: "grill" },
+    { id: "W9", name: "Window 1200×1200, sill 900 (grill + sliding)", w: 1200, h: 1200, sill: 900, mat: "al", kind: "grill" },
+    { id: "W10", name: "Window 2100×1200, sill 900 (aluminium sliding, 3-track)", w: 2100, h: 1200, sill: 900, mat: "al", kind: "sliding" },
+    { id: "BW", name: "Bathroom window 600×600, sill 1500 (louvered)", w: 600, h: 600, sill: 1500, mat: "al", kind: "louvre" },
+    { id: "V2", name: "Ventilator 450×450, sill 2000 (exhaust)", w: 450, h: 450, sill: 2000, mat: "al", kind: "louvre" },
+    { id: "FX2", name: "Fixed glazing 1800×1200, sill 900 (aluminium)", w: 1800, h: 1200, sill: 900, mat: "al", kind: "fixed" },
+    { id: "FX3", name: "Floor-to-ceiling fixed glass 1500×2400, sill 0", w: 1500, h: 2400, sill: 0, mat: "al", kind: "fixed" },
+    { id: "FX", name: "Fixed glazing 1200×1500, sill 600", w: 1200, h: 1500, sill: 600, mat: "al", kind: "fixed" }
+  ];
+  B.MATS = { brick: "Brick", block: "Concrete / AAC block", rcc: "RCC", stone: "Stone" };
+})();

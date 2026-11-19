@@ -1,0 +1,22 @@
+{
+  "name": "Estimate Pro — estimates, measurement & design",
+  "short_name": "Estimate Pro",
+  "description": "Estimates, measurement sheets, rate analysis and structural design on CPWD / MPPWD SORs. Works offline at site.",
+  "start_url": "app.html?src=pwa",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#f5f7fa",
+  "theme_color": "#0f3f62",
+  "lang": "en-IN",
+  "icons": [
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "icon-maskable.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ],
+  "shortcuts": [
+    { "name": "Estimates", "url": "app.html#estimates" },
+    { "name": "Reviews", "url": "app.html#reviews" },
+    { "name": "GPS camera", "url": "app.html#camera" }
+  ]
+}

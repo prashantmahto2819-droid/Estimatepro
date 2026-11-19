@@ -1,0 +1,3 @@
+/* App version + "what's new" — the super admin is offered to send this on WhatsApp after each upload. Change both with every release. */
+window.EP_VER = "2026.11.19-a";
+window.EP_NOTES = "• Scanner (like CamScanner): sharper auto crop, easy corner dragging with zoom on phone, auto light & colour, folders / projects, export PDF, JPG, long image, text\n• Scans are now saved online — open them on phone and laptop\n• Create users with a mobile number — they can log in with a WhatsApp OTP\n• Reminder to clear old scans after 30 days\n• Picture of every SOR item when you point at it (tap 🖼 on phone)";

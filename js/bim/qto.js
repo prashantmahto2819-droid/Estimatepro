@@ -1,0 +1,113 @@
+/* Estimate Pro BIM — quantity schedule from the model, SOR item mapping and two-way link to estimates.
+   Every row sent to an estimate carries src = { bim: drawing id, el: element id, key, v (model value) } so that
+   "Update estimate" replaces exactly those rows and the schedule can show what changed since. */
+(function () {
+  "use strict";
+  var EP = window.EP, B = EP.bim, UN = EP.units;
+  /* suggested SOR items: [book, code] in order of preference (first one present in the loaded books wins), else a text search */
+  var P = "plinth", SU = "super";
+  B.MAP = Object.assign({
+    excavation: { c: [["cpwd23", "2.8.1"], ["cpwd", "2.8.1"]], q: /excavation.*foundation trenches/i },
+    pcc: { c: [["cpwd23", "4.1.8"], ["cpwd", "4.1.8"]], q: /cement concrete.*1:4:8/i },
+    pcc_floor: { c: [["cpwd23", "4.1.8"], ["cpwd", "4.1.8"]], q: /cement concrete.*1:4:8/i },
+    backfill: { c: [["cpwd23", "2.25"], ["cpwd", "2.25"]], q: /filling available excavated earth/i },
+    rcc_found: { c: [["cpwd23", "5.33.1.1"], ["cpwd", "5.33.1.1"]], q: /design mix.*M.?25.*plinth/i },
+    rcc: { plinth: [["cpwd23", "5.33.1.1"], ["cpwd", "5.33.1.1"]], super: [["cpwd23", "5.33.2.1"], ["cpwd", "5.33.2.1"]], q: /design mix.*M.?25/i },
+    shut_found: { c: [["cpwd23", "5.9.1"], ["cpwd", "5.9.1"]], q: /centering and shuttering.*foundations/i },
+    shut_col: { c: [["cpwd23", "5.9.6"], ["cpwd", "5.9.6"]], q: /centering and shuttering.*columns/i },
+    shut_beam: { c: [["cpwd23", "5.9.5"], ["cpwd", "5.9.5"]], q: /centering and shuttering.*beams/i },
+    shut_lintel: { c: [["cpwd23", "5.9.5"], ["cpwd", "5.9.5"]], q: /centering and shuttering.*lintels/i },
+    shut_slab: { c: [["cpwd23", "5.9.3"], ["cpwd", "5.9.3"]], q: /centering and shuttering.*suspended floors/i },
+    shut_stair: { c: [["cpwd23", "5.9.7"], ["cpwd", "5.9.7"]], q: /centering and shuttering.*stairs/i },
+    shut_wall: { c: [["cpwd23", "5.9.2"], ["cpwd", "5.9.2"]], q: /centering and shuttering.*walls/i },
+    steel: { plinth: [["cpwd23", "5.22.6"], ["cpwd", "5.22.6"]], super: [["cpwd23", "5.22A.6"], ["cpwd", "5.22A.6"]], q: /steel reinforcement.*thermo.?mechanically/i },
+    brick: { plinth: [["cpwd23", "6.1.2"], ["cpwd", "6.1.2"]], super: [["cpwd23", "6.4.2"], ["cpwd", "6.4.2"]], q: /brick work.*cement mortar 1:6/i },
+    block: { q: /(autoclaved aerated|AAC|solid concrete block).*masonry|block masonry/i },
+    stone: { q: /random rubble masonry/i },
+    plaster_int: { c: [["cpwd23", "13.4.2"], ["cpwd", "13.4.2"]], q: /12 mm cement plaster.*1:6/i },
+    plaster_ext: { c: [["cpwd23", "13.6.2"], ["cpwd", "13.6.2"]], q: /20 mm cement plaster.*1:6/i },
+    ceiling_plaster: { q: /6 mm cement plaster.*1:3/i },
+    paint_int: { c: [["cpwd23", "13.82.2"]], q: /acrylic emulsion paint/i },
+    paint_ext: { c: [["cpwd23", "13.48A.1"]], q: /exterior.*(acrylic|paint)|premium acrylic/i },
+    floor_vitrified: { c: [["cpwd23", "11.41.2"], ["cpwd", "11.41.2"]], q: /vitrified tiles/i },
+    floor_ceramic: { q: /ceramic glazed floor tiles/i }, floor_kota: { q: /kota stone slab/i }, floor_granite: { q: /granite stone.*flooring|granite.*floor/i }, floor_ips: { q: /cement concrete flooring.*1:2:4/i },
+    skirting: { q: /skirting/i },
+    false_ceiling: { c: [["cpwd23", "12.45.1"]], q: /false ceiling/i },
+    door_flush: { c: [["cpwd23", "9.20.2"], ["cpwd", "9.20.2"]], q: /flush door shutter/i },
+    door_pvc: { c: [["cpwd23", "9.118.1"]], q: /PVC door shutter|uPVC.*door shutter/i },
+    door_steel: { q: /steel.*door.*shutter|M\.S\. door/i }, door_al: { q: /aluminium.*door/i },
+    door_frame: { c: [["cpwd23", "10.14.1.1"], ["cpwd", "10.14.1.1"]], q: /pressed steel door frames/i },
+    win_al: { q: /aluminium.*(glazed|sliding).*window/i }, win_upvc: { c: [["cpwd23", "9.147.A1.2"]], q: /uPVC.*window/i },
+    roof_gi: { q: /colour coated|pre-?painted.*sheet|G\.?I\.? sheet roofing/i }, roof_tile: { q: /roof tiles|mangalore/i }, roof_puf: { q: /PUF|insulated sandwich/i },
+    waterproof: { q: /water ?proofing/i }, stair_finish: { q: /kota stone.*steps|granite.*steps|treads/i }, railing: { q: /railing|hand ?rail/i },
+    block_count: null, count_door: null, count_window: null,
+    /* roads & culverts (MPPWD SOR 2025 for Road & Bridge Works first) */
+    road_clear: { c: [["mp25", "2.2 A"]], q: /clearing and grubbing/i, books: ["mp25"] },
+    road_cut: { c: [["mp25", "3.3"]], q: /excavation for road(way|work) in soil/i, books: ["mp25"] },
+    road_fill: { c: [["mp25", "3.13"]], q: /embankment.*borrow/i, books: ["mp25"] },
+    road_shoulder: { c: [["mp25", "3.14"]], q: /embankment.*roadway cutting/i, books: ["mp25"] },
+    road_gsb: { c: [["mp25", "4.1 A"]], q: /granular sub-?base/i, books: ["mp25"] },
+    road_wmm: { c: [["mp25", "4.3 A"]], q: /wet mix macadam/i, books: ["mp25"] },
+    road_dbm: { c: [["mp25", "5.6 a (i)"]], q: /dense graded bituminous macadam/i, books: ["mp25"] },
+    road_bc: { c: [["mp25", "5.7 a (i)"]], q: /bituminous concrete/i, books: ["mp25"] },
+    road_pqc: { c: [["mp25", "6.3"]], q: /cement concrete pavement/i, books: ["mp25"] },
+    road_dlc: { c: [["mp25", "6.1"]], q: /dry lean cement concrete/i, books: ["mp25"] },
+    road_earth: { c: [["mp25", "3.13"]], q: /embankment/i, books: ["mp25"] },
+    road_prime: { c: [["mp25", "5.1"]], q: /prime coat/i, books: ["mp25"] },
+    road_tack: { c: [["mp25", "5.3 (i)"]], q: /tack coat/i, books: ["mp25"] },
+    culv_exc: { c: [["mp25", "12.1 I (i)"]], q: /excavation for structures/i, books: ["mp25"] },
+    culv_pcc: { c: [["mp25", "9.8"]], q: /P\.?C\.?C\.? M-?15.*hume pipe/i, books: ["mp25"] },
+    culv_rcc: { c: [["mp25", "13.1 F [Drum] 1"]], q: /sub-structure.*RCC Grade M25/i, books: ["mp25"] },
+    culv_steel: { c: [["mp25", "12.33 [FE 500D/FE 550/FE 550D]"]], q: /HYSD bar reinforcement/i, books: ["mp25"] },
+    pipe1_600: { c: [["mp25", "9.2 A"]] }, pipe1_1000: { c: [["mp25", "9.2 B"]] }, pipe1_1200: { c: [["mp25", "9.2 C"]] }, pipe1_1500: { c: [["mp25", "9.2 D"]] },
+    pipe2_600: { c: [["mp25", "9.3 A"]] }, pipe2_1000: { c: [["mp25", "9.3 B"]] }, pipe2_1200: { c: [["mp25", "9.3 C"]] }, pipe2_1500: { c: [["mp25", "9.3 D"]] }
+  }, B.MAP || {});
+  function family(k) { if (B.MAP[k]) return k; if (/^rcc_/.test(k)) return "rcc"; if (/^steel_/.test(k)) return "steel"; return k; }
+  B.family = family;
+  B.resolve = function (d, key, zone) {
+    var bs = B.ensure(d), ov = bs.map[key + "|" + zone] || bs.map[key]; if (ov && EP.item && EP.item(ov.b, ov.c)) return { b: ov.b, c: ov.c, user: true };
+    var m = B.MAP[family(key)] || B.MAP[key]; if (!m) return null;
+    var list = m[zone] || m.c || [];
+    for (var i = 0; i < list.length; i++) if (EP.item && EP.item(list[i][0], list[i][1])) return { b: list[i][0], c: list[i][1] };
+    if (m.q && EP.BOOKS) { var books = m.books || ["cpwd23", "cpwd", "mp25", "mp", "hort"]; for (var j = 0; j < books.length; j++) { var Bk = EP.BOOKS[books[j]]; if (!Bk) continue; var hit = Bk.list.filter(function (it) { return m.q.test(it.desc) && (zone !== "plinth" || !/above plinth/i.test(it.desc)) && (zone !== "super" || !/up ?to plinth/i.test(it.desc)); })[0]; if (hit) return { b: books[j], c: hit.code, guess: true }; } }
+    return null;
+  };
+  /* schedule: rows grouped by key + zone → { key, zone, dim, total (model units), label, items: [element rows], sor, unit, qty (in SOR unit) } */
+  B.schedule = function (doc) {
+    var rows = B.allQty(doc), g = {}, order = [];
+    rows.forEach(function (r) { var k = r.k + "|" + r.z; if (!g[k]) { g[k] = { key: r.k, zone: r.z, dim: r.dim, total: 0, label: r.label.replace(/ — face [AB]$/, "").replace(/ \d+ mm$/, ""), rows: [] }; order.push(k); } g[k].total += r.v; g[k].rows.push(r); });
+    return order.map(function (k) {
+      var x = g[k], s = B.resolve(doc.d, x.key, x.zone), it = s && EP.item(s.b, s.c), unit = it ? it.unit : null, uid = unit && UN.fromSor(unit), q = null, err = null;
+      if (it && uid) { try { q = x.dim === "M" ? UN.conv(x.total, "kg", uid) : UN.toSor(x.total, x.dim, uid); } catch (e) { err = e.message; } }
+      else if (it) err = "unit " + unit + " cannot be measured from the model";
+      return Object.assign(x, { sor: s, item: it, unit: unit, qty: q, err: err, base: x.dim === "V" ? UN.conv(x.total, "mm3x", "m3") : x.dim === "A" ? UN.conv(x.total, "mm2", "m2") : x.dim === "L" ? x.total / 1000 : x.total, baseU: { V: "m³", A: "m²", L: "m", N: "nos", M: "kg" }[x.dim] });
+    });
+  };
+  /* write the schedule into an estimate part (adds items that are missing; replaces this model's earlier rows) */
+  B.sendToEstimate = function (doc, sched, est, partId, opts) {
+    opts = opts || {}; var d = est.doc, drawingId = opts.drawingId, n = 0, items = 0, marks = null, lvlName = function (id) { var L = id && B.level(doc.d, id); return L ? L.name : ""; };
+    // remove rows of this model from every item first (they are re-created below)
+    d.items.forEach(function (it) { if (it.meas) it.meas = it.meas.filter(function (m) { return !(m.src && m.src.bim === drawingId && (!opts.keys || opts.keys.indexOf(m.src.key + "|" + m.src.zone) >= 0)); }); });
+    sched.forEach(function (x) {
+      if (!x.sor || x.qty == null || x.include === false) return;
+      if (opts.keys && opts.keys.indexOf(x.key + "|" + x.zone) < 0) return;
+      var it = d.items.filter(function (i) { return i.part === partId && i.b === x.sor.b && i.c === x.sor.c; })[0];
+      if (!it) { it = { id: EP.uid(), part: partId, b: x.sor.b, c: x.sor.c, q: "", meas: [] }; d.items.push(it); items++; }
+      it.meas = it.meas || []; var uid = UN.fromSor(x.unit), uf = EP.unitFactor ? EP.unitFactor(x.unit) : 1;
+      x.rows.forEach(function (r) {
+        if (r.rf && B.bbsRows) {   // modelled bars → BBS rows in the estimate (same cut lengths and weight as the 3D bars)
+          var el = doc.get(r.id); if (el) { marks = marks || B.rfMarks(doc); B.bbsRows(doc, el, marks[r.id]).forEach(function (br) { br.d += lvlName(r.lvl) ? " · " + lvlName(r.lvl) : ""; if (uf !== 1) br.uf = uf; br.src = { bim: drawingId, el: r.id, key: x.key, zone: x.zone, v: r.v, at: Date.now(), name: doc.d.name }; it.meas.push(br); n++; }); return; }
+        }
+        var q = r.dim === "M" ? UN.conv(r.v, "kg", uid) : UN.toSor(r.v, r.dim, uid);
+        it.meas.push({ k: "+", d: r.label + (lvlName(r.lvl) ? " · " + lvlName(r.lvl) : "") + (r.f ? " (" + r.f + ")" : ""), n: "", q: String(+q.toFixed(4)), src: { bim: drawingId, el: r.id, key: x.key, zone: x.zone, v: r.v, at: Date.now(), name: doc.d.name } });
+        n++;
+      });
+    });
+    return { rows: n, items: items };
+  };
+  /* compare the model with an estimate: per key → { est: qty in estimate rows of this model, now: qty from the model } */
+  B.compare = function (sched, est, drawingId) {
+    var have = {}; (est.doc.items || []).forEach(function (it) { (it.meas || []).forEach(function (m) { if (m.src && m.src.bim === drawingId) { var k = m.src.key + "|" + m.src.zone; have[k] = (have[k] || 0) + (m.k === "bbs" ? (EP.bbs ? EP.bbs(est.doc, m).qty : 0) : (+m.q || 0)); } }); });
+    return sched.map(function (x) { var k = x.key + "|" + x.zone; return { k: k, est: have[k] == null ? null : have[k], now: x.qty }; });
+  };
+})();
