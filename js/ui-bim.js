@@ -193,7 +193,38 @@
   function fmtQ(r) { return r.dim === "V" ? (r.v / 1e9).toFixed(3) + " m³" : r.dim === "A" ? (r.v / 1e6).toFixed(3) + " m²" : r.dim === "L" ? (r.v / 1000).toFixed(3) + " m" : r.dim === "M" ? r.v.toFixed(1) + " kg" : r.v + " nos"; }
 
   /* ----- 3D ----- */
-  function v3host(C) { var body = C.root.querySelector(".cad-body"), h = body.querySelector(".cad-3d"); if (!h) { h = document.createElement("div"); h.className = "cad-3d"; h.innerHTML = "<div class='v3-host'><canvas class='v3-cv'></canvas></div><div class='v3-bar'>" + [["iso", "Iso"], ["top", "Top"], ["front", "Front"], ["right", "Right"], ["back", "Back"], ["left", "Left"]].map(function (v) { return "<button type='button' data-v3view='" + v[0] + "'>" + v[1] + "</button>"; }).join("") + "<button type='button' data-v3t='shadows'>Shadows</button><button type='button' data-v3t='edges'>Edges</button><button type='button' data-v3t='ortho'>Parallel</button><label>Cut <input type='range' min='0' max='100' value='100' data-v3cut='1' aria-label='Section height'></label><select data-v3style='1' aria-label='Visual style'><option value='0'>Realistic</option><option value='1'>Colours</option><option value='2'>White model</option></select><button type='button' data-v3pop='paint' title='Pick a material, then click walls, floors, roofs… to paint them'>🪣 Paint</button><button type='button' data-v3pop='sun' title='Sun position by date and time, sky'>☀ Sun</button><button type='button' data-v3pop='scenes' title='Saved views'>🎬 Scenes</button><button type='button' data-v3render='1' title='High-quality image'>📷 Render</button><button type='button' data-v3rebar='1' aria-pressed='false' title='Show reinforcement bars (concrete see-through)'>⛓ Rebar</button><select data-v3lv='1' aria-label='Levels'><option value='all'>All levels</option><option value='upto'>Up to current level</option></select><button type='button' data-v3png='1'>PNG</button></div><div class='v3-pop' hidden></div>"; body.insertBefore(h, body.querySelector(".cad-side")); } return h; }
+  /* 3D extras: walk-through and point-to-point measuring */
+  function v3mode(ed, C, m) {
+    var v = C.v3, root = C.root.querySelector(".cad-3d"), msg = root.querySelector(".v3-msg"), pad = root.querySelector(".v3-pad"), ov = root.querySelector(".v3-ov");
+    var say = function (t) { msg.hidden = !t; msg.textContent = t || ""; }, btn = function (k, on) { var b = root.querySelector("[data-v3m='" + k + "']"); if (b) b.setAttribute("aria-pressed", String(!!on)); };
+    if (m === "walk") {
+      var on = !v.walk, L = B.level(ed.doc.d, bim(ed).cur);
+      v.setWalk(on, on ? ((L && L.elev) || 0) / 1000 : 0); btn("walk", on); pad.hidden = !on;
+      say(on ? "Walk: drag to look round · W A S D / arrow keys or the buttons to move · wheel = forward / back · Q E = down / up. Press Walk again to leave." : (v.measure ? "Measure: click the first point." : ""));
+      return;
+    }
+    if (m === "measure") {
+      v.measure = !v.measure; btn("measure", v.measure); C.v3pts = []; ov.innerHTML = "";
+      if (!v.measure) { v.onMeasure = null; v.onFrame = null; say(v.walk ? "Walk mode." : ""); return; }
+      say("Measure: click the first point (it snaps to corners).");
+      var draw = function () {
+        var P = (C.v3pts || []).map(function (h) { return v.project(h.p); }), h = "";
+        if (P[0]) h += "<circle cx='" + P[0][0] + "' cy='" + P[0][1] + "' r='5'/>";
+        if (P[0] && P[1]) { var a = C.v3pts[0].p, b2 = C.v3pts[1].p, dist = Math.hypot(a[0] - b2[0], a[1] - b2[1], a[2] - b2[2]), tx = (P[0][0] + P[1][0]) / 2, ty = (P[0][1] + P[1][1]) / 2, txt = ed.fmt(dist * 1000);
+          h += "<line x1='" + P[0][0] + "' y1='" + P[0][1] + "' x2='" + P[1][0] + "' y2='" + P[1][1] + "'/><circle cx='" + P[1][0] + "' cy='" + P[1][1] + "' r='5'/><rect x='" + (tx - txt.length * 4 - 6) + "' y='" + (ty - 22) + "' width='" + (txt.length * 8 + 12) + "' height='20' rx='4'/><text x='" + tx + "' y='" + (ty - 8) + "' text-anchor='middle'>" + U.esc(txt) + "</text>"; }
+        ov.innerHTML = h;
+      };
+      v.onFrame = draw;
+      v.onMeasure = function (hp) {
+        if (!C.v3pts || C.v3pts.length >= 2) C.v3pts = [];
+        C.v3pts.push(hp);
+        if (C.v3pts.length === 2) { var a = C.v3pts[0].p, b2 = C.v3pts[1].p, dx = Math.hypot(a[0] - b2[0], a[1] - b2[1]), dz = Math.abs(a[2] - b2[2]); say("Distance " + ed.fmt(Math.hypot(dx, dz) * 1000) + "  ·  on plan " + ed.fmt(dx * 1000) + "  ·  height difference " + ed.fmt(dz * 1000) + ". Click again for a new measurement."); }
+        else say("Now click the second point.");
+        draw(); v.dirty = true;
+      };
+    }
+  }
+  function v3host(C) { var body = C.root.querySelector(".cad-body"), h = body.querySelector(".cad-3d"); if (!h) { h = document.createElement("div"); h.className = "cad-3d"; h.innerHTML = "<div class='v3-host'><canvas class='v3-cv'></canvas></div><div class='v3-bar'>" + [["iso", "Iso"], ["top", "Top"], ["front", "Front"], ["right", "Right"], ["back", "Back"], ["left", "Left"]].map(function (v) { return "<button type='button' data-v3view='" + v[0] + "'>" + v[1] + "</button>"; }).join("") + "<button type='button' data-v3t='shadows'>Shadows</button><button type='button' data-v3t='edges'>Edges</button><button type='button' data-v3t='ortho'>Parallel</button><label>Cut <input type='range' min='0' max='100' value='100' data-v3cut='1' aria-label='Section height'></label><select data-v3style='1' aria-label='Visual style'><option value='0'>Realistic</option><option value='1'>Colours</option><option value='2'>White model</option></select><button type='button' data-v3pop='paint' title='Pick a material, then click walls, floors, roofs… to paint them'>🪣 Paint</button><button type='button' data-v3pop='sun' title='Sun position by date and time, sky'>☀ Sun</button><button type='button' data-v3pop='scenes' title='Saved views'>🎬 Scenes</button><button type='button' data-v3render='1' title='High-quality image'>📷 Render</button><button type='button' data-v3rebar='1' aria-pressed='false' title='Show reinforcement bars (concrete see-through)'>⛓ Rebar</button><select data-v3lv='1' aria-label='Levels'><option value='all'>All levels</option><option value='upto'>Up to current level</option></select><button type='button' data-v3png='1'>PNG</button><button type='button' data-v3m='walk' aria-pressed='false' title='Walk through the building at eye level: drag to look, W A S D or the arrows to move, wheel to go forward'>🚶 Walk</button><button type='button' data-v3m='measure' aria-pressed='false' title='Click two points on the model to measure between them (snaps to corners)'>📏 Measure</button><button type='button' data-v3t='spin' aria-pressed='false' title='Turn the model slowly — for presentations'>⟳ Spin</button></div><div class='v3-pop' hidden></div><svg class='v3-ov' aria-hidden='true'></svg><div class='v3-msg' hidden></div><div class='v3-pad' hidden>" + [["f", "▲", "Forward"], ["l", "◀", "Left"], ["b", "▼", "Back"], ["r", "▶", "Right"], ["u", "⤒", "Up"], ["d", "⤓", "Down"]].map(function (k) { return "<button type='button' data-v3walk='" + k[0] + "' aria-label='" + k[2] + "' title='" + k[2] + "'>" + k[1] + "</button>"; }).join("") + "</div>"; body.insertBefore(h, body.querySelector(".cad-side")); } return h; }
   function build3d(ed, C) {
     if (!C.v3 || !C.v3.ok) { console.warn("build3d: v3 not ready", C.v3 ? "ok=" + C.v3.ok : "null"); return; }
     var b = bim(ed), opts = { rebar: !!C.v3rebar }; if (C.v3lv === "upto") opts.upTo = B.level(ed.doc.d, b.cur).elev;
@@ -324,7 +355,9 @@
       if (ds.bimcur) { setBim(ed, function (x) { x.cur = ds.bimcur; }, "Level"); CAD.ui.renderPanels(); return; }
       if (ds.bimadd) { setBim(ed, function (x) { var top = x.levels.slice().sort(function (a, c) { return c.elev - a.elev; })[0], id = "L" + Date.now().toString(36); x.levels.push({ id: id, name: "Level " + (x.levels.length), elev: top.elev + top.h, h: 3200 }); }, "Add level"); CAD.ui.renderPanels(); return; }
       if (ds.bimlvdel) { var keep = bim(ed).levels.filter(function (l) { return l.id !== ds.bimlvdel; }).sort(function (a, c) { return a.elev - c.elev; })[0]; ed.doc.begin("Delete level"); ed.doc.d.ents.filter(function (e) { return e.lvl === ds.bimlvdel; }).forEach(function (e) { ed.doc.mod(e.id, Object.assign(CAD.clone(e), { lvl: keep.id })); }); var bb = CAD.clone(bim(ed)); bb.levels = bb.levels.filter(function (l) { return l.id !== ds.bimlvdel; }); if (bb.cur === ds.bimlvdel) bb.cur = keep.id; ed.doc.set("bim", bb); ed.doc.commit(); CAD.ui.renderPanels(); return; }
-      if (ds.v3view && C.v3) { C.v3.frame(ds.v3view); return; }
+      if (ds.v3walk && C.v3) { var wk = { f: [0.6, 0, 0], b: [-0.6, 0, 0], l: [0, -0.5, 0], r: [0, 0.5, 0], u: [0, 0, 0.3], d: [0, 0, -0.3] }[ds.v3walk]; if (wk) C.v3.walkMove(wk[0], wk[1], wk[2]); return; }
+      if (ds.v3m && C.v3) { v3mode(ed, C, ds.v3m); return; }
+      if (ds.v3view && C.v3) { if (C.v3.walk) v3mode(ed, C, "walk"); C.v3.frame(ds.v3view); return; }
       if (ds.v3t && C.v3) { if (ds.v3t === "ortho") C.v3.cam.ortho = !C.v3.cam.ortho; else C.v3[ds.v3t] = !C.v3[ds.v3t]; t.setAttribute("aria-pressed", String(ds.v3t === "ortho" ? C.v3.cam.ortho : C.v3[ds.v3t])); C.v3.dirty = true; return; }
       if (ds.v3pop && C.v3) { C.v3pop = C.v3pop === ds.v3pop ? null : ds.v3pop; if (C.v3pop !== "paint") C.v3paintClr = false; showPop(ed, C); paintCursor(C); return; }
       if (ds.v3dq) { commitSun(ed, C, { date: ds.v3dq }); showPop(ed, C); return; }

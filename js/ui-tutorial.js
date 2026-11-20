@@ -70,6 +70,7 @@
         { tab: "Building (BIM)", el: "[data-rgrp='Building (BIM)'] [data-cc='ROOM']", text: "'Room' — कमरे के अंदर क्लिक करें: फ़र्श, स्कर्टिंग, फ़ॉल्स सीलिंग की मात्रा निकलती है।", en: "'Room' — click inside a room: floor, skirting and false ceiling quantities follow." },
         { tab: "Building (BIM)", el: "[data-rgrp='Building (BIM)'] [data-cc='FLOORCOPY']", text: "'Levels' से मंज़िलें बनाएँ, 'Copy floor' से पूरी मंज़िल ऊपर कॉपी करें।", en: "Make storeys with 'Levels'; 'Copy floor' copies a whole floor upward." },
         { el: "[data-cad='v3']", text: "'3D' — बिल्डिंग घुमाकर देखें। Paint से रंग/मटेरियल, Sun से धूप, Render से तस्वीर।", en: "'3D' — orbit the building. Paint for colours / materials, Sun for sunlight, Render for a picture." },
+        { el: "[data-v3m='walk']", text: "3D में '🚶 Walk' — बिल्डिंग के अंदर चलकर देखें। '📏 Measure' — दो बिंदु क्लिक करके नाप लें। '⟳ Spin' — मॉडल धीरे घूमता है।", en: "In 3D: '🚶 Walk' goes through the building, '📏 Measure' measures between two clicked points, '⟳ Spin' turns the model slowly." },
         { el: "[data-cad='qto']", text: "'Σ Quantities' — सारी मात्राएँ SOR आइटम के साथ; एक बटन से एस्टिमेट में भेजें।", en: "'Σ Quantities' — all quantities with their SOR items; send them to an estimate with one button." }
       ]
     },

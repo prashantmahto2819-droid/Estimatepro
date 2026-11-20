@@ -590,10 +590,13 @@ P.prototype.loop=function(){
   if(this.dead) return;
   if(this.lose && !this.cv.isConnected){this.destroy();return;}
   this._raf=requestAnimationFrame(()=>this.loop());
+  if(this.spin&&!this.walk){ const now=performance.now(); this.yaw+=((now-(this._spinT||now))/1000)*0.25; this._spinT=now; this.dirty=true; } else this._spinT=0;
+  if(this.walk&&this._keys&&this._keys.size) this._walkKeys();
   if(!this.dirty) return;
   this.dirty=false;
   this.render(false);
   this._updateCube();
+  if(this.onFrame) this.onFrame();
 };
 
 /* delete VAOs helper */
@@ -636,6 +639,7 @@ P.prototype.setScene=function(sc,keepCam){
 
   /* store raw transparent data for back-to-front sorting */
   this.trRaw=trData.length>0?new Float32Array(trData):null;
+  this.opRaw=opData;   /* kept for ray casting (measure, walk start) */
 
   /* create VBOs */
   if(this.opBuf) gl.deleteBuffer(this.opBuf);
@@ -737,6 +741,7 @@ P.prototype.frame=function(view){
 
 /* camera eye position */
 P.prototype.eye=function(){
+  if(this.walk&&this.we) return this.we.slice();
   const d=this.dist, y=this.yaw, p=this.pitch;
   const cp=Math.cos(p),sp=Math.sin(p),cy=Math.cos(y),sy=Math.sin(y);
   return[this.t[0]+d*cp*sy, this.t[1]-d*cp*cy, this.t[2]+d*sp];
@@ -746,6 +751,10 @@ P.prototype.eye=function(){
 P.prototype.mats=function(){
   const e=this.eye(), w=this.cv.width, h=this.cv.height;
   const asp=w/h||1;
+  if(this.walk&&this.we){   /* first person: look from the eye along yaw / look-pitch */
+    const d=this.walkDir(), nW=0.05, fW=Math.max(600,this.dist*100);
+    return{vp:mul(look(e,[e[0]+d[0],e[1]+d[1],e[2]+d[2]],[0,0,1]),persp(this.walkFov||1.15,asp,nW,fW)),eye:e,near:nW,far:fW};
+  }
   const V=look(e,this.t,[0,0,1]);
   const n=this.dist*0.01, f=this.dist*100;
   let Pr;
@@ -959,7 +968,7 @@ P.prototype.render=function(pick){
   gl.uniform1f(u.uSMs,this.smSize);
   gl.uniform1f(u.uStyle,this.style);
   gl.uniform1f(u.uFog,this.fog?1:0);
-  gl.uniform1f(u.uAmb,0.50);
+  gl.uniform1f(u.uAmb,this.walk?0.85:0.50);   /* brighter fill light indoors while walking */
   gl.uniform1i(u.uK,this.kern);
   if(u.uLinear) gl.uniform1i(u.uLinear,this.linear?1:0);
 
@@ -1276,6 +1285,11 @@ P.prototype.bind=function(){
     }
     const dx=e.clientX-lx, dy=e.clientY-ly;
     lx=e.clientX; ly=e.clientY;
+    if(self.walk){
+      if(btn===0 && !e.shiftKey){ self.yaw+=dx*0.004; self.wpitch=Math.max(-1.4,Math.min(1.4,(self.wpitch||0)-dy*0.004)); }
+      else self.walkMove(dy*0.02,-dx*0.02,0);
+      self.dirty=true; return;
+    }
     if(btn===0 && !e.shiftKey){
       /* orbit */
       self.yaw-=dx*0.005;
@@ -1300,6 +1314,7 @@ P.prototype.bind=function(){
     const dx=Math.abs(e.clientX-x0), dy=Math.abs(e.clientY-y0);
     if(dx<4&&dy<4&&btn===0&&!multi){
       const r=cv.getBoundingClientRect();
+      if(self.measure){ const hp=self.hitPoint(e.clientX-r.left,e.clientY-r.top); if(hp&&self.onMeasure) self.onMeasure(hp); return; }
       const id=self.pickAt(e.clientX-r.left,e.clientY-r.top);
       self.sel=id;
       self.dirty=true;
@@ -1312,18 +1327,84 @@ P.prototype.bind=function(){
     down=touches.length>0; pinch0=0; mid0=null; multi=true;
   });
 
+  cv.tabIndex=0; self._keys=new Set();
+  cv.addEventListener('pointerdown',function(){ if(self.walk) cv.focus({preventScroll:true}); });
+  cv.addEventListener('keydown',function(e){ if(!self.walk) return; const k=e.key.toLowerCase(); if(['w','a','s','d','q','e','arrowup','arrowdown','arrowleft','arrowright'].indexOf(k)>=0){ self._keys.add(k); e.preventDefault(); e.stopPropagation(); } });
+  cv.addEventListener('keyup',function(e){ self._keys.delete(e.key.toLowerCase()); });
+  cv.addEventListener('blur',function(){ self._keys.clear(); });
+
   cv.addEventListener('wheel',function(e){
     e.preventDefault();
     /* wheel in lines (Firefox) or pixels; exponential so a fast spin can never flip or zero the distance */
     const dy=e.deltaMode===1?e.deltaY*33:e.deltaMode===2?e.deltaY*400:e.deltaY;
+    if(self.walk){ self.walkMove(-Math.max(-600,Math.min(600,dy))*0.004,0,0); return; }
     self.dist*=Math.exp(Math.max(-600,Math.min(600,dy))*0.001);
     self.dist=Math.max(0.1,self.dist);
     self.dirty=true;
   },{passive:false});
 };
 
+/* ---------- walk-through (first person) ---------- */
+P.prototype.walkDir=function(){ const y=this.yaw, p=this.wpitch||0, cp=Math.cos(p); return[-Math.sin(y)*cp, Math.cos(y)*cp, Math.sin(p)]; };
+/* on: enter at eye height above floorZ (metres), at pos [x,y] or where the orbit camera looks; off: back to the orbit view */
+P.prototype.setWalk=function(on,floorZ,pos){
+  if(on){
+    if(!this.walk) this._orbit={t:this.t.slice(),yaw:this.yaw,pitch:this.pitch,dist:this.dist,ortho:this.ortho_};
+    const e0=P.prototype.eye.call(Object.assign(Object.create(this),{walk:false}));
+    const z=(floorZ||0)+1.6, far=Math.min(this.dist,8);
+    /* stand a few metres in front of what the orbit camera was looking at, facing it */
+    const dx=this.t[0]-e0[0], dy=this.t[1]-e0[1], L=Math.hypot(dx,dy)||1;
+    this.we=pos?[pos[0],pos[1],z]:[this.t[0]-dx/L*far, this.t[1]-dy/L*far, z];
+    this.wpitch=0; this.ortho_=false; this.walk=true;
+  }else if(this.walk){
+    this.walk=false; const o=this._orbit; if(o){ this.t=o.t; this.yaw=o.yaw; this.pitch=o.pitch; this.dist=o.dist; this.ortho_=o.ortho; }
+  }
+  this.dirty=true;
+};
+/* move: forward, right, up in metres (forward follows the ground, not the look pitch) */
+P.prototype.walkMove=function(f,r,u){
+  if(!this.walk||!this.we) return; const y=this.yaw, fx=-Math.sin(y), fy=Math.cos(y);
+  this.we[0]+=fx*f+fy*r; this.we[1]+=fy*f-fx*r; this.we[2]+=u; this.dirty=true;
+};
+P.prototype._walkKeys=function(){
+  const now=performance.now(), dt=Math.min(0.1,(now-(this._wkT||now))/1000)||0.016; this._wkT=now; const k=this._keys, v=2.2*dt;
+  let f=0,r=0,u=0; if(k.has('w')||k.has('arrowup')) f+=v; if(k.has('s')||k.has('arrowdown')) f-=v; if(k.has('d')) r+=v; if(k.has('a')) r-=v; if(k.has('e')) u+=v; if(k.has('q')) u-=v;
+  if(k.has('arrowleft')){ this.yaw+=1.4*dt; this.dirty=true; } if(k.has('arrowright')){ this.yaw-=1.4*dt; this.dirty=true; }
+  if(f||r||u) this.walkMove(f,r,u);
+};
+
+/* ---------- ray casting: the model point under a screen position (CSS px) ---------- */
+function xfRow(p,m){ const o=[0,0,0,0]; for(let c=0;c<4;c++) o[c]=p[0]*m[c]+p[1]*m[4+c]+p[2]*m[8+c]+p[3]*m[12+c]; return o; }
+P.prototype.project=function(p){   /* model point (m) → CSS px, or null when behind the camera */
+  const c=xfRow([p[0],p[1],p[2],1],this.mats().vp); if(c[3]<=1e-6) return null;
+  return[(c[0]/c[3]*0.5+0.5)*this.cv.clientWidth,(0.5-c[1]/c[3]*0.5)*this.cv.clientHeight];
+};
+P.prototype.hitPoint=function(x,y,noSnap){
+  const m=this.mats(), iv=inv(m.vp); if(!iv) return null;
+  const nx=x/this.cv.clientWidth*2-1, ny=1-y/this.cv.clientHeight*2;
+  const a=xfRow([nx,ny,-1,1],iv), b=xfRow([nx,ny,1,1],iv);
+  const o=[a[0]/a[3],a[1]/a[3],a[2]/a[3]], e=[b[0]/b[3],b[1]/b[3],b[2]/b[3]];
+  let d=[e[0]-o[0],e[1]-o[1],e[2]-o[2]]; const dl=Math.hypot(d[0],d[1],d[2])||1; d=[d[0]/dl,d[1]/dl,d[2]/dl];
+  let best=Infinity, tri=null; const self=this;
+  [this.opRaw,this.trRaw].forEach(function(V){ if(!V) return;
+    for(let i=0;i+3*ST<=V.length;i+=3*ST){
+      if(self.cut<1e8 && V[i+2]>self.cut && V[i+ST+2]>self.cut && V[i+2*ST+2]>self.cut) continue;
+      const ax=V[i],ay=V[i+1],az=V[i+2], e1x=V[i+ST]-ax,e1y=V[i+ST+1]-ay,e1z=V[i+ST+2]-az, e2x=V[i+2*ST]-ax,e2y=V[i+2*ST+1]-ay,e2z=V[i+2*ST+2]-az;
+      const px=d[1]*e2z-d[2]*e2y, py=d[2]*e2x-d[0]*e2z, pz=d[0]*e2y-d[1]*e2x, det=e1x*px+e1y*py+e1z*pz; if(det>-1e-12&&det<1e-12) continue;
+      const id=1/det, tx=o[0]-ax,ty=o[1]-ay,tz=o[2]-az, u=(tx*px+ty*py+tz*pz)*id; if(u<0||u>1) continue;
+      const qx=ty*e1z-tz*e1y, qy=tz*e1x-tx*e1z, qz=tx*e1y-ty*e1x, v=(d[0]*qx+d[1]*qy+d[2]*qz)*id; if(v<0||u+v>1) continue;
+      const t=(e2x*qx+e2y*qy+e2z*qz)*id; if(t>1e-6&&t<best&&!(self.cut<1e8&&o[2]+d[2]*t>self.cut)){ best=t; tri=[[ax,ay,az],[V[i+ST],V[i+ST+1],V[i+ST+2]],[V[i+2*ST],V[i+2*ST+1],V[i+2*ST+2]]]; }
+    }
+  });
+  if(!tri) return null;
+  let p=[o[0]+d[0]*best,o[1]+d[1]*best,o[2]+d[2]*best], snapped=false;
+  if(!noSnap){ let bd=14; for(const c of tri){ const s=this.project(c); if(!s) continue; const dd=Math.hypot(s[0]-x,s[1]-y); if(dd<bd){ bd=dd; p=c; snapped=true; } } }
+  return{p:p,snap:snapped};
+};
+
 /* pan camera target in screen-aligned directions */
 P.prototype.pan=function(dx,dy){
+  if(this.walk) return;
   const e=this.eye(), fwd=nrm(sub(this.t,e));
   const right=nrm(cross(fwd,[0,0,1]));
   const up=cross(right,fwd);

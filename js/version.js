@@ -1,5 +1,5 @@
 /* App version + "what's new" — the super admin is offered to send this on WhatsApp after each upload. Change both with every release. */
-window.EP_VER = "2026.11.20-k";
-window.EP_NOTES = "• CAD Studio: every tab is now arranged in named sections (Structure, Openings, Roof & stairs, Rooms & floors…), and tools that were only on the keyboard — layers, levels, copy / paste, 3D, Σ Quantities — have buttons\n• Measurement sheet: type sizes as 10'6\", 450mm, 30cm or 12ft — they are read as metres; use pi, sqrt and ^ in sums\n• '+ Shape row' adds ready rows: triangle, circle, trapezium, round column, ring, cone, dome, sloping roof, trench, stair waist\n• ⧉ copies a measurement row; Convert has one-tap units (ft, sqft, cft, brass, litre, kg, quintal, tonne, acre, decimal…)\n• Tutorials rewritten: 7 guided tours in Hindi and English, including measurement, roof / parapet / railing and library";
+window.EP_VER = "2026.11.20-l";
+window.EP_NOTES = "• 3D: 🚶 Walk — go through the building at eye level (drag to look, W A S D / arrows or the on-screen buttons to move)\n• 3D: 📏 Measure — click two points on the model; it snaps to corners and shows the distance, plan length and height difference\n• 3D: ⟳ Spin — the model turns slowly for presentations";
 /* pictures of this update: [file in /updates, caption]. Shown to the owner with the WhatsApp "what's new" message. */
-window.EP_PICS = [["updates/k-ribbon.jpg", "CAD Studio tabs in sections"], ["updates/k-measure.jpg", "Measurement: feet-inches, shapes, quick units"], ["updates/k-parapet.jpg", "Railing and parapet designs"], ["updates/k-temple.jpg", "Temple items in 3D"]];
+window.EP_PICS = [["updates/l-walk.jpg", "Walk through the building"], ["updates/l-measure3d.jpg", "Measure in 3D"]];
