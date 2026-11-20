@@ -204,18 +204,30 @@
   });
   cmd("EARTHWORK", ["EW", "LSEC", "XSEC"], async function (ed) { if (ed.onRoad) ed.onRoad(); });
   /* ---------- ASSET: place library items (trees, lights, WCs…) — several clicks, Enter to finish ---------- */
+  /* one library item dropped at p (drag & drop from the Library panel) */
+  B.placeAsset = function (ed, kind, p) {
+    var def = B.ASSET_LIB[kind]; if (!def) return null; ensureBim(ed);
+    var catLay = Object.assign({ Landscape: "L-LAND", Electrical: "E-ELEC", Plumbing: "P-PLUMB", Furniture: "A-FURN", Kitchen: "A-KITCHEN", Finishes: "A-FINISH" }, B.CAT_LAY || {}), rot = ed.astRot || 0;
+    var sn = ed.set.astSnap === false || !B.assetWallSnap ? null : B.assetWallSnap(ed.doc, { kind: kind, rot: rot, lvl: cur(ed) }, p);
+    ed.doc.begin("Place " + def.n); var o = { t: "asset", kind: kind, p: sn ? sn.p : p, rot: sn ? sn.rot : rot, lvl: cur(ed), layer: lay(ed, catLay[def.cat] || "A-ASSET") }; if (kind === "tank") o.cap = 1000;
+    var e = ed.doc.add(o); ed.doc.commit(); ed.lastAsset = kind; return e;
+  };
+  B.assetGhost = function (ed, kind, p) { var rot = ed.astRot || 0, sn = ed.set.astSnap === false || !B.assetWallSnap ? null : B.assetWallSnap(ed.doc, { kind: kind, rot: rot, lvl: cur(ed) }, p); return { t: "asset", kind: kind, p: sn ? sn.p : p, rot: sn ? sn.rot : rot, lvl: cur(ed) }; };
   cmd("ASSET", ["AST", "LIBRARY"], async function (ed) {
     ensureBim(ed); var kinds = Object.keys(B.ASSET_LIB), kind = ed.assetKind && B.ASSET_LIB[ed.assetKind] ? ed.assetKind : null;
     if (!kind) kind = await ed.getKw("Item", kinds, ed.lastAsset || "tree"); ed.assetKind = null; ed.lastAsset = kind;
     var def = B.ASSET_LIB[kind], rot = ed.astRot || 0, sc = 1, cap = 1000, n = 0, catLay = Object.assign({ Landscape: "L-LAND", Electrical: "E-ELEC", Plumbing: "P-PLUMB", Furniture: "A-FURN", Kitchen: "A-KITCHEN", Finishes: "A-FINISH" }, B.CAT_LAY || {}), layer = lay(ed, catLay[def.cat] || "A-ASSET");
     if (kind === "tank") cap = Math.max(200, Math.round(await ed.getNum("Tank capacity (litres)", { def: 1000 })));
+    var snapOf = function (w) { return ed.set.astSnap === false || !B.assetWallSnap ? null : B.assetWallSnap(ed.doc, { kind: kind, rot: rot, sc: sc, lvl: cur(ed) }, w); };
     while (true) {
-      ed.preview = function (w) { return [{ t: "asset", kind: kind, p: w, rot: rot, sc: sc, cap: cap, lvl: cur(ed) }]; };
-      var p = await ed.getPoint("Place " + def.n + " (Enter to finish)", { opt: true, kw: ["Rotate", "Scale"] }); ed.preview = null;
+      ed.preview = function (w) { var sn = snapOf(w); return [{ t: "asset", kind: kind, p: sn ? sn.p : w, rot: sn ? sn.rot : rot, sc: sc, cap: cap, lvl: cur(ed) }]; };
+      var p = await ed.getPoint("Place " + def.n + " — it jumps flush to a wall when close (Enter to finish)", { opt: true, kw: ["Turn", "Rotate", "Scale", "Wallsnap"] }); ed.preview = null;
       if (p == null) break;
+      if (p === "Turn") { rot = ed.astRot = (rot + 90) % 360; continue; }   // quarter turn
       if (p === "Rotate") { rot = ed.astRot = await ed.getNum("Rotation (degrees)", { def: rot }); continue; }
       if (p === "Scale") { sc = await ed.getNum("Scale (1 = standard size)", { def: sc }); continue; }
-      var o = { t: "asset", kind: kind, p: p, rot: rot, lvl: cur(ed), layer: layer }; if (sc !== 1) o.sc = sc; if (kind === "tank") o.cap = cap; ed.doc.add(o); n++;
+      if (p === "Wallsnap") { ed.set.astSnap = ed.set.astSnap === false; ed.say(ed.set.astSnap ? "Items jump to walls." : "Items stay exactly where you click."); continue; }
+      var sn = snapOf(p), o = { t: "asset", kind: kind, p: sn ? sn.p : p, rot: sn ? sn.rot : rot, lvl: cur(ed), layer: layer }; if (sc !== 1) o.sc = sc; if (kind === "tank") o.cap = cap; ed.doc.add(o); n++;
     }
     ed.say(n + " × " + def.n + " placed.");
   });

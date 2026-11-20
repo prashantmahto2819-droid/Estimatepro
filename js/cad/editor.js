@@ -429,7 +429,7 @@
       case "arc": if (k === "c") o.c = p; else if (k === "r") o.r = G.dist(e.c, p); else if (k === "a1") o.a1 = G.ang(e.c, p) * 180 / Math.PI; else o.a2 = G.ang(e.c, p) * 180 / Math.PI; break;
       case "ellipse": o.c = p; break;
       case "dim": o[k] = p; break;
-      default: if (o.p) o.p = p;
+      default: if (o.p) { o.p = p; if (e.t === "asset" && !this.gripAlone && this.set.astSnap !== false && EP.bim && EP.bim.assetWallSnap) { var sn = EP.bim.assetWallSnap(this.doc, e, p); if (sn) { o.p = sn.p; o.rot = sn.rot; } } }
     }
     return o;
   };

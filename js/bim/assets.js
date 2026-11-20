@@ -223,6 +223,24 @@
   B.assetZ = mountZ;
 
   var CAT_FILL = B.CAT_FILL = { Landscape: "rgba(90,160,70,.15)", Plumbing: "rgba(80,160,220,.12)", Electrical: "rgba(220,200,50,.12)", Furniture: "rgba(160,120,60,.15)", Kitchen: "rgba(180,140,80,.12)", Finishes: "rgba(120,140,180,.10)" };
+  /* Wall snapping for library items. Near a wall of its level an item jumps flush against the wall face on the cursor's side:
+     wall-mounted items and sanitary ware turn their back (+y of the symbol) to the wall, everything else just turns parallel
+     to the wall, keeping the nearest quarter turn to its present rotation. Returns { p, rot } or null when no wall is near. */
+  B.assetWallSnap = function (doc, e, p) {
+    var def = A[e.kind]; if (!def || def.cat === "Landscape" || def.mount === "ceiling" || !doc.idx) return null;
+    B.ctx.doc = doc; var s = e.sc || 1, W = (def.w || 1000) * s, D = (def.d || 1000) * s, back = def.mount === "wall" || def.cat === "Plumbing", reach = Math.max(W, D) / 2 + 600, best = null;
+    doc.idx.query(p[0] - reach - 300, p[1] - reach - 300, p[0] + reach + 300, p[1] + reach + 300).forEach(function (w) {
+      if (w.t !== "wall" || (e.lvl && w.lvl !== e.lvl) || (doc.visible && !doc.visible(w))) return;
+      var c = B.wallLine(w), v = G.sub(p, c.a), along = G.dot(v, c.u), dd = G.dot(v, c.n); if (along < 0 || along > c.L) return;
+      var wa = Math.atan2(c.u[1], c.u[0]) * 180 / Math.PI, side = dd >= 0 ? 1 : -1, rot, ext;
+      if (back) { rot = Math.atan2(-c.n[1] * side, -c.n[0] * side) * 180 / Math.PI - 90; ext = D / 2; }
+      else { var k = Math.round(((e.rot || 0) - wa) / 90); rot = wa + k * 90; ext = (((k % 2) + 2) % 2 ? W : D) / 2; }
+      var gap = Math.abs(dd) - w.th / 2 - ext; if (gap > 250 || (best && Math.abs(gap) >= Math.abs(best.gap))) return;   // only when the item is (nearly) touching the wall
+      var half = (back || !(((Math.round((rot - wa) / 90) % 2) + 2) % 2) ? W : D) / 2, al = c.L > 2 * half ? Math.max(half, Math.min(c.L - half, along)) : along;   // keep it on the wall's length
+      best = { gap: gap, p: G.add(G.add(c.a, G.mul(c.u, al)), G.mul(c.n, side * (w.th / 2 + ext))), rot: ((rot % 360) + 360) % 360 };
+    });
+    return best ? { p: best.p, rot: best.rot } : null;
+  };
   B.EXT.asset = {
     plan: function (doc, e) { var def = A[e.kind] || A.tree, X = xf(e), s = e.sc || 1, fillCol = CAT_FILL[def.cat] || "rgba(140,140,140,.1)", fp = rect(X([0, 0]), (def.w || 1000) * s, (def.d || 1000) * s, (e.rot || 0)); return { segs: def.sym(X, e), fill: [{ pts: fp, col: fillCol }], dashed: def.mount === "ceiling" ? G.polySegs(fp, true) : [] }; },
     labels: function (doc, e, h) { return []; },

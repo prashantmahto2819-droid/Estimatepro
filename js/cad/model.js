@@ -95,8 +95,12 @@
   Doc.prototype.lwOf = function (e) { return e.lw == null ? (this.layer(e.layer).lw || 0.25) : e.lw; };
   Doc.prototype.ltOf = function (e) { return e.lt || this.layer(e.layer).lt || "CONTINUOUS"; };
   Doc.prototype.c = function (e) { var c = this.cache.get(e); if (!c) { c = {}; this.cache.set(e, c); } return c; };
-  Doc.prototype.segs = function (e) { var c = this.c(e); if (!c.s) c.s = G.segsOf(e, this.d.blocks); return c.s; };
-  Doc.prototype.bbox = function (e) { var c = this.c(e); if (!c.bb) c.bb = G.bbox(e, this.d.blocks); return c.bb; };
+  /* building elements take their plan outline from "the current document" (EP.bim.ctx.doc). If that was not this document yet
+     (a drawing just opened), their outline came back empty and the empty result was cached — they could not be picked, snapped to
+     or zoomed to until the next edit. So point the context at this document before measuring. */
+  function bimCtx(doc) { var Bm = window.EP && window.EP.bim; if (Bm && Bm.ctx) Bm.ctx.doc = doc; }
+  Doc.prototype.segs = function (e) { var c = this.c(e); if (!c.s) { bimCtx(this); c.s = G.segsOf(e, this.d.blocks); } return c.s; };
+  Doc.prototype.bbox = function (e) { var c = this.c(e); if (!c.bb) { bimCtx(this); c.bb = G.bbox(e, this.d.blocks); } return c.bb; };
   Doc.prototype.extents = function (onlyVisible) {
     var b = [Infinity, Infinity, -Infinity, -Infinity], self = this;
     this.d.ents.forEach(function (e) { if (onlyVisible && !self.visible(e)) return; if (e.t === "xline" || e.t === "ray") return; var x = self.bbox(e); if (isFinite(x[0])) { G.ext(b, [x[0], x[1]]); G.ext(b, [x[2], x[3]]); } });
