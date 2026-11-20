@@ -3,7 +3,7 @@
 (function () {
   "use strict";
   var EP = window.EP, S = EP.S, U = EP.ui, esc = U.esc, CAD = EP.cad, B = EP.bim, G = EP.geom, UN = EP.units;
-  CAD.RIBBON.splice(1, 0, ["Building (BIM)", [["WALL", "Wall"], ["DOOR", "Door"], ["WINDOW", "Window"], ["OPENING", "Opening"], ["COLUMN", "Column"], ["BEAM", "Beam"], ["SLAB", "Slab"], ["FOOTING", "Footing"], ["ROOF", "Roof"], ["STAIR", "Stair"], ["ROOM", "Room"], ["RAILING", "Railing"], ["REBAR", "Rebar"], ["BBS", "BBS"]]]);
+  CAD.RIBBON.splice(1, 0, ["Building (BIM)", [["WALL", "Wall"], ["DOOR", "Door"], ["WINDOW", "Window"], ["OPENING", "Opening"], ["COLUMN", "Column"], ["BEAM", "Beam"], ["SLAB", "Slab"], ["FOOTING", "Footing"], ["ROOF", "Roof"], ["STAIR", "Stair"], ["ROOM", "Room"], ["RAILING", "Railing"], ["FLOORCOPY", "Copy floor"], ["REBAR", "Rebar"], ["BBS", "BBS"]]]);
   CAD.SIDE_TABS.splice(1, 0, ["bim", "Building"]);
   CAD.HOOKS.top.push(function () { return "<span class='bim-top'></span><button type='button' class='btn sec sm' data-cad='iso' title='Toggle isometric 2D view'>◇ Iso</button><button type='button' class='btn sec sm' data-cad='v3' title='3D view: off → split → full'>🧊 3D</button><button type='button' class='btn sec sm' data-cad='qto' title='Quantities from the building model → estimate'>Σ Quantities</button>"; });
 

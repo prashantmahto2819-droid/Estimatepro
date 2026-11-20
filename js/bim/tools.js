@@ -192,6 +192,23 @@
     if (pts.length > 1) ed.doc.add({ t: "railing", pts: pts, h: h, base: base || undefined, lvl: cur(ed), layer: lay(ed, "A-RAIL") });
   });
   cmd("LEVEL", ["LV"], async function (ed) { if (ed.onPanel) ed.onPanel("bim"); });
+  /* ---------- copy the whole floor to another level (typical floors) ---------- */
+  cmd("FLOORCOPY", ["COPYFLOOR", "CF"], async function (ed) {
+    var b = ensureBim(ed), from = B.level(ed.doc.d, cur(ed)), KEEP = { wall: 1, door: 1, window: 1, opening: 1, column: 1, beam: 1, slab: 1, room: 1, railing: 1, stair: 1, asset: 1 };
+    var src = ed.doc.d.ents.filter(function (e) { if (!KEEP[e.t] || !ed.doc.editable(e)) return false; var lv = e.lvl || (B.hostOf(ed.doc, e) || {}).lvl; return lv === from.id; });
+    if (!src.length) { ed.say("Nothing on " + from.name + " to copy."); return; }
+    var others = b.levels.filter(function (l) { return l.id !== from.id; }).sort(function (x, y) { return x.elev - y.elev; }), NEW = "New level above", names = others.map(function (l) { return l.name; }).concat([NEW]), above = B.levelAbove(ed.doc.d, from.id);
+    var pick = await ed.getKw("Copy " + src.length + " element(s) of " + from.name + " to which level? (roofs and footings are not copied)", names, above ? above.name : NEW), to = others.filter(function (l) { return l.name === pick; })[0];
+    if (!to) {   // a new level on top of everything, same storey height as this one
+      var nb = CAD.clone(b), topL = nb.levels.slice().sort(function (x, y) { return y.elev - x.elev; })[0]; to = { id: "L" + Date.now().toString(36), name: "Level " + nb.levels.length, elev: topL.elev + topL.h, h: from.h }; nb.levels.push(to); ed.doc.set("bim", nb);
+    }
+    var busy = ed.doc.d.ents.filter(function (e) { return KEEP[e.t] && e.lvl === to.id; }).length;
+    if (busy && (await ed.getKw(to.name + " already has " + busy + " element(s). Add the copy to them?", ["Yes", "No"], "No")) !== "Yes") { ed.say("Nothing copied."); return; }
+    var idMap = {}, n = 0;
+    src.filter(function (e) { return !e.host; }).forEach(function (e) { var o = CAD.clone(e); delete o.id; o.lvl = to.id; var ne = ed.doc.add(o); idMap[e.id] = ne.id; n++; });
+    src.filter(function (e) { return e.host; }).forEach(function (e) { if (!idMap[e.host]) return; var o = CAD.clone(e); delete o.id; o.host = idMap[e.host]; if (o.lvl) o.lvl = to.id; ed.doc.add(o); n++; });   // doors and windows go to the copied walls
+    ed.say(n + " element(s) copied from " + from.name + " to " + to.name + ". Choose " + to.name + " in the Level list to work on it."); if (ed.onRebar) ed.onRebar();
+  });
   /* ---------- ROAD: centre line like a polyline (or an existing polyline / line), then ground and road levels ---------- */
   cmd("ROAD", ["RD", "ALIGN"], async function (ed) {
     ensureBim(ed); var pts = [], first = await ed.getPoint("Road centre line — start point", { kw: ["Object"] });

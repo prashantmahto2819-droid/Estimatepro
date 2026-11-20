@@ -407,6 +407,11 @@
     });
     return out;
   };
+  /* the point a dragged grip goes to: an object snap wins; otherwise ORTHO keeps the move square to the axes from where the grip was */
+  P.gripPt = function (gp, r) {
+    if (!this.set.ortho || !r || (r.k && r.k !== "free" && r.k !== "grid") || !gp || !gp.p || /^(at|w0|w1)$/.test(gp.k)) return r ? r.p : null;
+    var dx = r.p[0] - gp.p[0], dy = r.p[1] - gp.p[1]; return Math.abs(dx) >= Math.abs(dy) ? [r.p[0], gp.p[1]] : [gp.p[0], r.p[1]];
+  };
   /* remove the corner node under a grip (Delete key while pointing at it) */
   P.removeNode = function (gp) {
     var e = gp && this.doc.get(gp.id); if (!e || !e.pts || !/^v\d+$/.test(gp.k)) return false;
@@ -659,7 +664,7 @@
       if (d.grip) {
         var dragged = !!self.gripDrag; self.hotGrip = null; if (dragged) { self.gripDrag = null; self.preview = null; self.tipEl.hidden = true; }
         if (dragged || Math.hypot(p[0] - d.p[0], p[1] - d.p[1]) > 3) {
-          var r = self.resolve(p[0], p[1]), ed2 = self.gripEdit(d.grip, r.p, !!ev.altKey, true);
+          var r = self.resolve(p[0], p[1]), ed2 = self.gripEdit(d.grip, self.gripPt(d.grip, r), !!ev.altKey, true);
           if (ed2.length) { self.doc.begin("Grip edit"); ed2.forEach(function (x) { self.doc.mod(x.id, x.after); }); self.doc.commit(); if (ed2.length > 1 && !ev.altKey && !self._gripHint) { self._gripHint = 1; self.say("Joined corners moved together. Hold Alt while dragging to move only this one (GRIPLINK turns this off)."); } }
         } else self.gripCmd(d.grip);
         self.hoverGrip = null; self.dirty = true; return;
@@ -701,6 +706,7 @@
   P.toggle = function (k) { this.set[k] = !this.set[k]; if (k === "ortho" && this.set.ortho) this.set.polar = false; if (k === "polar" && this.set.polar) this.set.ortho = false; this.say({ osnap: "Object snap", grid: "Grid", ortho: "Ortho", gsnap: "Grid snap", polar: "Polar tracking", otrack: "Object snap tracking", lwt: "Lineweight display" }[k] + " " + (this.set[k] ? "on" : "off")); this.dirty = true; if (this.onSettings) this.onSettings(); };
   P.move = function (p) {
     this.cursorS = p; var r = (this.prompt && (this.prompt.kind === "point" || this.prompt.kind === "dist")) || this.cmd || this.gripDrag ? this.resolve(p[0], p[1]) : { p: this.s2w(p[0], p[1]), k: "free" };
+    if (this.gripDrag) r = { p: this.gripPt(this.gripDrag, r), k: r.k };
     this.snapPt = r; this.cursorW = r.p; this.curDir = r.dir || null;
     if (!this.prompt || this.prompt.kind === "sel" || this.prompt.kind === "ent") { var h = this.pick(p[0], p[1], this.prompt && this.prompt.filter); this.hover = h ? h.id : null; } else this.hover = null;
     this.hoverGrip = !this.prompt && !this.cmd && !this.gripDrag && this.sel.size ? this.gripAt(p[0], p[1]) : null;
