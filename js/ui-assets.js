@@ -48,7 +48,7 @@
       var def = B.ASSET_LIB[e.kind] || {}, L = B.level(ed.doc.d, e.lvl), zNow = B.assetZ(ed.doc, Object.assign({}, e, { z: null }), def) - L.elev;
       h += "<div class='cad-ph'>" + esc(def.cat || "Item") + " — " + esc(def.n || e.kind) + "</div><div class='libic' style='margin:4px 0'>" + icon(e.kind, 56) + "</div>" + sel("Item", "kind", e.kind, Object.keys(B.ASSET_LIB).map(function (k) { return [k, B.ASSET_LIB[k].cat + " — " + B.ASSET_LIB[k].n]; })) + sel("Level", "lvl", e.lvl, lv) +
         f("Rotation °", "rot", e.rot || 0, "num") + f("Scale (1 = standard)", "sc", e.sc || 1, "num") + (function () {
-          var hh = (def.h || 60) * (e.sc || 1), zb = B.assetZ(ed.doc, e, def) - L.elev, auto = def.mount === "ceiling" ? "under the slab" : def.mount === "wall" ? "on the wall at " + Lm(def.mz || 1200) : "on the floor";
+          var hh = (def.h || 60) * (e.sc || 1), zb = B.assetZ(ed.doc, e, def) - L.elev, auto = def.mount === "top" ? "on top of the slab above" : def.mount === "ceiling" ? "under the slab" : def.mount === "wall" ? "on the wall at " + Lm(def.mz || 1200) : "on the floor";
           var lab = { floor: "Bottom of the item above the floor", fceil: "Gap below the false ceiling (0 = touching)", ceiling: "Gap below the slab (0 = touching)", top: "Above the top of the slab" };
           var rm = e.ref === "fceil" ? B.roomAt(ed.doc, e.p, e.lvl, true) : null;
           return sel("Height is measured from", "ref", e.ref || "", [["", "Automatic — " + auto]].concat(B.MOUNT_REFS)) +

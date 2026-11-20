@@ -233,7 +233,8 @@
     if (e.ref) { var dz = +e.dz || 0, hh = (def.h || 60) * (e.sc || 1), soffit = L.elev + L.h - bs.slabTh;
       if (e.ref === "floor") return L.elev + dz; if (e.ref === "ceiling") return soffit - hh - dz; if (e.ref === "top") return L.elev + L.h + dz;
       if (e.ref === "fceil") return L.elev + B.fceilH(doc, B.roomAt(doc, e.p, e.lvl, true), e.lvl) - hh - dz; }
-    if (e.z != null) return L.elev + e.z; if (def.mount === "ceiling") return L.elev + L.h - bs.slabTh - (def.h || 60); if (def.mount === "wall") return L.elev + (def.mz || 1200); return L.elev + (def.mz || 0); }
+    if (e.z != null) return L.elev + e.z;
+    /* domes, shikhars: on top of the slab above this level */ if (def.mount === "top") return L.elev + L.h;  if (def.mount === "ceiling") return L.elev + L.h - bs.slabTh - (def.h || 60); if (def.mount === "wall") return L.elev + (def.mz || 1200); return L.elev + (def.mz || 0); }
   B.assetZ = mountZ;
 
   var CAT_FILL = B.CAT_FILL = { Landscape: "rgba(90,160,70,.15)", Plumbing: "rgba(80,160,220,.12)", Electrical: "rgba(220,200,50,.12)", Furniture: "rgba(160,120,60,.15)", Kitchen: "rgba(180,140,80,.12)", Finishes: "rgba(120,140,180,.10)" };

@@ -170,7 +170,7 @@
           case "room": prism(M, e.pts, L.elev - 2, L.elev + 3, B.look(e.look && B.LOOKS[e.look] ? e.look : B.FLOOR_LOOK[e.floor || ""] || "ips", e.col), null, 1, true);
             if (e.ceil && B.fceilH) { var zf = L.elev + B.fceilH(doc, e); prism(M, e.pts, zf, zf + 12, B.lookFor(d, "ceiling"), null, null, true); }   // false ceiling board (underside at the set height)
             break;
-          case "railing": for (var k = 0; k + 1 < e.pts.length; k++) { var a2 = e.pts[k], b2 = e.pts[k + 1], len = G.dist(a2, b2), nP = Math.max(1, Math.round(len / 1200)); boxAlong(M, a2, b2, 50, z0 + (e.h || 1000) - 50, z0 + (e.h || 1000), LK("rail", e)); for (var j = 0; j <= nP; j++) box(M, G.lerp(a2, b2, j / nP), 40, 40, 0, z0, z0 + (e.h || 1000), LK("rail", e)); } break;
+          case "railing": B.railMesh(M, e, z0, { d: d, box: box, boxAlong: boxAlong }); break;
         }
       } catch (er) { console.warn("mesh", e.t, er); }
       var str = B.RF_TYPES && B.RF_TYPES[e.t];   // x-ray for the rebar view: structure faint, the rest almost invisible

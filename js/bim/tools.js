@@ -171,20 +171,24 @@
     d.ents.forEach(function (e) { if ((e.t === "roof" || (e.t === "slab" && e.kind !== "floor")) && e.lvl === lv.id && e.off != null && e.off > 0 && (best == null || e.off > best)) best = e.off; });
     return best != null ? best : lv.h;
   }
-  cmd("RAILING", ["RL"], async function (ed) {
-    ensureBim(ed); var base = ed.rlBase || 0, mode = ed.rlMode || "Floor", h = ed.rlH || 1000, lv = B.level(ed.doc.d, cur(ed)), first;
+  async function railingCmd(ed, par) {
+    ensureBim(ed); var isPar = function (id) { return B.railStyle({ style: id }).par; }, style = par ? (ed.ppStyle || "par_solid") : (ed.rlStyle || ""), th = ed.ppTh || 115, word = par ? "Parapet" : "Railing";
+    function extra() { var o = {}; if (style) o.style = style; if (isPar(style) && th !== 115) o.th = th; return o; }
+    var base = ed.rlBase || 0, mode = ed.rlMode || "Floor", h = ed.rlH || 1000, lv = B.level(ed.doc.d, cur(ed)), first;
     function setMode(m, custom) { mode = ed.rlMode = m; base = ed.rlBase = m === "Floor" ? 0 : m === "Roof top" ? roofTop(ed) : custom; ed.wpZ = lv.elev + base; ed.dirty = true; }
     setMode(mode, base);
-    function lbl() { return "Railing start — on " + (mode === "Floor" ? "the floor of this level" : mode === "Roof top" ? "the roof / slab top (+" + Math.round(base) + " mm)" : "+" + Math.round(base) + " mm above the floor") + ", " + Math.round(h) + " mm high"; }
+    function lbl() { return word + " (" + B.railStyle({ style: style }).n.replace(/^(Railing|Parapet) — /, "") + ") start — on " + (mode === "Floor" ? "the floor of this level" : mode === "Roof top" ? "the roof / slab top (+" + Math.round(base) + " mm)" : "+" + Math.round(base) + " mm above the floor") + ", " + Math.round(h) + " mm high"; }
     while (true) {
-      first = await ed.getPoint(lbl() + " — or Around a slab / terrace in one step", { kw: ["Around", "Floor", "Roof top", "Elevation", "Height", "Iso"] });
+      first = await ed.getPoint(lbl() + " — or Around a slab / terrace in one step", { kw: ["Around", "Design", "Floor", "Roof top", "Elevation", "Height"].concat(par ? ["Thickness"] : [], ["Iso"]) });
+      if (first === "Design") { var SN = {}; B.RAIL_STYLES.forEach(function (r) { if (isPar(r[0]) === !!par) SN[r[1].replace(/^(Railing|Parapet) — /, "")] = r[0]; }); var curN = Object.keys(SN).filter(function (k) { return SN[k] === style; })[0]; style = SN[await ed.getKw(word + " design", Object.keys(SN), curN)]; if (style == null) style = par ? "par_solid" : ""; if (par) ed.ppStyle = style; else ed.rlStyle = style; continue; }
+      if (first === "Thickness") { th = ed.ppTh = await ed.getDist("Parapet wall thickness", { def: th }); continue; }
       if (first === "Around") {   // a closed railing all round a slab, flat roof or closed outline, just inside its edge
         var pk = await ed.getEnt("Select the slab, flat roof or closed outline to rail", { filter: function (x) { return ((x.t === "slab" || x.t === "roof" || x.t === "land") && x.pts && x.pts.length > 2) || !!CAD.loopOf(x); } });
-        var src = pk.e, loop = src.pts && src.t !== "pline" ? src.pts.map(function (q) { return [q[0], q[1]]; }) : G.loopPts(CAD.loopOf(src)), ins = G.offset({ t: "pline", pts: ccw(loop).map(function (q) { return [q[0], q[1], 0]; }), closed: true }, -75, [1e12, 1e12]);
+        var src = pk.e, loop = src.pts && src.t !== "pline" ? src.pts.map(function (q) { return [q[0], q[1]]; }) : G.loopPts(CAD.loopOf(src)), ins = G.offset({ t: "pline", pts: ccw(loop).map(function (q) { return [q[0], q[1], 0]; }), closed: true }, -(isPar(style) ? th / 2 : 75), [1e12, 1e12]);
         var rp = (ins && ins.pts && ins.pts.length > 2 ? ins.pts : ccw(loop)).map(function (q) { return [q[0], q[1]]; }); rp.push([rp[0][0], rp[0][1]]);
         var onTop = src.t === "slab" || src.t === "roof", rb = onTop ? (src.off || 0) : base;
-        ed.wpZ = null; ed.doc.add({ t: "railing", pts: rp, h: h, base: rb || undefined, lvl: onTop && src.lvl ? src.lvl : cur(ed), layer: lay(ed, "A-RAIL") });
-        ed.say("Railing placed all round" + (onTop ? " on top of the " + src.t : "") + ", " + Math.round(h) + " mm high."); ed.dirty = true; return;
+        ed.wpZ = null; ed.doc.add(Object.assign({ t: "railing", pts: rp, h: h, base: rb || undefined, lvl: onTop && src.lvl ? src.lvl : cur(ed), layer: lay(ed, "A-RAIL") }, extra()));
+        ed.say(word + " placed all round" + (onTop ? " on top of the " + src.t : "") + ", " + Math.round(h) + " mm high."); ed.dirty = true; return;
       }
       if (first === "Floor") setMode("Floor"); else if (first === "Roof top") { setMode("Roof top"); ed.say("Railing will sit on the roof top (" + Math.round(base) + " mm above this level). Use Iso to pick the roof corners in the isometric view."); }
       else if (first === "Elevation") setMode("Elevation", await ed.getDist("Height of the railing base above this level's floor", { def: base }));
@@ -194,10 +198,12 @@
     }
     var pts = [first];
     try {
-      while (true) { ed.preview = function (w) { return [{ t: "railing", pts: pts.concat([w]), lvl: cur(ed), h: h, base: base }]; }; var p = await ed.getPoint("Next point (Enter to finish)", { opt: true, base: pts[pts.length - 1] }); if (p == null) break; if (typeof p === "string") continue; pts.push(p); }
+      while (true) { ed.preview = function (w) { return [Object.assign({ t: "railing", pts: pts.concat([w]), lvl: cur(ed), h: h, base: base }, extra())]; }; var p = await ed.getPoint("Next point (Enter to finish)", { opt: true, base: pts[pts.length - 1] }); if (p == null) break; if (typeof p === "string") continue; pts.push(p); }
     } finally { ed.preview = null; ed.wpZ = null; ed.dirty = true; }
-    if (pts.length > 1) ed.doc.add({ t: "railing", pts: pts, h: h, base: base || undefined, lvl: cur(ed), layer: lay(ed, "A-RAIL") });
-  });
+    if (pts.length > 1) ed.doc.add(Object.assign({ t: "railing", pts: pts, h: h, base: base || undefined, lvl: cur(ed), layer: lay(ed, "A-RAIL") }, extra()));
+  }
+  cmd("RAILING", ["RL"], function (ed) { return railingCmd(ed, false); });
+  cmd("PARAPET", ["PRP"], function (ed) { return railingCmd(ed, true); });
   cmd("LEVEL", ["LV"], async function (ed) { if (ed.onPanel) ed.onPanel("bim"); });
   /* ---------- dimension the building in one step ---------- */
   cmd("DIMWALLS", ["AUTODIM", "DW"], async function (ed) {

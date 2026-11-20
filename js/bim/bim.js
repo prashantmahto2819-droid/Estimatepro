@@ -134,7 +134,7 @@
     }
     if (e.t === "stair") { var S = stairGeom(e); S.plan.forEach(function (s) { L(s[0], s[1]); }); out.segs.push.apply(out.segs, []); return out; }
     if (e.t === "room") { out.dashed = G.polySegs(e.pts, true); return out; }
-    if (e.t === "railing") { out.segs = G.polySegs(e.pts, false); return out; }
+    if (e.t === "railing") { out.segs = B.railPlan ? B.railPlan(e) : G.polySegs(e.pts, false); return out; }
     return out;
   };
   function polyBox(P) { var b = [Infinity, Infinity, -Infinity, -Infinity]; P.forEach(function (p) { G.ext(b, p); }); return b; }
@@ -430,7 +430,7 @@
       if (lvlR.elev <= 0) push("pcc_floor", "V", Aroom * 75, "PCC under floor 75 mm — " + (e.name || "room"), "", "plinth");
       return rows;
     }
-    if (e.t === "railing") { push("railing", "L", G.segsLength(G.polySegs(e.pts, false)), "Railing / handrail", ""); return rows; }
+    if (e.t === "railing") { if (B.railQty) B.railQty(e, push); else push("railing", "L", G.segsLength(G.polySegs(e.pts, false)), "Railing / handrail", ""); return rows; }
     return rows;
   };
   /* which face of an exterior wall is outside: 0 = left face (A), 1 = right face (B) */

@@ -3,7 +3,7 @@
 (function () {
   "use strict";
   var EP = window.EP, S = EP.S, U = EP.ui, esc = U.esc, CAD = EP.cad, B = EP.bim, G = EP.geom, UN = EP.units;
-  CAD.RIBBON.splice(1, 0, ["Building (BIM)", [["WALL", "Wall"], ["DOOR", "Door"], ["WINDOW", "Window"], ["OPENING", "Opening"], ["COLUMN", "Column"], ["BEAM", "Beam"], ["SLAB", "Slab"], ["FOOTING", "Footing"], ["ROOF", "Roof"], ["STAIR", "Stair"], ["ROOM", "Room"], ["RAILING", "Railing"], ["FLOORCOPY", "Copy floor"], ["DIMWALLS", "Auto dimension"], ["REBAR", "Rebar"], ["BBS", "BBS"]]]);
+  CAD.RIBBON.splice(1, 0, ["Building (BIM)", [["WALL", "Wall"], ["DOOR", "Door"], ["WINDOW", "Window"], ["OPENING", "Opening"], ["COLUMN", "Column"], ["BEAM", "Beam"], ["SLAB", "Slab"], ["FOOTING", "Footing"], ["ROOF", "Roof"], ["STAIR", "Stair"], ["ROOM", "Room"], ["RAILING", "Railing"], ["PARAPET", "Parapet"], ["FLOORCOPY", "Copy floor"], ["DIMWALLS", "Auto dimension"], ["REBAR", "Rebar"], ["BBS", "BBS"]]]);
   CAD.SIDE_TABS.splice(1, 0, ["bim", "Building"]);
   CAD.HOOKS.top.push(function () { return "<span class='bim-top'></span><button type='button' class='btn sec sm' data-cad='iso' title='Toggle isometric 2D view'>◇ Iso</button><button type='button' class='btn sec sm' data-cad='v3' title='3D view: off → split → full'>🧊 3D</button><button type='button' class='btn sec sm' data-cad='qto' title='Quantities from the building model → estimate'>Σ Quantities</button>"; });
 
@@ -42,11 +42,11 @@
   /* --- visual material library popup --- */
   var MAT_CATS = [
     ["paint", "Paints & Wall coverings", /^paint_|^plaster$|^wallpaper_|^gypsum|^concrete_micro$/],
-    ["masonry", "Masonry", /^brick$|^block$|^stone$|^concrete$/],
-    ["stone", "Granite, Marble & Tops", /^granite|^marble|^onyx|^quartz|^corian|^terrazzo$|^kota$/],
+    ["masonry", "Masonry & Sandstone", /^brick$|^block$|^stone$|^concrete$|^sandstone_/],
+    ["stone", "Granite, Marble & Tops", /^granite|^marble|^onyx|^quartz|^corian|^terrazzo$|^kota$|^stone_(kota|jaisalmer|tandur)/],
     ["tile", "Tiles & Flooring", /^tile_|^ips$|^wood_floor/],
     ["wood", "Wood", /^wood/],
-    ["metal", "Metal & Sheet", /^sheet_|^aluminium$|^steel|^chrome$|^brass|^copper$/],
+    ["metal", "Metal & Sheet", /^sheet_|^aluminium|^steel|^chrome$|^brass|^copper$|^wrought_iron$|^corten$|^gold_leaf$|^cast_iron|^ms_powder_/],
     ["roof", "Roofing", /^rooftile$/],
     ["glass", "Glass", /^glass/],
     ["panel", "Panels & Cladding", /^acp_|^hpl_|^wpc_|^stone_cladding|^panel_|^veneer_/],
@@ -153,7 +153,7 @@
       case "roof": h += sel("Type", "kind", e.kind, [["flat", "Flat"], ["shed", "Shed (mono-pitch)"], ["gable", "Gable"], ["hip", "Hip"]]) + sel("Covering", "mat", e.mat, [["rcc", "RCC slab"], ["gi", "GI / colour-coated sheet"], ["tile", "Tiles"], ["puf", "PUF panel"]]) + f("Slope °", "slope", e.slope || 0, "num") + f("Thickness", "th", Lm(e.th)) + f("Base offset from level", "off", Lm(e.off || 0)) + (e.kind === "shed" || e.kind === "gable" ? f("Direction ° (ridge / slope)", "dir", e.dir == null ? "" : e.dir, "num") : "") + ro("Plan area", ed.fmtA(B.area(e.pts))); break;
       case "stair": h += sel("Type", "kind", e.kind, [["straight", "Straight"], ["dogleg", "Dog-legged"]]) + f("Flight width", "w", Lm(e.w)) + f("Risers", "n", e.n, "num") + f("Riser", "R", Lm(e.R)) + f("Tread", "T", Lm(e.T)) + f("Waist slab", "wt", Lm(e.wt || 150)) + f("Direction °", "dir", e.dir || 0, "num") + ro("Total rise", ed.fmt(e.n * e.R)) + ro("Check 2R + T", Math.round(2 * e.R + e.T) + " mm" + (2 * e.R + e.T < 550 || 2 * e.R + e.T > 700 ? " — outside the usual 550–700 comfort range" : " — within 550–700")); break;
       case "room": h += f("Name", "name", e.name || "", "text") + sel("Floor finish", "floor", e.floor || "", [["vitrified", "Vitrified tiles"], ["ceramic", "Ceramic tiles"], ["kota", "Kota stone"], ["granite", "Granite"], ["ips", "IPS / CC flooring"], ["", "None"]]) + f("Skirting height (mm)", "skirt", e.skirt || "", "num") + sel("False ceiling", "ceil", String(!!e.ceil), [["false", "No"], ["true", "Yes"]]) + (e.ceil ? f("False ceiling height above floor (blank = 300 below slab)", "fch", e.fch == null ? "" : Lm(e.fch), "len", { ph: Lm(B.fceilH ? B.fceilH(ed.doc, Object.assign({}, e, { fch: null })) : 0) }) : "") + ro("Area", ed.fmtA(B.area(e.pts))) + ro("Perimeter", ed.fmt(G.segsLength(G.polySegs(e.pts, true)))); break;
-      case "railing": h += f("Height", "h", Lm(e.h || 1000)) + f("Base above level floor (roof top = level height)", "base", Lm(e.base || 0)); break;
+      case "railing": var rst = B.railStyle(e); h += sel("Design", "style", e.style || "", B.RAIL_STYLES) + (rst.par ? f("Wall thickness", "th", Lm(B.railTh(e))) + (e.style === "par_rail" || e.style === "par_glass" ? f("Low wall height (rest is railing / glass)", "ph", Lm(B.railLow(e))) : "") : "") + "<p class='muted small'>Material / colour: use Paint or the look below — e.g. SS, PVD gold, cast iron, powder coat, any paint.</p>" + f("Height", "h", Lm(e.h || 1000)) + f("Base above level floor (roof top = level height)", "base", Lm(e.base || 0)); break;
     }
     h += rfFields(e, ed);
     h += lookFields(e, doc.d);

@@ -107,6 +107,7 @@
     };
     A[id] = def;
   }
+  B.AH.mk = mk;   // the next catalogue file uses the same builder
   var LT = "Lighting", FU = "Furniture", PA = "Partitions", WP = "Wall panelling", FC = "False ceiling", KI = "Kitchen";
   /* rows of slats / legs along x: n pieces of size pw × pd from x0 to x1 */
   function slats(n, x0, x1, y, pw, pd, z0, z1, look) { var o = []; for (var i = 0; i < n; i++) o.push(["b", n > 1 ? x0 + (x1 - x0) * i / (n - 1) : (x0 + x1) / 2, y, pw, pd, z0, z1, look]); return o; }
