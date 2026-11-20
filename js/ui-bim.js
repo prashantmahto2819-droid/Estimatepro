@@ -42,11 +42,11 @@
   /* --- visual material library popup --- */
   var MAT_CATS = [
     ["mypic", "My pictures", /^tex_/],
-    ["paint", "Paints & Wall coverings", /^paint_|^plaster$|^wallpaper_|^gypsum|^concrete_micro$/],
+    ["paint", "Paints, Putty & Wall coverings", /^paint_|^plaster$|^plaster_|^wallpaper_|^gypsum|^concrete_micro$/],
     ["masonry", "Masonry & Sandstone", /^brick$|^block$|^stone$|^concrete$|^sandstone_/],
     ["stone", "Granite, Marble & Tops", /^granite|^marble|^onyx|^quartz|^corian|^terrazzo$|^kota$|^stone_(kota|jaisalmer|tandur)/],
     ["tile", "Tiles & Flooring", /^tile_|^ips$|^wood_floor/],
-    ["wood", "Wood", /^wood/],
+    ["wood", "Wood & Laminate", /^wood|^laminate_/],
     ["metal", "Metal & Sheet", /^sheet_|^aluminium|^steel|^chrome$|^brass|^copper$|^wrought_iron$|^corten$|^gold_leaf$|^cast_iron|^ms_powder_/],
     ["roof", "Roofing", /^rooftile$/],
     ["glass", "Glass", /^glass/],

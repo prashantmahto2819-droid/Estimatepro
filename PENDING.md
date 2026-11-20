@@ -1,6 +1,6 @@
 # Estimate Pro — pending work (kept with the code; not published)
 
-Last updated at version 2026.11.20-x.
+Last updated at version 2026.11.20-y.
 
 ## A. Waiting for the owner
 1. Connect the app's Supabase project (ref starts `eaygozhjsmohfcuiazfm`) to the build session. Then: admin dashboard switches (module on / off), WhatsApp update messages with real pictures, shared cut-out / model library for all users.
@@ -21,6 +21,13 @@ Last updated at version 2026.11.20-x.
    - Sketchfab — https://sketchfab.com/search?features=downloadable&type=models — biggest choice (sanitary ware, sofas, cars); set the licence filter to CC0 or CC BY; avoid NC (non-commercial) ones; download as glTF / GLB.
    - People / tree PNG cut-outs — https://www.gendo.ai/people-png , Viz-People free packs.
    A credits list (author + licence for every CC-BY file) must be kept. (-x: `credits.html` exists and each drawing has File ▾ → Credits for models and pictures. Files shipped with the app must be added to the table in `credits.html`.)
+   Material pictures (tiles, marble, wood, wallpaper, fabric) for "＋ Add your own material picture" and for a built-in picture library:
+   - ambientCG — https://ambientcg.com/list?type=material — CC0, seamless (tiles, marble, wood, plaster, fabric). Download the 1K JPG, use the "Color" picture.
+   - Poly Haven textures — https://polyhaven.com/textures — CC0, seamless.
+   - Share Textures — https://www.sharetextures.com/textures — CC0.
+   - Company tile / laminate / ACP shade cards: use only with the company's or dealer's permission; a straight photo of the real sample taken by the owner is always fine.
+   What to send in the chat, in this order (10–20 files at a time, name each file by what it is, e.g. `wc-wall-hung.glb`, `tile-600x600-beige.jpg`):
+   1) sanitary ware and taps (GLB), 2) furniture — beds, sofas, wardrobes, TV units, doors (GLB), 3) decorative and garden lights (GLB), 4) cars, people, trees (GLB or PNG), 5) material pictures (JPG) with the real width of the area shown, 6) sky / site background (JPG). With each batch say the site it came from and the licence shown there.
 3. Decisions: the 30 quick rates that differ from their analysis (tipper, tanker…); whether 1:30 / 1:40 / 1:60 scales may be used on Design Studio sheets.
 4. Commercial plans (owner will describe).
 
@@ -35,6 +42,12 @@ Last updated at version 2026.11.20-x.
 8. Section box: hide the shadows of cut-away parts; section fill colour.
 9. Select / move / rotate objects directly in 3D.
 10. Slanting outlines with inside corners (hip), gable roofs on slanting outlines, curved roofs, domes as roof elements.
+
+11. Materials: (done in -y: 386 looks — paint shade card, putty / primer / distemper, enamel, textures, tiles, granite, marble, wood, laminate, metal, glass, ACP; any material of a library item can be swapped in Properties.) Still open: picture-based (photo) materials built in for all users (needs the files above), bump / roughness maps, material favourites and search by colour, brand shade codes.
+12. Plaster and façade decoration: (done in -y: 37 pieces — cornices, bands, surrounds, quoins, columns, balusters, jali, kangura.) Still open: mouldings that follow a wall or a drawn line from a start point to an end point with mitred corners (SWEEP command with a profile library), arches and curved pieces, grooves cut into the plaster of a wall face, custom profile drawn by the user.
+13. ACP / POP: (done in -y: ACP sheet finishes for WALLFINISH, 11 ACP pieces, 7 POP ceiling designs with lights.) Still open: ACP panel layout by points on a façade (grid size, groove width, start / end), POP ceiling drawn as an outline inside a room with steps and cove, automatic spot-light grid.
+14. Lights: (done in -y: 30 more decorative / garden lights.) Still open: light colour and strength per fitting in Properties, shadows from fittings, glow (bloom) round lamps, light cones on walls.
+15. Furniture / doors / fittings: parametric sizes (width, height, number of shutters, handle type) for wardrobes, TV units, beds and kitchen units; door designs (panel, flush with grooves, glass, jali) on the door element itself.
 
 ## C. CAD Studio — to build
 1. (done in -x: SHEET puts plan + elevations + sections in one frame at one scale and plots with the title block.) Still open: several sheets per drawing, views at different scales on one sheet, print sets, sheet in portrait.

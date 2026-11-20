@@ -53,6 +53,16 @@
   function f(label, key, val, pt, o) { o = o || {}; return "<label class='cad-f'><span>" + label + "</span><input class='in small' data-pf='b." + key + "' data-pt='" + (pt || "len") + "' value='" + esc(val == null ? "" : val) + "'" + (o.ph ? " placeholder='" + esc(o.ph) + "'" : "") + "></label>"; }
   function sel(label, key, val, opts) { return "<label class='cad-f'><span>" + label + "</span><select class='in small' data-pp='b." + key + "'>" + opts.map(function (o) { return "<option value='" + esc(o[0]) + "'" + (String(o[0]) === String(val) ? " selected" : "") + ">" + esc(o[1]) + "</option>"; }).join("") + "</select></label>"; }
   function ro(label, val) { return "<label class='cad-f'><span>" + label + "</span><input class='in small' value='" + esc(val) + "' readonly></label>"; }
+  /* the materials a library item is built from (found by a dry run of its 3D builder), so each can be swapped per item */
+  var LOOKS_OF = {};
+  B.assetLooks = function (kind) {
+    if (LOOKS_OF[kind]) return LOOKS_OF[kind]; var def = B.ASSET_LIB[kind], ids = [], M = { tri: function () {}, quad: function () {}, edge: function () {}, loop: function () {}, v: [], e: [] };
+    var X = function (p) { return [p[0], p[1]]; }; X.s = 1; X.r = 0; var nop = function () {}, H = { box: nop, prism: nop, boxAlong: nop, look: nop, lights: [], cutouts: [] };
+    try { if (def && def.mesh && !def.cut) def.mesh(M, X, 0, function (id) { if (typeof id === "string" && ids.indexOf(id) < 0) ids.push(id); return [0.5, 0.5, 0.5]; }, H, { kind: kind, p: [0, 0], sc: 1 }); } catch (er) {}
+    return (LOOKS_OF[kind] = ids.filter(function (id) { return B.LOOKS[id] && !/^led_|^deco_/.test(id); }).slice(0, 6));
+  };
+  var MATOPTS = null;
+  function matOpts() { if (MATOPTS && MATOPTS.n === Object.keys(B.LOOKS).length) return MATOPTS.l; var l = Object.keys(B.LOOKS).filter(function (k) { return !/^deco_|^car_|^foliage$|^bark$|^rebar_|^steel_member$/.test(k); }).map(function (k) { return [k, B.LOOKS[k].n]; }).sort(function (a, b) { return a[1] < b[1] ? -1 : 1; }); MATOPTS = { n: Object.keys(B.LOOKS).length, l: l }; return l; }
   var prevFields = CAD.HOOKS.fields;
   CAD.HOOKS.fields = function (e, ed) {
     if (e.t !== "asset" && e.t !== "land" && e.t !== "model3d") return prevFields ? prevFields(e, ed) : "";
@@ -60,7 +70,8 @@
     if (e.t === "asset") {
       var def = B.ASSET_LIB[e.kind] || {}, L = B.level(ed.doc.d, e.lvl), zNow = B.assetZ(ed.doc, Object.assign({}, e, { z: null }), def) - L.elev;
       h += "<div class='cad-ph'>" + esc(def.cat || "Item") + " — " + esc(def.n || e.kind) + "</div><div class='libic' style='margin:4px 0'>" + icon(e.kind, 56) + "</div>" + sel("Item", "kind", e.kind, Object.keys(B.ASSET_LIB).map(function (k) { return [k, B.ASSET_LIB[k].cat + " — " + B.ASSET_LIB[k].n]; })) + sel("Level", "lvl", e.lvl, lv) +
-        f("Rotation °", "rot", e.rot || 0, "num") + f("Scale (1 = standard)", "sc", e.sc || 1, "num") + (function () {
+        f("Rotation °", "rot", e.rot || 0, "num") + f("Scale (1 = standard)", "sc", e.sc || 1, "num") + (function () { var ids = B.assetLooks(e.kind); if (!ids.length) return ""; var mo = matOpts();
+          return "<div class='cad-ph'>Materials of this item</div>" + ids.map(function (id) { return sel(B.LOOKS[id].n, "mat:" + id, e["mat:" + id] || "", [["", "As designed"]].concat(mo)); }).join("") + "<p class='muted small'>Change the wood, laminate, glass, metal, stone or fabric of this one item. Your own material pictures are in the list too. Looks only — the estimate item does not change.</p>"; })() + (function () {
           var hh = (def.h || 60) * (e.sc || 1), zb = B.assetZ(ed.doc, e, def) - L.elev, auto = def.mount === "top" ? "on top of the slab above" : def.mount === "ceiling" ? "under the slab" : def.mount === "wall" ? "on the wall at " + Lm(def.mz || 1200) : "on the floor";
           var lab = { floor: "Bottom of the item above the floor", fceil: "Gap below the false ceiling (0 = touching)", ceiling: "Gap below the slab (0 = touching)", top: "Above the top of the slab" };
           var rm = e.ref === "fceil" ? B.roomAt(ed.doc, e.p, e.lvl, true) : null;
