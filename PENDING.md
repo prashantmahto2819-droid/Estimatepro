@@ -13,6 +13,14 @@ Last updated at version 2026.11.20-u.
      - Lighting & fans, false-ceiling pieces, partitions, doors.
    - People and tree cut-outs as PNG with transparent background (10–20).
    - Optional: furniture / sanitary GLB models, sky pictures (JPG) for the background.
+   Where to download (check the licence shown on each model before using it; keep a note of the author for CC-BY models):
+   - Poly Haven — https://polyhaven.com/models — CC0, realistic furniture and props, glTF download.
+   - Kenney — https://kenney.nl/assets — CC0 packs (furniture kit, car kit, city kit), GLB included, simple low-poly look.
+   - Quaternius — https://quaternius.com — CC0 packs (cars, furniture, nature), glTF.
+   - Poly Pizza — https://poly.pizza — small GLB models; mostly CC-BY (credit needed), some CC0.
+   - Sketchfab — https://sketchfab.com/search?features=downloadable&type=models — biggest choice (sanitary ware, sofas, cars); set the licence filter to CC0 or CC BY; avoid NC (non-commercial) ones; download as glTF / GLB.
+   - People / tree PNG cut-outs — https://www.gendo.ai/people-png , Viz-People free packs.
+   A credits list (author + licence for every CC-BY file) must be kept; the app needs a Credits page before such files are shipped to users.
 3. Decisions: the 30 quick rates that differ from their analysis (tipper, tanker…); whether 1:30 / 1:40 / 1:60 scales may be used on Design Studio sheets.
 4. Commercial plans (owner will describe).
 
