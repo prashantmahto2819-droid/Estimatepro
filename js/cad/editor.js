@@ -335,10 +335,20 @@
 
   /* ---------- grips ---------- */
   P.gripsOf = function (e) {
-    var g = [];
+    var g = [], B = EP.bim;
+    /* corner nodes "v0…" and, on straight edges, a small "add a node here" grip "m0…" in the middle */
+    function verts(pts, closed, mids) {
+      (pts || []).forEach(function (p, i) { g.push({ p: p, k: "v" + i }); });
+      if (mids && pts) for (var i = 0; i < (closed ? pts.length : pts.length - 1); i++) { var a = pts[i], b = pts[(i + 1) % pts.length]; if (!a[2] && G.dist(a, b) > 1e-6) g.push({ p: G.mid(a, b), k: "m" + i, add: true }); }
+    }
     switch (e.t) {
-      case "line": g.push({ p: e.a, k: "a" }, { p: e.b, k: "b" }, { p: G.mid(e.a, e.b), k: "mid" }); break;
-      case "pline": case "spline": case "leader": e.pts.forEach(function (p, i) { g.push({ p: p, k: "v" + i }); }); break;
+      case "line": case "wall": case "beam": g.push({ p: e.a, k: "a" }, { p: e.b, k: "b" }, { p: G.mid(e.a, e.b), k: "mid" }); break;
+      case "pline": verts(e.pts, e.closed, true); break;
+      case "spline": case "leader": case "road": verts(e.pts, false, false); break;
+      case "slab": case "roof": case "room": case "land": verts(e.pts, true, true); break;
+      case "railing": verts(e.pts, false, true); break;
+      case "door": case "window": case "opening": var pl = B && B.place ? B.place(this.doc, e) : null; if (pl) g.push({ p: pl.p, k: "at" }); break;   // slides along its wall
+      case "column": case "footing": case "stair": case "asset": case "model3d": case "dsmodel": if (e.p) g.push({ p: e.p, k: "p" }); break;
       case "circle": g.push({ p: e.c, k: "c" }); [0, 90, 180, 270].forEach(function (a) { g.push({ p: G.polar(e.c, e.r, a * Math.PI / 180), k: "r" }); }); break;
       case "arc": var s = G.segsOf(e)[0]; g.push({ p: e.c, k: "c" }, { p: G.segStart(s), k: "a1" }, { p: G.segEnd(s), k: "a2" }, { p: G.segAt(s, 0.5), k: "r" }); break;
       case "ellipse": g.push({ p: e.c, k: "c" }); break;
@@ -352,18 +362,69 @@
   };
   P.drawGrips = function (c, K) {
     if (this.sel.size > 300) return; var self = this; c.setTransform(this.dpr, 0, 0, this.dpr, 0, 0); c.setLineDash([]);
-    this.sel.forEach(function (id) { var e = self.doc.get(id); if (!e || !self.doc.editable(e)) return; self.gripsOf(e).forEach(function (gp) { var s = self.w2s(gp.p); c.fillStyle = self.hotGrip && self.hotGrip.id === id && self.hotGrip.k === gp.k ? "#ff4d4d" : K.grip; c.fillRect(s[0] - 4, s[1] - 4, 8, 8); c.strokeStyle = "#fff"; c.lineWidth = 1; c.strokeRect(s[0] - 4.5, s[1] - 4.5, 9, 9); }); });
+    var big = this.touchUI ? 6 : 4, hg = this.hotGrip || this.hoverGrip;
+    this.sel.forEach(function (id) { var e = self.doc.get(id); if (!e || !self.doc.editable(e)) return; self.gripsOf(e).forEach(function (gp) {
+      var s = self.w2s(gp.p), hot = hg && hg.id === id && hg.k === gp.k, h = hot ? big + 2 : big; c.lineWidth = 1;
+      if (gp.add) { c.beginPath(); c.arc(s[0], s[1], hot ? h : h - 1, 0, 6.2832); c.fillStyle = hot ? "#ff4d4d" : "rgba(255,255,255,.85)"; c.fill(); c.strokeStyle = K.grip; c.stroke(); if (hot) { c.strokeStyle = "#fff"; c.beginPath(); c.moveTo(s[0] - 3, s[1]); c.lineTo(s[0] + 3, s[1]); c.moveTo(s[0], s[1] - 3); c.lineTo(s[0], s[1] + 3); c.stroke(); } return; }
+      c.fillStyle = hot ? "#ff4d4d" : K.grip; c.fillRect(s[0] - h, s[1] - h, 2 * h, 2 * h); c.strokeStyle = "#fff"; c.strokeRect(s[0] - h - 0.5, s[1] - h - 0.5, 2 * h + 1, 2 * h + 1);
+    }); });
   };
   P.gripAt = function (sx, sy) {
-    var self = this, hit = null; if (this.sel.size > 300) return null;
-    this.sel.forEach(function (id) { if (hit) return; var e = self.doc.get(id); if (!e || !self.doc.editable(e)) return; self.gripsOf(e).forEach(function (gp) { var s = self.w2s(gp.p); if (!hit && Math.abs(s[0] - sx) <= 6 && Math.abs(s[1] - sy) <= 6) hit = { id: id, k: gp.k, p: gp.p }; }); });
+    var self = this, hit = null, tol = this.touchUI ? 16 : 7; if (this.sel.size > 300) return null;   // a finger needs a bigger target than a mouse
+    /* the nearest grip wins; a corner node beats an "add node" grip at the same distance */
+    this.sel.forEach(function (id) { var e = self.doc.get(id); if (!e || !self.doc.editable(e)) return; self.gripsOf(e).forEach(function (gp) { var s = self.w2s(gp.p), d = Math.max(Math.abs(s[0] - sx), Math.abs(s[1] - sy)) + (gp.add ? 2 : 0); if (d <= tol && (!hit || d < hit.d)) hit = { id: id, k: gp.k, p: gp.p, d: d }; }); });
     return hit;
+  };
+  /* other elements whose corner sits on this corner: walls with walls and beams with beams on the same level, railings, lines / polylines on the same layer */
+  P.gripMates = function (gp) {
+    var self = this, doc = this.doc, e = doc.get(gp.id), out = []; if (!e || this.set.linkGrips === false || !/^(a|b|v\d+)$/.test(gp.k)) return out;
+    var fam = function (x) { return x.t === "wall" || x.t === "beam" || x.t === "railing" ? x.t + "|" + (x.lvl || "") : x.t === "line" || x.t === "pline" ? "draw|" + x.layer : null; }, f = fam(e); if (!f) return out;
+    var tol = 1, q = gp.p; if (EP.bim) EP.bim.ctx.doc = doc;
+    doc.idx.query(q[0] - tol, q[1] - tol, q[0] + tol, q[1] + tol).forEach(function (x) {
+      if (x.id === e.id || fam(x) !== f || !doc.visible(x) || !doc.editable(x)) return;
+      var m = self.gripsOf(x).filter(function (g2) { return /^(a|b|v\d+)$/.test(g2.k) && G.dist(g2.p, q) <= tol; })[0]; if (m) out.push({ id: x.id, k: m.k, p: m.p });
+    });
+    return out;
+  };
+  /* everything one grip move changes: the element, the corners joined to it (not with alone = true) and the doors / windows of a wall whose start moved.
+     final = true (on drop): a corner node dropped on its neighbour is removed. Returns [{ id, after }]. */
+  P.gripEdit = function (gp, p, alone, final) {
+    var self = this, doc = this.doc, e = doc.get(gp.id), out = []; if (!e) return out;
+    var plan = gp._plan || (gp._plan = { mates: this.gripMates(gp), hosted: null });
+    if (final && /^v\d+$/.test(gp.k) && e.pts) {
+      var i = +gp.k.slice(1), n = e.pts.length, cl = e.t !== "railing" && e.t !== "road" && (e.t !== "pline" || e.closed), tolW = (this.touchUI ? 12 : 6) / this.view.s;
+      var nb = [i - 1, i + 1].map(function (j) { return cl ? (j + n) % n : j; }).filter(function (j) { return j >= 0 && j < n && j !== i; });
+      if (n > (cl ? 3 : 2) && nb.some(function (j) { return G.dist(e.pts[j], p) <= tolW; })) { var o = CAD.clone(e); o.pts.splice(i, 1); this.say("Node removed."); return [{ id: e.id, after: o }]; }
+    }
+    var list = [{ e: e, k: gp.k, from: gp.p }]; if (!alone) plan.mates.forEach(function (m) { var x = doc.get(m.id); if (x) list.push({ e: x, k: m.k, from: m.p }); });
+    list.forEach(function (it) {
+      var after = self.applyGrip(it.e, it.k, p, it.from); out.push({ id: it.e.id, after: after });
+      if (it.e.t === "wall" && it.k === "a") {   // openings are measured from the wall start: keep them where they are when the start moves
+        var L1 = G.dist(after.a, after.b), dL = L1 - G.dist(it.e.a, it.e.b); if (Math.abs(dL) < 1e-6) return;
+        if (!plan.hosted) { plan.hosted = {}; doc.d.ents.forEach(function (x) { if (x.host) (plan.hosted[x.host] = plan.hosted[x.host] || []).push(x.id); }); }
+        (plan.hosted[it.e.id] || []).forEach(function (hid) { var x = doc.get(hid); if (!x) return; var o2 = CAD.clone(x), hw = (x.w || 0) / 2; o2.at = Math.max(Math.min(hw, L1 / 2), Math.min(L1 - hw, x.at + dL)); out.push({ id: hid, after: o2 }); });
+      }
+    });
+    return out;
+  };
+  /* remove the corner node under a grip (Delete key while pointing at it) */
+  P.removeNode = function (gp) {
+    var e = gp && this.doc.get(gp.id); if (!e || !e.pts || !/^v\d+$/.test(gp.k)) return false;
+    var cl = e.t !== "railing" && e.t !== "road" && (e.t !== "pline" || e.closed); if (e.pts.length <= (cl ? 3 : 2)) { this.say("This outline cannot have fewer nodes."); return true; }
+    var o = CAD.clone(e); o.pts.splice(+gp.k.slice(1), 1); this.doc.begin("Remove node"); this.doc.mod(e.id, o); this.doc.commit(); this.hoverGrip = null; this.say("Node removed."); this.dirty = true; return true;
   };
   P.applyGrip = function (e, k, p, orig) {
     var o = CAD.clone(e), d = G.sub(p, orig);
     switch (e.t) {
-      case "line": if (k === "a") o.a = p; else if (k === "b") o.b = p; else { o.a = G.add(e.a, d); o.b = G.add(e.b, d); } break;
-      case "pline": case "spline": case "leader": var i = +k.slice(1); o.pts[i] = [p[0], p[1]].concat(e.pts[i].length > 2 ? [e.pts[i][2]] : []); break;
+      case "line": case "wall": case "beam": if (k === "a") o.a = p; else if (k === "b") o.b = p; else { o.a = G.add(e.a, d); o.b = G.add(e.b, d); } break;
+      case "pline": case "spline": case "leader": case "road": case "slab": case "roof": case "room": case "land": case "railing":
+        var i = +k.slice(1);
+        if (k.charAt(0) === "m") o.pts.splice(i + 1, 0, [p[0], p[1]].concat(e.pts[i].length > 2 ? [0] : []));   // new node on the edge i → i+1
+        else o.pts[i] = [p[0], p[1]].concat(e.pts[i].length > 2 ? [e.pts[i][2]] : []);
+        break;
+      case "door": case "window": case "opening":
+        var pl = EP.bim && EP.bim.place ? EP.bim.place(this.doc, e) : null; if (pl) { var hw = (e.w || 0) / 2, L = pl.c.L; o.at = Math.max(Math.min(hw, L / 2), Math.min(L - hw, G.dot(G.sub(p, pl.c.a), pl.c.u))); }
+        break;
       case "circle": if (k === "c") o.c = p; else o.r = G.dist(e.c, p); break;
       case "arc": if (k === "c") o.c = p; else if (k === "r") o.r = G.dist(e.c, p); else if (k === "a1") o.a1 = G.ang(e.c, p) * 180 / Math.PI; else o.a2 = G.ang(e.c, p) * 180 / Math.PI; break;
       case "ellipse": o.c = p; break;
@@ -375,7 +436,7 @@
 
   /* ---------- picking ---------- */
   P.pick = function (sx, sy, filter) {
-    if (EP.bim) EP.bim.ctx.doc = this.doc; var w = this.s2w(sx, sy), tol = 6 / this.view.s, doc = this.doc, best = null, self = this;
+    if (EP.bim) EP.bim.ctx.doc = this.doc; var w = this.s2w(sx, sy), tol = (this.touchUI ? 14 : 6) / this.view.s, doc = this.doc, best = null, self = this;
     doc.idx.query(w[0] - tol, w[1] - tol, w[0] + tol, w[1] + tol).forEach(function (e) {
       if (!doc.visible(e) || (self.isolated && !self.isolated.has(e.id)) || (filter && !filter(e))) return;
       var d = self.distTo(e, w); if (d <= tol && (!best || d < best.d || (d === best.d && e.t !== "hatch" && e.t !== "image"))) best = { e: e, d: d };
@@ -574,13 +635,15 @@
         down = null; return;
       }
       if (ev.button === 1 || ev.button === 2 || self.spaceDown || self.panMode) { down = { pan: true, p: p, v: Object.assign({}, self.view) }; self.panning = true; return; }
-      down = { p: p, t: Date.now(), touch: ev.pointerType === "touch" };
+      down = { p: p, t: Date.now(), touch: ev.pointerType === "touch" }; self.touchUI = ev.pointerType === "touch";
       if (!self.prompt || self.prompt.kind === "sel") { var gp = !self.prompt && self.gripAt(p[0], p[1]); if (gp) { down.grip = gp; self.hotGrip = gp; } }
     });
     cv.addEventListener("pointermove", function (ev) {
       var p = pos(ev); if (touches[ev.pointerId]) touches[ev.pointerId] = p;
       if (pinch && Object.keys(touches).length === 2) { var k = Object.keys(touches), a = touches[k[0]], b = touches[k[1]], d = Math.hypot(a[0] - b[0], a[1] - b[1]), c = [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2]; self.zoomAt(c[0], c[1], d / pinch.d); var w0 = self.s2w(pinch.c[0], pinch.c[1]), w1 = self.s2w(c[0], c[1]); self.view.x += w0[0] - w1[0]; self.view.y += w0[1] - w1[1]; pinch.d = d; pinch.c = c; return; }
       if (down && down.pan) { self.view.x = down.v.x - (p[0] - down.p[0]) / self.view.s; self.view.y = down.v.y + (p[1] - down.p[1]) / self.view.s; self.dirty = true; return; }
+      if (down && down.grip && !self.gripDrag && Math.hypot(p[0] - down.p[0], p[1] - down.p[1]) > 3) { var dg = down.grip; self.gripDrag = dg; self.preview = function (w) { return self.gripEdit(dg, w, self.gripAlone).map(function (x) { return x.after; }); }; }
+      if (self.gripDrag) self.gripAlone = !!ev.altKey;
       if (down && !down.grip && (!self.prompt || self.prompt.kind === "sel") && Math.hypot(p[0] - down.p[0], p[1] - down.p[1]) > 6) { if (down.touch && !self.prompt && !self.cmd && self.sel.size === 0 && !self.touchSel) { down.pan = true; down.v = Object.assign({}, self.view); self.panning = true; return; } self.win = { a: down.p, b: p }; }
       self.move(p);
     });
@@ -588,11 +651,18 @@
       var p = pos(ev); delete touches[ev.pointerId]; if (pinch) { if (Object.keys(touches).length < 2) pinch = null; return; }
       if (!down) return; var d = down; down = null; self.panning = false;
       if (d.pan) { self.dirty = true; return; }
-      if (d.grip) { self.hotGrip = null; if (Math.hypot(p[0] - d.p[0], p[1] - d.p[1]) > 3) { var r = self.resolve(p[0], p[1]), e = self.doc.get(d.grip.id); if (e) { self.doc.begin("Grip edit"); self.doc.mod(e.id, self.applyGrip(e, d.grip.k, r.p, d.grip.p)); self.doc.commit(); } } else self.gripCmd(d.grip); self.dirty = true; return; }
+      if (d.grip) {
+        var dragged = !!self.gripDrag; self.hotGrip = null; if (dragged) { self.gripDrag = null; self.preview = null; self.tipEl.hidden = true; }
+        if (dragged || Math.hypot(p[0] - d.p[0], p[1] - d.p[1]) > 3) {
+          var r = self.resolve(p[0], p[1]), ed2 = self.gripEdit(d.grip, r.p, !!ev.altKey, true);
+          if (ed2.length) { self.doc.begin("Grip edit"); ed2.forEach(function (x) { self.doc.mod(x.id, x.after); }); self.doc.commit(); if (ed2.length > 1 && !ev.altKey && !self._gripHint) { self._gripHint = 1; self.say("Joined corners moved together. Hold Alt while dragging to move only this one (GRIPLINK turns this off)."); } }
+        } else self.gripCmd(d.grip);
+        self.hoverGrip = null; self.dirty = true; return;
+      }
       if (self.win) { var w = self.win; self.win = null; var a = self.s2w(w.a[0], w.a[1]), b = self.s2w(w.b[0], w.b[1]), found = self.inWindow(a, b, w.b[0] < w.a[0]); self.addSel(found.map(function (e) { return e.id; }), ev.shiftKey); if (self.prompt && self.prompt.kind === "sel" && self.prompt.single && self.sel.size) self.answer(true); self.dirty = true; return; }
       self.click(p, ev);
     }
-    cv.addEventListener("pointerup", up); cv.addEventListener("pointercancel", function (ev) { delete touches[ev.pointerId]; down = null; pinch = null; self.win = null; self.panning = false; });
+    cv.addEventListener("pointerup", up); cv.addEventListener("pointercancel", function (ev) { delete touches[ev.pointerId]; down = null; pinch = null; self.win = null; self.panning = false; if (self.gripDrag) { self.gripDrag = null; self.preview = null; self.hotGrip = null; self.dirty = true; } });
     cv.addEventListener("pointerleave", function () { self.cursorS = null; self.dirty = true; self.tipEl.hidden = true; });
     cv.addEventListener("dblclick", function (ev) { var p = pos(ev); if (!self.prompt) { var e = self.pick(p[0], p[1]); if (e && self.onEdit) self.onEdit(e); else if (!e) self.zoomExtents(); } });
     // keyboard: typing goes to the command line
@@ -611,7 +681,7 @@
     var fk = { F3: "osnap", F7: "grid", F8: "ortho", F9: "gsnap", F10: "polar", F11: "otrack" }[k];
     if (fk) { ev.preventDefault(); this.toggle(fk); return; }
     if (k === "Escape") { ev.preventDefault(); inp.value = ""; if (this.cmd || this.prompt) this.stop(); else { this.sel.clear(); this.acq = []; this.emitSel(); } this.dirty = true; return; }
-    if (k === "Delete" && !inInput && !this.prompt) { ev.preventDefault(); this.exec("ERASE"); return; }
+    if (k === "Delete" && !inInput && !this.prompt) { ev.preventDefault(); if (this.hoverGrip && /^v\d+$/.test(this.hoverGrip.k) && this.removeNode(this.hoverGrip)) return; this.exec("ERASE"); return; }
     var textPr = this.prompt && this.prompt.kind === "text";
     if (k === "Enter" || (k === " " && !textPr)) {
       ev.preventDefault(); var v = inp.value; inp.value = "";
@@ -625,12 +695,14 @@
   };
   P.toggle = function (k) { this.set[k] = !this.set[k]; if (k === "ortho" && this.set.ortho) this.set.polar = false; if (k === "polar" && this.set.polar) this.set.ortho = false; this.say({ osnap: "Object snap", grid: "Grid", ortho: "Ortho", gsnap: "Grid snap", polar: "Polar tracking", otrack: "Object snap tracking", lwt: "Lineweight display" }[k] + " " + (this.set[k] ? "on" : "off")); this.dirty = true; if (this.onSettings) this.onSettings(); };
   P.move = function (p) {
-    this.cursorS = p; var r = (this.prompt && (this.prompt.kind === "point" || this.prompt.kind === "dist")) || this.cmd ? this.resolve(p[0], p[1]) : { p: this.s2w(p[0], p[1]), k: "free" };
+    this.cursorS = p; var r = (this.prompt && (this.prompt.kind === "point" || this.prompt.kind === "dist")) || this.cmd || this.gripDrag ? this.resolve(p[0], p[1]) : { p: this.s2w(p[0], p[1]), k: "free" };
     this.snapPt = r; this.cursorW = r.p; this.curDir = r.dir || null;
     if (!this.prompt || this.prompt.kind === "sel" || this.prompt.kind === "ent") { var h = this.pick(p[0], p[1], this.prompt && this.prompt.filter); this.hover = h ? h.id : null; } else this.hover = null;
-    var u = this.du(), tip = "", base = this.prompt && this.prompt.base;
+    this.hoverGrip = !this.prompt && !this.cmd && !this.gripDrag && this.sel.size ? this.gripAt(p[0], p[1]) : null;
+    var u = this.du(), tip = "", base = this.gripDrag ? this.gripDrag.p : this.prompt && this.prompt.base;
+    if (this.gripDrag && base) tip = this.fmt(G.dist(base, r.p)) + " < " + UN.trimNum((G.ang(base, r.p) * 180 / Math.PI + 360) % 360, 1) + "°";
     this.coordEl.textContent = this.fmt(r.p[0]) + ", " + this.fmt(r.p[1]);
-    if (base && this.prompt && (this.prompt.kind === "point" || this.prompt.kind === "dist")) tip = (this.prompt.ang ? "Angle " + UN.trimNum(G.ang(base, r.p) * 180 / Math.PI, 1) + "°" : this.fmt(G.dist(base, r.p)) + " < " + UN.trimNum((G.ang(base, r.p) * 180 / Math.PI + 360) % 360, 1) + "°");
+    if (!this.gripDrag && base && this.prompt && (this.prompt.kind === "point" || this.prompt.kind === "dist")) tip = (this.prompt.ang ? "Angle " + UN.trimNum(G.ang(base, r.p) * 180 / Math.PI, 1) + "°" : this.fmt(G.dist(base, r.p)) + " < " + UN.trimNum((G.ang(base, r.p) * 180 / Math.PI + 360) % 360, 1) + "°");
     if (tip) { this.tipEl.hidden = false; this.tipEl.textContent = tip; this.tipEl.style.left = (p[0] + 18) + "px"; this.tipEl.style.top = (p[1] + 18) + "px"; } else this.tipEl.hidden = true;
     this.dirty = true;
   };
@@ -653,7 +725,7 @@
   P.addSel = function (ids, remove) { var self = this; ids = this.expandGroups(ids); ids.forEach(function (id) { var e = self.doc.get(id); if (!e) return; if (remove) self.sel.delete(id); else self.sel.add(id); }); this.emitSel(); };
   P.emitSel = function () { this.dirty = true; if (this.onSel) this.onSel(this.sel); };
   P.selectAll = function () { var self = this; this.sel = new Set(this.doc.d.ents.filter(function (e) { return self.doc.visible(e); }).map(function (e) { return e.id; })); this.emitSel(); };
-  P.gripCmd = function (gp) { var self = this, e = this.doc.get(gp.id); if (!e) return; this.run("GRIP", function (ed) { ed.preview = function (w) { return [ed.applyGrip(e, gp.k, w, gp.p)]; }; return ed.getPoint("Specify stretch point", { base: gp.p }).then(function (q) { ed.doc.mod(e.id, ed.applyGrip(e, gp.k, q, gp.p)); }); }); };
+  P.gripCmd = function (gp) { var self = this, e = this.doc.get(gp.id); if (!e) return; this.run("GRIP", function (ed) { ed.preview = function (w) { return ed.gripEdit(gp, w).map(function (x) { return x.after; }); }; return ed.getPoint(gp.k.charAt(0) === "m" && e.pts ? "New node — click, or type a distance" : "Specify stretch point — click, or type a distance", { base: gp.p }).then(function (q) { ed.gripEdit(gp, q).forEach(function (x) { ed.doc.mod(x.id, x.after); }); }); }); };
   P.undo = function () { if (this.cmd) { this.stop(true); } var l = this.doc.undo(); this.say(l != null ? "Undo " + (l || "") : "Nothing to undo"); this.cleanSel(); };
   P.redo = function () { var l = this.doc.redo(); this.say(l != null ? "Redo " + (l || "") : "Nothing to redo"); this.cleanSel(); };
   P.cleanSel = function () { var self = this; Array.from(this.sel).forEach(function (id) { if (!self.doc.get(id)) self.sel.delete(id); }); this.emitSel(); };

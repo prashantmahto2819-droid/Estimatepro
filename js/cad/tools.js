@@ -360,6 +360,7 @@
       if (ed.offCur) o.layer = ed.doc.d.cur.layer; ed.doc.add(o);
     }
   });
+  cmd("GRIPLINK", [], function (ed) { ed.set.linkGrips = ed.set.linkGrips === false; ed.say(ed.set.linkGrips ? "Joined corners move together (hold Alt while dragging to move one only)." : "Each corner now moves on its own."); });
   cmd("TRIM", ["TR"], async function (ed) {
     clearSel(ed); ed.say("Cutting edges: all visible objects. Pick the part to remove.");
     while (true) {
