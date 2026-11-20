@@ -3,6 +3,11 @@
 This file is for the people maintaining the app. It is not published with the site (see `.assetsignore`).
 The text users see is `EP_NOTES` in `js/version.js`.
 
+## 2026.11.21-z
+- `js/bim/runs.js` (new): BIM type `run` (`B.TYPES.run`, `B.EXT.run`: plan, xform, qty, mesh), catalogue `B.RUNS` — profile family (`fam: "p"`, stepped profile `pr` swept with mitred corners by `offsetPath`) and cladding family (`fam: "c"`, generators `batten` and `grid`). Entity: `{kind, pts, closed, side, z, h, mw, rh, led, ledLook, look, noq}`. LED modes `B.RUN_LED`; LED length `B.runLedLen`; point lights pushed to `H.lights`. Qty: profile = L (keys `run_cornice`, `run_band`, `skirting`, `false_ceiling`), cladding = A (`wall_panel`, `acp_panel`, `stone_veneer`), LED = L (`led_strip`). `run_cornice`, `run_band`, `led_strip` have no SOR mapping yet. Commands RUN (MOULDING, CORNICE, LEDLINE, SKIRTING) and CLADDING (CLAD, WPC, ACP, LOUVRE) with Type / Flip / Undo / Close. Properties in `ui-assets.js`.
+- Shader pattern 16 (`PT.emit`): surface never darker than 1.2 × its colour; all `led_*` looks and `lamp` use it.
+- Cladding runs do not cut round doors / windows and do not follow a wall when the wall moves.
+
 ## 2026.11.20-y
 - `js/bim/assets8.js` (new): 164 more looks (paint shade card `paint_*`, exterior, enamel, putty, primer, distemper, lime wash, stucco, `plaster_pop_white`, `plaster_grc`, tiles, granite, marble, sandstone, cladding, wood, laminate, metals, glass, LED colours, ACP finishes) — added only when the id is free (`add`). New categories "Plaster & façade decoration" (37, key `plaster_decor`, `mould()` stepped profiles) and "ACP & façade" (11, key `acp_panel`); 30 lights (`lt_*`), 7 POP ceilings (`fc_*`), 11 taps (`tap_*`, key `tap_fitting`). `B.FIN_LOOKS_MORE` → `wallfin.js` appends materials to the wall-finish kinds.
 - Material swap per library item: entity property `mat:<look id>` = replacement look, applied in `B.EXT.asset.mesh` (`LK`); Properties lists the item's looks from a dry run (`B.assetLooks`). LED looks are not swappable. Keys `plaster_decor` and `tap_fitting` have no SOR mapping yet.

@@ -66,6 +66,7 @@
   add("led_green", { n: "LED — green", c: "#8dffa0", p: PT.plain, g: 0.2 });
   add("led_pink", { n: "LED — pink", c: "#ff8fc8", p: PT.plain, g: 0.2 });
 
+  Object.keys(B.LOOKS).forEach(function (k) { if (/^led_/.test(k) || k === "lamp") B.LOOKS[k].p = PT.emit; });   /* light sources glow: the shader never shades them darker than their colour */
   /* ---------- cement-plaster and façade decoration ---------- */
   var PD = "Plaster & façade decoration", W = "plaster_pop_white", Gc = "plaster_grc";
   B.CAT_FILL = Object.assign(B.CAT_FILL || {}, (function () { var o = {}; o[PD] = "rgba(200,190,170,.16)"; return o; })());

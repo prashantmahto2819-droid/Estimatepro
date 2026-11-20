@@ -199,7 +199,7 @@ void main(){
     lit+=uSunCol*spec*gloss*sh;
   }
 
-  col*=lit;
+  if(pi==16 && uStyle<0.5) col*=max(lit,vec3(1.2)); else col*=lit;   /* 16 = light-giving surface (LED, lamp): never darker than its own colour */
 
   /* selection highlight */
   if(uSel>0.5 && abs(vI-uSel)<0.5) col=mix(col,vec3(0.2,0.6,1.0),0.35);

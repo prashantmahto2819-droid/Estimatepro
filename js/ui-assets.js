@@ -65,7 +65,7 @@
   function matOpts() { if (MATOPTS && MATOPTS.n === Object.keys(B.LOOKS).length) return MATOPTS.l; var l = Object.keys(B.LOOKS).filter(function (k) { return !/^deco_|^car_|^foliage$|^bark$|^rebar_|^steel_member$/.test(k); }).map(function (k) { return [k, B.LOOKS[k].n]; }).sort(function (a, b) { return a[1] < b[1] ? -1 : 1; }); MATOPTS = { n: Object.keys(B.LOOKS).length, l: l }; return l; }
   var prevFields = CAD.HOOKS.fields;
   CAD.HOOKS.fields = function (e, ed) {
-    if (e.t !== "asset" && e.t !== "land" && e.t !== "model3d") return prevFields ? prevFields(e, ed) : "";
+    if (e.t !== "asset" && e.t !== "land" && e.t !== "model3d" && e.t !== "run") return prevFields ? prevFields(e, ed) : "";
     var b = B.ensure(ed.doc.d), lv = b.levels.map(function (l) { return [l.id, l.name]; }), Lm = function (v) { return v == null ? "" : ed.fmt(v); }, h = "";
     if (e.t === "asset") {
       var def = B.ASSET_LIB[e.kind] || {}, L = B.level(ed.doc.d, e.lvl), zNow = B.assetZ(ed.doc, Object.assign({}, e, { z: null }), def) - L.elev;
@@ -82,6 +82,14 @@
             ro("Result: bottom / top above floor", Lm(Math.round(zb)) + " / " + Lm(Math.round(zb + hh)));
         })() + (e.kind === "tank" ? f("Capacity (litres)", "cap", e.cap || 1000, "num") + ro("Diameter × height", Lm(B.tankD(e)) + " × " + Lm(Math.round(B.tankD(e) * 1.15))) : "") +
         "<p class='muted small'>SOR item: " + esc(sorOf(ed.doc.d, def.key)) + "</p>";
+    } else if (e.t === "run") {
+      var RD = B.RUNS[e.kind] || B.RUNS.band, fam = RD.fam, mo2 = matOpts();
+      h += "<div class='cad-ph'>" + (fam === "p" ? "Moulding / light line" : "Cladding") + " — " + esc(RD.n) + "</div>" + sel("Type", "kind", e.kind, Object.keys(B.RUNS).filter(function (k) { return B.RUNS[k].fam === fam; }).map(function (k) { return [k, B.RUNS[k].n]; })) + sel("Level", "lvl", e.lvl, lv) +
+        sel("Stands out on", "side", +e.side === -1 ? "-1" : "1", [["1", "Right of the line (start → end)"], ["-1", "Left of the line"]]) + f(fam === "p" ? "Underside above the floor" : "Starts above the floor", "z", Lm(e.z == null ? RD.z : e.z)) +
+        (fam === "c" ? f("Height of the cladding", "h", Lm(e.h || RD.h)) + f(RD.gen === "batten" ? "Spacing of the ribs (centre to centre)" : "Panel width", "mw", Lm(e.mw || RD.mw)) + (RD.gen === "grid" ? f("Panel height (0 = one piece full height)", "rh", Lm(e.rh != null ? e.rh : RD.rh)) : "") + sel("LED lights", "led", e.led || "", B.RUN_LED) : "") +
+        (fam === "c" || RD.led ? sel("LED colour", "ledLook", e.ledLook || "", [["", "Automatic"]].concat(B.RUN_LEDLOOKS.map(function (k) { return [k, B.LOOKS[k].n]; }))) : "") +
+        sel("Material", "look", e.look || "", [["", "As designed — " + ((B.LOOKS[RD.look] || {}).n || RD.look)]].concat(mo2)) + sel("Count in the estimate (Σ Quantities)", "noq", e.noq === true ? "true" : "", [["", "Yes"], ["true", "No — show only"]]) +
+        ro("Length", (B.runLen(e) / 1000).toFixed(2) + " m") + (B.runLedLen(e) > 0 ? ro("LED length", (B.runLedLen(e) / 1000).toFixed(2) + " m") : "") + "<p class='muted small'>SOR item: " + esc(sorOf(ed.doc.d, RD.key)) + "</p>";
     } else if (e.t === "land") {
       h += "<div class='cad-ph'>Landscape area</div>" + sel("Type", "kind", e.kind || "lawn", Object.keys(B.LAND).map(function (k) { return [k, B.LAND[k][0]]; })) + sel("Level", "lvl", e.lvl, lv) + ro("Area", (B.area(e.pts) / 1e6).toFixed(2) + " m²") + "<p class='muted small'>SOR item: " + esc(sorOf(ed.doc.d, "land_" + (e.kind || "lawn"))) + "</p>";
     } else {
@@ -89,7 +97,7 @@
       h += "<div class='cad-ph'>Imported 3D model</div>" + f("Name", "name", e.name || a.name || "", "text") + sel("Level", "lvl", e.lvl, lv) + f("Rotation °", "rot", e.rot || 0, "num") + f("Scale (model units → m)", "sc", e.sc || 1, "num") + f("Base height above the level", "z", Lm(e.z || 0)) + sel("Count in quantities", "count", String(e.count !== false), [["true", "Yes (1 no.)"], ["false", "No"]]) +
         (g ? ro("Size (m)", ((g.bbox[3] - g.bbox[0]) * (e.sc || 1)).toFixed(2) + " × " + ((g.bbox[4] - g.bbox[1]) * (e.sc || 1)).toFixed(2) + " × " + ((g.bbox[5] - g.bbox[2]) * (e.sc || 1)).toFixed(2)) + ro("Triangles", Math.round(g.n / 3).toLocaleString("en-IN") + (g.truncated ? " (cut at the limit)" : "")) : "<p class='muted small'>Model data is loading…</p>");
     }
-    var q = B.qty(ed.doc, e); if (q.length) h += "<div class='cad-ph'>Quantities</div><div class='bimq'>" + q.map(function (r) { return "<div><span>" + esc(r.label) + "</span><b>" + (r.dim === "A" ? (r.v / 1e6).toFixed(2) + " m²" : r.dim === "V" ? (r.v / 1e6).toFixed(0) + " litre" : r.v + " no.") + "</b></div>"; }).join("") + "</div>";
+    var q = B.qty(ed.doc, e); if (q.length) h += "<div class='cad-ph'>Quantities</div><div class='bimq'>" + q.map(function (r) { return "<div><span>" + esc(r.label) + "</span><b>" + (r.dim === "A" ? (r.v / 1e6).toFixed(2) + " m²" : r.dim === "L" ? (r.v / 1000).toFixed(2) + " m" : r.dim === "V" ? (r.v / 1e6).toFixed(0) + " litre" : r.v + " no.") + "</b></div>"; }).join("") + "</div>";
     return h;
   };
 

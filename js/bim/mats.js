@@ -8,7 +8,7 @@
   "use strict";
   var EP = window.EP, B = EP.bim;
   /* pattern ids understood by the shader (view3d.js) */
-  var PT = { plain: 0, brick: 1, block: 2, stone: 3, concrete: 4, paint: 5, tile: 6, wood: 7, sheet: 8, rooftile: 9, grass: 10, granite: 11, glass: 12, marble: 13, paver: 14, soil: 15 };
+  var PT = { plain: 0, brick: 1, block: 2, stone: 3, concrete: 4, paint: 5, tile: 6, wood: 7, sheet: 8, rooftile: 9, grass: 10, granite: 11, glass: 12, marble: 13, paver: 14, soil: 15, emit: 16 };
   B.PT = PT;
   /* s = pattern size in metres (tile size, plank width…); g = gloss 0–1; a = opacity */
   B.LOOKS = {
