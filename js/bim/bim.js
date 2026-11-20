@@ -139,9 +139,15 @@
   B.polyBox = polyBox;
   /* gable / hip ridge for a (near) rectangular outline */
   function roofRidge(e) {
-    var P = e.pts; if (!P || P.length < 4) return null; var bb = polyBox(P), W = bb[2] - bb[0], H = bb[3] - bb[1], along = e.dir != null ? Math.abs(Math.cos(e.dir * Math.PI / 180)) > 0.5 : W >= H, cy = (bb[1] + bb[3]) / 2, cx = (bb[0] + bb[2]) / 2, half = (along ? H : W) / 2;
-    if (along) { var a = [bb[0] + (e.kind === "hip" ? half : 0), cy], b = [bb[2] - (e.kind === "hip" ? half : 0), cy]; return { a: a, b: b, half: half, along: true, hips: [[[bb[0], bb[1]], a], [[bb[0], bb[3]], a], [[bb[2], bb[1]], b], [[bb[2], bb[3]], b]] }; }
-    var a2 = [cx, bb[1] + (e.kind === "hip" ? half : 0)], b2 = [cx, bb[3] - (e.kind === "hip" ? half : 0)]; return { a: a2, b: b2, half: half, along: false, hips: [[[bb[0], bb[1]], a2], [[bb[2], bb[1]], a2], [[bb[0], bb[3]], b2], [[bb[2], bb[3]], b2]] };
+    var P = e.pts; if (!P || P.length < 4) return null;
+    // frame of the outline = direction of its longest edge, folded to within ±45° of the drawing axes (0 for an axis-parallel outline)
+    var th = 0, best = 0, Q = Math.PI / 2; for (var i = 0; i < P.length; i++) { var p = P[i], q = P[(i + 1) % P.length], l = G.dist(p, q); if (l > best + 1e-6) { best = l; th = Math.atan2(q[1] - p[1], q[0] - p[0]); } }
+    th = ((th % Q) + Q) % Q; if (th > Q / 2) th -= Q; if (Math.abs(th) < 1e-4) th = 0;
+    var c = Math.cos(th), s = Math.sin(th), toL = function (p) { return [p[0] * c + p[1] * s, -p[0] * s + p[1] * c]; }, toW = function (p) { return th ? [p[0] * c - p[1] * s, p[0] * s + p[1] * c] : p; };
+    var bb = polyBox(th ? P.map(toL) : P), W = bb[2] - bb[0], H = bb[3] - bb[1], along = e.dir != null ? Math.abs(Math.cos(e.dir * Math.PI / 180 - th)) > 0.5 : W >= H, cy = (bb[1] + bb[3]) / 2, cx = (bb[0] + bb[2]) / 2, half = (along ? H : W) / 2, hip = e.kind === "hip" ? half : 0;
+    var C = [[bb[0], bb[1]], [bb[2], bb[1]], [bb[2], bb[3]], [bb[0], bb[3]]].map(toW);   // corners of the frame: 00, 10, 11, 01
+    var a = toW(along ? [bb[0] + hip, cy] : [cx, bb[1] + hip]), b = toW(along ? [bb[2] - hip, cy] : [cx, bb[3] - hip]);
+    return { a: a, b: b, half: half, along: along, c: C, hips: along ? [[C[0], a], [C[3], a], [C[1], b], [C[2], b]] : [[C[0], a], [C[1], a], [C[3], b], [C[2], b]] };
   }
   B.roofRidge = roofRidge;
   /* stair: steps along dir from p; dog-leg turns back after a landing */

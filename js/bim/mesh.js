@@ -126,8 +126,8 @@
       return;
     }
     var R = B.roofRidge(e); if (!R) { prism(M, P, zBase - th, zBase, col, null, null, false, under); return; }
-    var bb = B.polyBox(P), zr = zBase + R.half * tn, x0 = bb[0], y0 = bb[1], x1 = bb[2], y1 = bb[3];
-    var c00 = [x0, y0], c10 = [x1, y0], c11 = [x1, y1], c01 = [x0, y1], ra = R.a, rb = R.b, Z = function (p, z) { return v3(p, z); };
+    var zr = zBase + R.half * tn;
+    var c00 = R.c[0], c10 = R.c[1], c11 = R.c[2], c01 = R.c[3], ra = R.a, rb = R.b, Z = function (p, z) { return v3(p, z); };
     function face(pts, zs) { if (pts.length === 3) { M.tri(Z(pts[0], zs[0]), Z(pts[1], zs[1]), Z(pts[2], zs[2]), col); M.tri(Z(pts[0], zs[0] - th), Z(pts[2], zs[2] - th), Z(pts[1], zs[1] - th), col); } else { M.quad(Z(pts[0], zs[0]), Z(pts[1], zs[1]), Z(pts[2], zs[2]), Z(pts[3], zs[3]), col); M.quad(Z(pts[0], zs[0] - th), Z(pts[3], zs[3] - th), Z(pts[2], zs[2] - th), Z(pts[1], zs[1] - th), col); } for (var i = 0; i < pts.length; i++) M.edge(Z(pts[i], zs[i]), Z(pts[(i + 1) % pts.length], zs[(i + 1) % pts.length])); }
     if (R.along) {
       face([c00, c10, rb, ra], [zBase, zBase, zr, zr]); face([c11, c01, ra, rb], [zBase, zBase, zr, zr]);

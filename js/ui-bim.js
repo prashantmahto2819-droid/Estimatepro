@@ -249,14 +249,15 @@
     C.v3mode = C.v3mode === "split" ? "full" : C.v3mode === "full" ? "off" : "split";
     var body = C.root.querySelector(".cad-body"); body.classList.toggle("v3split", C.v3mode === "split"); body.classList.toggle("v3full", C.v3mode === "full");
     if (C.v3mode !== "off") {
-      var h = v3host(C); if (!C.v3 || C.v3.dead) { C.v3 = new B.View3D(h.querySelector(".v3-host canvas")); if (!C.v3.ok) { console.warn("View3D init failed"); return; } C.v3.onPick = function (id) { if (!id) { ed.sel.clear(); ed.emitSel(); return; } var e = ed.doc.get(id); if (!e) return; var lv = e.lvl || (B.hostOf(ed.doc, e) || {}).lvl, bb = bim(ed); if (lv && lv !== bb.cur && !bb.showAll) { setBim(ed, function (x) { x.cur = lv; }, "Level"); } ed.sel = new Set([id]); ed.emitSel(); C.panel = "props"; CAD.ui.renderPanels(); }; }
-      setTimeout(function () { try { C.v3.resize(); build3d(ed, C); ed.resize(); C.v3.frame(); } catch (er) { console.error("3D init:", er); } }, 60);
+      var h = v3host(C), fresh = false; if (!C.v3 || C.v3.dead) { fresh = true; C.v3 = new B.View3D(h.querySelector(".v3-host canvas")); if (!C.v3.ok) { console.warn("View3D init failed"); U.toast("The 3D view needs WebGL 2 — it is not available in this browser / device."); return; } C.v3.onPick = function (id) { if (!id) { ed.sel.clear(); ed.emitSel(); return; } var e = ed.doc.get(id); if (!e) return; var lv = e.lvl || (B.hostOf(ed.doc, e) || {}).lvl, bb = bim(ed); if (lv && lv !== bb.cur && !bb.showAll) { setBim(ed, function (x) { x.cur = lv; }, "Level"); } ed.sel = new Set([id]); ed.emitSel(); C.panel = "props"; CAD.ui.renderPanels(); }; }
+      setTimeout(function () { try { C.v3.resize(); build3d(ed, C); ed.resize(); if (fresh) C.v3.frame(); } catch (er) { console.error("3D init:", er); } }, 60);
     } else setTimeout(function () { ed.resize(); }, 30);
     var btn = C.root.querySelector("[data-cad=v3]"); if (btn) btn.textContent = { off: "🧊 3D", split: "🧊 3D: split", full: "🧊 3D: full" }[C.v3mode];
   };
   var t3 = 0;
   CAD.HOOKS.change.push(function (ed, C) { topBar(ed, C); if (C.v3 && C.v3.ok && C.v3mode && C.v3mode !== "off") { clearTimeout(t3); t3 = setTimeout(function () { build3d(ed, C); }, 350); } });
   CAD.HOOKS.wire.push(function (ed, C) {
+    if (C.v3 && C.v3.destroy) { try { C.v3.lose = true; C.v3.destroy(); } catch (er) { /* the old view is gone either way */ } }
     C.v3 = null; C.v3mode = "off"; topBar(ed, C); ed._ctx = C;
     ed.on3d = function () { CAD.ACTIONS.v3(ed, C); }; ed.onQto = function () { CAD.ACTIONS.qto(ed, C); }; ed.onBbs = function () { bbsDlg(ed, C); }; ed.onRebar = function () { setTimeout(function () { CAD.ui.renderPanels(); }, 0); };
     var sel0 = ed.onSel; ed.onSel = function (s) { if (sel0) sel0(s); syncSel(ed, C); };

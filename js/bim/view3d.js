@@ -81,8 +81,9 @@ const vec2 poisson[16]=vec2[16](
 float shadow(){
   if(uShadow<0.5) return 1.0;
   vec3 lp=vL*0.5+0.5;
-  if(lp.z>1.0) return 1.0;
-  float bias=0.003, spread=float(uK)*1.2/uSMs, s=0.0;
+  if(lp.z>1.0||lp.x<0.0||lp.x>1.0||lp.y<0.0||lp.y>1.0) return 1.0;
+  float nl=clamp(dot(normalize(vN),uSun),0.0,1.0);
+  float bias=mix(0.0016,0.0004,nl), spread=float(uK)*1.2/uSMs, s=0.0;
   for(int i=0;i<16;i++){
     vec2 off=poisson[i]*spread;
     float d=texture(uSM,lp.xy+off).r;
@@ -182,7 +183,7 @@ void main(){
   col*=lit;
 
   /* selection highlight */
-  if(abs(vI-uSel)<0.5) col=mix(col,vec3(0.2,0.6,1.0),0.35);
+  if(uSel>0.5 && abs(vI-uSel)<0.5) col=mix(col,vec3(0.2,0.6,1.0),0.35);
 
   /* fog */
   if(uFog>0.5){
@@ -342,13 +343,19 @@ void main(){
 
 
 /* ── View3D class ─────────────────────────────────── */
-const P=B.View3D=function(canvas){
+const P=B.View3D=function(canvas,opts){
+  opts=opts||{};
   this.ok=false; this.dead=false;
+  /* a host element (dialog previews) gets its own canvas */
+  if(canvas && typeof canvas.getContext!=='function'){
+    const host=canvas; canvas=document.createElement('canvas');
+    canvas.style.cssText='display:block;width:100%;height:100%;touch-action:none';
+    host.appendChild(canvas);
+  }
   this.cv=canvas;
-  const gl=canvas.getContext('webgl2',{antialias:true,preserveDrawingBuffer:true,alpha:false,premultipliedAlpha:false});
+  const gl=canvas&&canvas.getContext('webgl2',{antialias:true,preserveDrawingBuffer:true,alpha:false,premultipliedAlpha:false});
   if(!gl){console.warn('View3D: WebGL2 not available');this.dead=true;return;}
   this.gl=gl;
-  console.log('View3D: GL context OK');
 
   /* compile shader programs */
   this.mp=this.prog(gl,VS,FS);   /* main */
@@ -370,10 +377,13 @@ const P=B.View3D=function(canvas){
   this.ortho_=false; this.fov=45*Math.PI/180;
 
   /* settings */
-  this.cut=-9999; this.sel=-1;
+  this.cut=1e9; this.sel=-1;   /* cut = section height (m); 1e9 = no section */
   this.sunAz=135; this.sunEl=50;
   this.shadows=true; this.edges=true;
-  this.bg=null; this.lose=false;
+  this.bg=null; this.lose=!!opts.lose;   /* lose: free the WebGL context when the canvas leaves the page (previews) */
+  this.showGround=true;
+  const self0=this;
+  this.cam={get ortho(){return self0.ortho_;},set ortho(v){self0.ortho_=!!v;self0.dirty=true;}};
   this.style=0; this.sky=true; this.fog=true;
   this.kern=1;
   this.ssao=false;    /* SSAO off for realtime */
@@ -401,7 +411,6 @@ const P=B.View3D=function(canvas){
   this._raf=0;
   this.ok=true;
   this.loop();
-  console.log('View3D: init complete, canvas',canvas.width,'x',canvas.height);
 };
 
 /* compile + link shader, cache uniform locations */
@@ -539,8 +548,11 @@ P.prototype.ensurePP=function(w,h){
 
 /* cleanup */
 P.prototype.destroy=function(){
+  if(this.dead) return;
+  this.dead=true; this.ok=false;
   cancelAnimationFrame(this._raf);
-  this._ro.disconnect();
+  if(this._ro) this._ro.disconnect();
+  if(this._cubeWrap && this._cubeWrap.parentElement) this._cubeWrap.parentElement.removeChild(this._cubeWrap);
   if(this.ppFBO){
     this.gl.deleteFramebuffer(this.ppFBO);
     this.gl.deleteTexture(this.ppColTex);
@@ -575,6 +587,7 @@ P.prototype.resize=P.prototype._forceSize;
 
 /* render loop */
 P.prototype.loop=function(){
+  if(this.dead) return;
   if(this.lose && !this.cv.isConnected){this.destroy();return;}
   this._raf=requestAnimationFrame(()=>this.loop());
   if(!this.dirty) return;
@@ -649,8 +662,10 @@ P.prototype.setScene=function(sc,keepCam){
   /* edge lines */
   if(this.lnBuf) gl.deleteBuffer(this.lnBuf);
   this.lnBuf=null; this.lnN=0;
-  if(sc.lines && sc.lines.length){
-    const ld=sc.lines instanceof Float32Array?sc.lines:new Float32Array(sc.lines);
+  let lines=sc.lines;
+  if(!lines){lines=[];for(const g of groups){const ge=g&&g.e;if(ge&&ge.length)for(let i=0;i<ge.length;i++)lines.push(ge[i]);}}
+  if(lines && lines.length){
+    const ld=lines instanceof Float32Array?lines:new Float32Array(lines);
     this.lnN=ld.length/3|0;
     this.lnBuf=this.vbo(gl,ld);
     this.vaoLine=this.makeLineVAO(gl,this.lnBuf);
@@ -678,17 +693,20 @@ P.prototype.setScene=function(sc,keepCam){
   /* ground plane */
   if(this.gndBuf) gl.deleteBuffer(this.gndBuf);
   this.gndBuf=null; this.gndN=0;
-  this.showGround=!sc.noGround;
-  if(this.showGround){
-    const r=R*12, z=mn[2]-0.01;
-    /* ground: lush grass green with grass pattern (10) for garden look */
+  /* showGround is the user's switch (kept between rebuilds); a scene that draws its own terrain sets noGround */
+  this.noGround=!!sc.noGround;
+  if(!this.noGround){
+    /* at natural ground level when the scene gives it (foundations stay below ground), else just under the model */
+    const r=R*12, z=(typeof sc.ngl==='number'&&isFinite(sc.ngl)?Math.min(sc.ngl,mx[2]):mn[2])-0.01;
+    const gk=sc.ground&&sc.ground.length>=3?sc.ground:null;
+    const gr=gk?gk[0]:0.38, gg=gk?gk[1]:0.55, gb=gk?gk[2]:0.25, gp=gk?(gk.p||0):10, gs=gk?(gk.s||1):2.0, gq=gk?(gk.g||0):0;
     const gv=new Float32Array([
-      c[0]-r,c[1]-r,z, 0,0,1, 0.38,0.55,0.25,1, -1, 10,2.0,0,
-      c[0]+r,c[1]-r,z, 0,0,1, 0.38,0.55,0.25,1, -1, 10,2.0,0,
-      c[0]+r,c[1]+r,z, 0,0,1, 0.38,0.55,0.25,1, -1, 10,2.0,0,
-      c[0]-r,c[1]-r,z, 0,0,1, 0.38,0.55,0.25,1, -1, 10,2.0,0,
-      c[0]+r,c[1]+r,z, 0,0,1, 0.38,0.55,0.25,1, -1, 10,2.0,0,
-      c[0]-r,c[1]+r,z, 0,0,1, 0.38,0.55,0.25,1, -1, 10,2.0,0
+      c[0]-r,c[1]-r,z, 0,0,1, gr,gg,gb,1, 0, gp,gs,gq,
+      c[0]+r,c[1]-r,z, 0,0,1, gr,gg,gb,1, 0, gp,gs,gq,
+      c[0]+r,c[1]+r,z, 0,0,1, gr,gg,gb,1, 0, gp,gs,gq,
+      c[0]-r,c[1]-r,z, 0,0,1, gr,gg,gb,1, 0, gp,gs,gq,
+      c[0]+r,c[1]+r,z, 0,0,1, gr,gg,gb,1, 0, gp,gs,gq,
+      c[0]-r,c[1]+r,z, 0,0,1, gr,gg,gb,1, 0, gp,gs,gq
     ]);
     this.gndN=6;
     this.gndBuf=this.vbo(gl,gv);
@@ -698,8 +716,6 @@ P.prototype.setScene=function(sc,keepCam){
 
   if(!keepCam) this.frame();
   this.dirty=true;
-  console.log('[3D-DIAG] setScene: opN='+this.opN+' trN='+this.trN+' gndN='+this.gndN+' lnN='+this.lnN+' bbox='+this.bbox+' showGround='+this.showGround);
-  if(this.opN>0){var d=new Float32Array(this.gl.getBufferSubData?0:0);try{this.gl.bindBuffer(this.gl.ARRAY_BUFFER,this.opBuf);var t=new Float32Array(Math.min(14,this.opN*14));this.gl.getBufferSubData(this.gl.ARRAY_BUFFER,0,t);console.log('[3D-DIAG] first vertex: pos='+t[0].toFixed(2)+','+t[1].toFixed(2)+','+t[2].toFixed(2)+' nrm='+t[3].toFixed(2)+','+t[4].toFixed(2)+','+t[5].toFixed(2)+' col='+t[6].toFixed(2)+','+t[7].toFixed(2)+','+t[8].toFixed(2)+','+t[9].toFixed(2)+' id='+t[10]+' mat='+t[11]+','+t[12]+','+t[13]);}catch(e){console.log('[3D-DIAG] getBufferSubData not available');}}
 };
 
 /* fit camera to bounding box */
@@ -711,8 +727,8 @@ P.prototype.frame=function(view){
   if(view==='top'){this.yaw=0;this.pitch=Math.PI/2-0.001;}
   else if(view==='front'){this.yaw=0;this.pitch=0;}
   else if(view==='back'){this.yaw=Math.PI;this.pitch=0;}
-  else if(view==='left'){this.yaw=Math.PI/2;this.pitch=0;}
-  else if(view==='right'){this.yaw=-Math.PI/2;this.pitch=0;}
+  else if(view==='left'){this.yaw=-Math.PI/2;this.pitch=0;}
+  else if(view==='right'){this.yaw=Math.PI/2;this.pitch=0;}
   else{this.yaw=-0.8;this.pitch=0.55;} /* iso */
   this.dirty=true;
 };
@@ -880,7 +896,7 @@ P.prototype.render=function(pick){
       gl.bindVertexArray(this.vaoOpS);
       gl.drawArrays(gl.TRIANGLES,0,this.opN);
     }
-    if(this.showGround && this.vaoGndS){
+    if(this.showGround && !this.noGround && this.vaoGndS){
       gl.bindVertexArray(this.vaoGndS);
       gl.drawArrays(gl.TRIANGLES,0,this.gndN);
     }
@@ -951,7 +967,7 @@ P.prototype.render=function(pick){
   gl.uniform1i(u.uSM,0);
 
   /* 5. Ground plane */
-  if(this.showGround && this.vaoGndF){
+  if(this.showGround && !this.noGround && this.vaoGndF){
     gl.enable(gl.POLYGON_OFFSET_FILL);
     gl.polygonOffset(1,1);
     gl.bindVertexArray(this.vaoGndF);
@@ -1025,15 +1041,15 @@ P.prototype._initCube=function(){
   if(this._cube) return;
   const wrap=document.createElement('div');
   wrap.className='vcube-wrap';
-  wrap.style.cssText='position:absolute;bottom:10px;right:10px;width:110px;height:110px;pointer-events:auto;z-index:3;';
+  wrap.style.cssText='position:absolute;bottom:8px;right:8px;width:140px;height:140px;pointer-events:auto;z-index:3;';
   /* compass ring (N/E/S/W) */
   const ring=document.createElement('div');
   ring.className='vcube-ring';
-  ring.style.cssText='position:absolute;top:0;left:0;width:110px;height:110px;';
+  ring.style.cssText='position:absolute;top:0;left:0;width:140px;height:140px;';
   /* 3D scene for cube */
   const scene=document.createElement('div');
   scene.className='vcube-scene';
-  scene.style.cssText='position:absolute;top:15px;left:15px;width:80px;height:80px;perspective:300px;';
+  scene.style.cssText='position:absolute;top:30px;left:30px;width:80px;height:80px;perspective:300px;transform:scale(0.72);';   /* the whole cube stays inside the compass ring */
   const cube=document.createElement('div');
   cube.className='vcube-cube';
   cube.style.cssText='width:80px;height:80px;position:relative;transform-style:preserve-3d;transition:transform 0.4s ease;';
@@ -1056,7 +1072,7 @@ P.prototype._initCube=function(){
   });
   scene.appendChild(cube);
   /* compass labels */
-  const dirs=[['N',55,2,'#e54','bold'],['S',55,104,'#8899aa','normal'],['E',104,55,'#8899aa','normal'],['W',2,55,'#8899aa','normal']];
+  const dirs=[['N',70,7,'#e54','bold'],['S',70,133,'#8899aa','normal'],['E',133,70,'#8899aa','normal'],['W',7,70,'#8899aa','normal']];
   dirs.forEach(function(d){
     const lb=document.createElement('span');
     lb.textContent=d[0]; lb.dataset.vcDir=d[0];
@@ -1070,24 +1086,26 @@ P.prototype._initCube=function(){
   });
   /* ring circle */
   const svg=document.createElementNS('http://www.w3.org/2000/svg','svg');
-  svg.setAttribute('width','110'); svg.setAttribute('height','110');
+  svg.setAttribute('width','140'); svg.setAttribute('height','140');
   svg.style.cssText='position:absolute;top:0;left:0;pointer-events:none;';
-  svg.innerHTML='<circle cx="55" cy="55" r="52" fill="none" stroke="rgba(100,115,140,0.35)" stroke-width="1.5"/><circle cx="55" cy="55" r="38" fill="none" stroke="rgba(100,115,140,0.2)" stroke-width="1"/>';
+  svg.innerHTML='<circle cx="70" cy="70" r="63" fill="rgba(20,28,40,0.28)" stroke="rgba(160,175,200,0.55)" stroke-width="1.5"/>';
   ring.appendChild(svg);
   wrap.appendChild(ring);
   wrap.appendChild(scene);
-  this._cube=cube; this._cubeWrap=wrap;
+  this._cube=cube; this._cubeWrap=wrap; this._ring=ring;
   /* insert into the canvas parent */
   const par=this.cv.parentElement;
   if(par){ par.style.position='relative'; par.appendChild(wrap); }
 };
 P.prototype._updateCube=function(){
+  if(this.lose) return;   /* small dialog previews have no view cube */
   if(!this._cube) this._initCube();
   if(!this._cube) return;
   /* map yaw/pitch to CSS rotateX/rotateY for cube orientation */
   const yDeg=(-this.yaw*180/Math.PI);
   const pDeg=(this.pitch*180/Math.PI);
-  this._cube.style.transform='rotateX('+pDeg+'deg) rotateY('+yDeg+'deg)';
+  this._cube.style.transform='rotateX('+(-pDeg)+'deg) rotateY('+yDeg+'deg)';
+  if(this._ring){const rd=-yDeg;this._ring.style.transform='rotate('+rd+'deg)';const lb=this._ring.querySelectorAll('span');for(let i=0;i<lb.length;i++)lb[i].style.transform='translate(-50%,-50%) rotate('+(-rd)+'deg)';}
 };
 
 /* pick entity at screen coordinates */
@@ -1135,7 +1153,10 @@ P.prototype.png=function(){
 P.prototype.renderImage=function(w,h,o){
   o=o||{};
   const gl=this.gl;
-  const ss=o.ss||2;
+  const maxT=Math.min(gl.getParameter(gl.MAX_TEXTURE_SIZE)||4096,gl.getParameter(gl.MAX_RENDERBUFFER_SIZE)||4096);
+  if(w>maxT||h>maxT) throw new Error('This size is larger than the graphics card allows ('+maxT+' px)');
+  let ss=o.ss||2;
+  ss=Math.max(1,Math.min(ss,Math.floor(maxT/w),Math.floor(maxT/h),Math.floor(Math.sqrt(20e6/(w*h)))||1));
   const iw=w*ss, ih=h*ss;
 
   /* save state */
@@ -1145,7 +1166,7 @@ P.prototype.renderImage=function(w,h,o){
 
   /* high-quality settings */
   this.setSM(4096);
-  this.kern=o.soft||3;
+  this.kern=o.soft===false?1:3;   /* soft shadows: wider filter */
   this.ssao=true;
   this.linear=true;
   if(o.edges!==undefined) this.edges=o.edges;
@@ -1216,16 +1237,17 @@ P.prototype.setView=function(v){
 P.prototype.bind=function(){
   const cv=this.cv, self=this;
   let down=false, btn=0, lx=0, ly=0;
-  let pinch0=0, touches=[];
+  let pinch0=0, touches=[], x0=0, y0=0, multi=false, mid0=null;
 
   cv.addEventListener('pointerdown',function(e){
     cv.setPointerCapture(e.pointerId);
-    down=true; btn=e.button; lx=e.clientX; ly=e.clientY;
+    down=true; btn=e.button; lx=e.clientX; ly=e.clientY; x0=lx; y0=ly; multi=false;
     if(e.pointerType==='touch'){
       touches.push({id:e.pointerId,x:e.clientX,y:e.clientY});
       if(touches.length===2){
         const dx=touches[1].x-touches[0].x, dy=touches[1].y-touches[0].y;
-        pinch0=Math.hypot(dx,dy);
+        pinch0=Math.hypot(dx,dy); multi=true;
+        mid0=[(touches[0].x+touches[1].x)/2,(touches[0].y+touches[1].y)/2];
       }
     }
   });
@@ -1238,11 +1260,15 @@ P.prototype.bind=function(){
       if(touches.length===2){
         const dx=touches[1].x-touches[0].x, dy=touches[1].y-touches[0].y;
         const d=Math.hypot(dx,dy);
-        if(pinch0>0){
-          self.dist*=pinch0/d;
-          self.dirty=true;
+        if(pinch0>0 && d>0){
+          self.dist=Math.max(0.1,self.dist*pinch0/d);
         }
         pinch0=d;
+        /* two fingers moving together = pan */
+        const mx2=(touches[0].x+touches[1].x)/2, my2=(touches[0].y+touches[1].y)/2;
+        if(mid0) self.pan(mx2-mid0[0],my2-mid0[1]);
+        mid0=[mx2,my2];
+        self.dirty=true;
         return;
       }
     }
@@ -1261,24 +1287,34 @@ P.prototype.bind=function(){
   });
 
   cv.addEventListener('pointerup',function(e){
-    down=false;
     if(e.pointerType==='touch'){
       touches=touches.filter(t=>t.id!==e.pointerId);
-    }
-    /* tap = pick */
-    const dx=Math.abs(e.clientX-lx), dy=Math.abs(e.clientY-ly);
-    if(dx<3&&dy<3&&btn===0){
+      down=touches.length>0;
+      if(touches.length===1){lx=touches[0].x;ly=touches[0].y;}   /* the remaining finger carries on orbiting from where it is */
+      pinch0=0; mid0=null;
+      if(down) return;
+    }else down=false;
+    /* tap = pick (measured from where the pointer went down, so an orbit / pan / pinch never picks) */
+    const dx=Math.abs(e.clientX-x0), dy=Math.abs(e.clientY-y0);
+    if(dx<4&&dy<4&&btn===0&&!multi){
       const r=cv.getBoundingClientRect();
       const id=self.pickAt(e.clientX-r.left,e.clientY-r.top);
       self.sel=id;
       self.dirty=true;
-      if(self.onPick) self.onPick(id);
+      /* the app works with element ids; byIdx[n-1] is the element drawn with index n */
+      if(self.onPick) self.onPick(id>0&&self.byIdx?(self.byIdx[id-1]||null):null);
     }
+  });
+  cv.addEventListener('pointercancel',function(e){
+    touches=touches.filter(t=>t.id!==e.pointerId);
+    down=touches.length>0; pinch0=0; mid0=null; multi=true;
   });
 
   cv.addEventListener('wheel',function(e){
     e.preventDefault();
-    self.dist*=1+e.deltaY*0.001;
+    /* wheel in lines (Firefox) or pixels; exponential so a fast spin can never flip or zero the distance */
+    const dy=e.deltaMode===1?e.deltaY*33:e.deltaMode===2?e.deltaY*400:e.deltaY;
+    self.dist*=Math.exp(Math.max(-600,Math.min(600,dy))*0.001);
     self.dist=Math.max(0.1,self.dist);
     self.dirty=true;
   },{passive:false});

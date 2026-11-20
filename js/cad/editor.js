@@ -512,7 +512,7 @@
     var p = this.prompt, t = txt.trim();
     if (!p) return false;
     if (p.kind === "text") { this.answer(t === "" && p.def != null ? p.def : txt); return true; }
-    if (t === "") { if (p.def != null) { this.answer(p.def); return true; } if (p.kind === "sel") { this.answer(true); return true; } if ((p.kind === "point" || p.kind === "dist") && !p.allowNone) { this.say(p.kind === "point" ? "A point is needed — click or type x,y (Esc cancels)." : "A distance is needed (Esc cancels)."); return true; } this.answer(null); return true; }
+    if (t === "") { if (p.def != null) { this.answer(p.def); return true; } if (p.kind === "sel") { this.answer(true); return true; } if (p.kind === "ent" && !p.allowNone) { this.cancelPrompt(); return true; } if ((p.kind === "point" || p.kind === "dist") && !p.allowNone) { this.say(p.kind === "point" ? "A point is needed — click or type x,y (Esc cancels)." : "A distance is needed (Esc cancels)."); return true; } this.answer(null); return true; }
     var kw = (p.kw || []).filter(function (k) { var u = t.toUpperCase(); return k.toUpperCase() === u || k.replace(/[^A-Z]/g, "") === u || k.toUpperCase().indexOf(u) === 0; })[0];
     if (kw) { this.answer(kw); return true; }
     if (p.kind === "point") { var pt = this.parsePoint(t, p.base); if (pt) { this.last = pt; this.answer(pt); return true; } this.say("Point or option keyword required."); return true; }
