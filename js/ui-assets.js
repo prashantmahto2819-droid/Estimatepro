@@ -47,7 +47,15 @@
     if (e.t === "asset") {
       var def = B.ASSET_LIB[e.kind] || {}, L = B.level(ed.doc.d, e.lvl), zNow = B.assetZ(ed.doc, Object.assign({}, e, { z: null }), def) - L.elev;
       h += "<div class='cad-ph'>" + esc(def.cat || "Item") + " — " + esc(def.n || e.kind) + "</div><div class='libic' style='margin:4px 0'>" + icon(e.kind, 56) + "</div>" + sel("Item", "kind", e.kind, Object.keys(B.ASSET_LIB).map(function (k) { return [k, B.ASSET_LIB[k].cat + " — " + B.ASSET_LIB[k].n]; })) + sel("Level", "lvl", e.lvl, lv) +
-        f("Rotation °", "rot", e.rot || 0, "num") + f("Scale (1 = standard)", "sc", e.sc || 1, "num") + f("Height above the level (blank = " + (def.mount || "floor") + ")", "z", e.z == null ? "" : Lm(e.z), "len", { ph: Lm(zNow) }) + (e.kind === "tank" ? f("Capacity (litres)", "cap", e.cap || 1000, "num") + ro("Diameter × height", Lm(B.tankD(e)) + " × " + Lm(Math.round(B.tankD(e) * 1.15))) : "") +
+        f("Rotation °", "rot", e.rot || 0, "num") + f("Scale (1 = standard)", "sc", e.sc || 1, "num") + (function () {
+          var hh = (def.h || 60) * (e.sc || 1), zb = B.assetZ(ed.doc, e, def) - L.elev, auto = def.mount === "ceiling" ? "under the slab" : def.mount === "wall" ? "on the wall at " + Lm(def.mz || 1200) : "on the floor";
+          var lab = { floor: "Bottom of the item above the floor", fceil: "Gap below the false ceiling (0 = touching)", ceiling: "Gap below the slab (0 = touching)", top: "Above the top of the slab" };
+          var rm = e.ref === "fceil" ? B.roomAt(ed.doc, e.p, e.lvl, true) : null;
+          return sel("Height is measured from", "ref", e.ref || "", [["", "Automatic — " + auto]].concat(B.MOUNT_REFS)) +
+            (e.ref ? f(lab[e.ref] || "Distance", "dz", Lm(e.dz || 0), "len") + (e.ref === "fceil" ? ro("False ceiling here", Lm(B.fceilH(ed.doc, rm, e.lvl)) + " above floor" + (rm ? " (" + (rm.name || "room") + ")" : " — no room with a false ceiling here, standard height used")) : "")
+              : f("Height above the level (blank = automatic)", "z", e.z == null ? "" : Lm(e.z), "len", { ph: Lm(zNow) })) +
+            ro("Result: bottom / top above floor", Lm(Math.round(zb)) + " / " + Lm(Math.round(zb + hh)));
+        })() + (e.kind === "tank" ? f("Capacity (litres)", "cap", e.cap || 1000, "num") + ro("Diameter × height", Lm(B.tankD(e)) + " × " + Lm(Math.round(B.tankD(e) * 1.15))) : "") +
         "<p class='muted small'>SOR item: " + esc(sorOf(ed.doc.d, def.key)) + "</p>";
     } else if (e.t === "land") {
       h += "<div class='cad-ph'>Landscape area</div>" + sel("Type", "kind", e.kind || "lawn", Object.keys(B.LAND).map(function (k) { return [k, B.LAND[k][0]]; })) + sel("Level", "lvl", e.lvl, lv) + ro("Area", (B.area(e.pts) / 1e6).toFixed(2) + " m²") + "<p class='muted small'>SOR item: " + esc(sorOf(ed.doc.d, "land_" + (e.kind || "lawn"))) + "</p>";

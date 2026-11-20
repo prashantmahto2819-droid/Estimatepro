@@ -85,21 +85,28 @@
     ed.say(kind + " slab " + (B.area(pts) / 1e6).toFixed(2) + " m² × " + Math.round(th) + " mm" + (kind === "Ceiling" ? " (top at +" + (here.h / 1000).toFixed(2) + " m above this floor)" : ""));
   });
   cmd("COLUMN", ["COL"], async function (ed) {
-    ensureBim(ed); var w = ed.cW || 300, d = ed.cD || 300, rot = 0, shape = "rect";
+    ensureBim(ed); var w = ed.cW || 300, d = ed.cD || 300, rot = 0, shape = ed.cShape || "rect", tw = ed.cTw || 230, rnd = function () { return shape === "circle" || shape === "octagon" || shape === "hexagon"; }, legs = function () { return shape === "L" || shape === "T" || shape === "plus"; };
+    var colOf = function (p, r) { var o = { t: "column", p: p, w: w, d: rnd() ? w : d, rot: shape === "circle" ? 0 : r, shape: shape, lvl: cur(ed) }; if (legs()) o.tw = tw; return o; };
     while (true) {
-      ed.preview = function (p) { return [{ t: "column", p: p, w: w, d: d, rot: rot, shape: shape, lvl: cur(ed) }]; };
-      var p = await ed.getPoint("Column " + (shape === "circle" ? "Ø" + w : w + "×" + d) + " — click to place, or Corners for every wall corner and junction (Enter to finish)", { opt: true, kw: ["Corners", "Size", "Round", "Rotate"] });
+      ed.preview = function (p) { return [colOf(p, rot)]; };
+      var p = await ed.getPoint("Column " + (shape === "rect" ? "" : shape + " ") + (rnd() ? (shape === "circle" ? "Ø" : "") + w : w + "×" + d) + (legs() ? ", legs " + tw : "") + " — click to place, or Corners for every wall corner and junction (Enter to finish)", { opt: true, kw: ["Corners", "Shape", "Size", "Round", "Rotate"] });
       if (p == null) return;
+      if (p === "Shape") {
+        var SH = { Rectangular: "rect", Circular: "circle", Octagonal: "octagon", Hexagonal: "hexagon", "L shape": "L", "T shape": "T", "Plus shape": "plus" }, curS = Object.keys(SH).filter(function (k) { return SH[k] === shape; })[0];
+        shape = ed.cShape = SH[await ed.getKw("Column shape", Object.keys(SH), curS)] || "rect";
+        if (legs()) { if (w < 400) w = ed.cW = 450; if (d < 400) d = ed.cD = 450; tw = ed.cTw = await ed.getDist("Leg thickness", { def: tw }); }
+        continue;
+      }
       if (p === "Corners") {   // one column at every corner / junction of this level's walls that has none yet
         var lv = cur(ed), nodes = [], have = ed.doc.d.ents.filter(function (x) { return x.t === "column" && x.lvl === lv; });
         ed.doc.d.ents.forEach(function (x) { if (x.t !== "wall" || x.lvl !== lv) return; var c = B.wallLine(x), ang = Math.atan2(c.u[1], c.u[0]) * 180 / Math.PI; [c.a, c.b].forEach(function (q) { var n = nodes.filter(function (m) { return G.dist(m.p, q) <= Math.max(5, x.th * 0.6); })[0]; if (n) n.n++; else nodes.push({ p: q, n: 1, rot: ((ang % 90) + 90) % 90 }); }); });
-        var made = 0; nodes.forEach(function (n) { if (have.some(function (h) { return G.dist(h.p, n.p) < Math.max(h.w, h.d || h.w) / 2 + 50; })) return; ed.doc.add({ t: "column", p: [n.p[0], n.p[1]], w: w, d: shape === "circle" ? w : d, rot: shape === "circle" ? 0 : n.rot, shape: shape, lvl: lv, layer: lay(ed, "S-COL") }); made++; });
+        var made = 0; nodes.forEach(function (n) { if (have.some(function (h) { return G.dist(h.p, n.p) < Math.max(h.w, h.d || h.w) / 2 + 50; })) return; ed.doc.add(Object.assign(colOf([n.p[0], n.p[1]], n.rot), { lvl: lv, layer: lay(ed, "S-COL") })); made++; });
         ed.say(made ? made + " column(s) placed at the wall corners and junctions of this level." : nodes.length ? "Every wall corner of this level already has a column." : "No walls on this level yet."); continue;
       }
-      if (p === "Size") { w = ed.cW = await ed.getDist("Width", { def: w }); d = ed.cD = await ed.getDist("Depth", { def: d }); shape = "rect"; continue; }
-      if (p === "Round") { w = ed.cW = await ed.getDist("Diameter", { def: w }); shape = "circle"; continue; }
+      if (p === "Size") { w = ed.cW = await ed.getDist(rnd() ? "Size (diameter / across flats)" : "Width (overall)", { def: w }); if (!rnd()) d = ed.cD = await ed.getDist("Depth (overall)", { def: d }); if (legs()) tw = ed.cTw = await ed.getDist("Leg thickness", { def: tw }); continue; }
+      if (p === "Round") { w = ed.cW = await ed.getDist("Diameter", { def: w }); shape = ed.cShape = "circle"; continue; }
       if (p === "Rotate") { rot = await ed.getAngle("Rotation", { def: rot }); continue; }
-      ed.doc.add({ t: "column", p: p, w: w, d: shape === "circle" ? w : d, rot: rot, shape: shape, lvl: cur(ed), layer: lay(ed, "S-COL") });
+      ed.doc.add(Object.assign(colOf(p, rot), { layer: lay(ed, "S-COL") }));
     }
   });
   cmd("BEAM", ["BM"], async function (ed) {
@@ -240,7 +247,7 @@
     var def = B.ASSET_LIB[kind]; if (!def) return null; ensureBim(ed);
     var catLay = Object.assign({ Landscape: "L-LAND", Electrical: "E-ELEC", Plumbing: "P-PLUMB", Furniture: "A-FURN", Kitchen: "A-KITCHEN", Finishes: "A-FINISH" }, B.CAT_LAY || {}), rot = ed.astRot || 0;
     var sn = ed.set.astSnap === false || !B.assetWallSnap ? null : B.assetWallSnap(ed.doc, { kind: kind, rot: rot, lvl: cur(ed) }, p);
-    ed.doc.begin("Place " + def.n); var o = { t: "asset", kind: kind, p: sn ? sn.p : p, rot: sn ? sn.rot : rot, lvl: cur(ed), layer: lay(ed, catLay[def.cat] || "A-ASSET") }; if (kind === "tank") o.cap = 1000;
+    ed.doc.begin("Place " + def.n); var o = { t: "asset", kind: kind, p: sn ? sn.p : p, rot: sn ? sn.rot : rot, lvl: cur(ed), layer: lay(ed, catLay[def.cat] || "A-ASSET") }; if (ed.astRef) { o.ref = ed.astRef; o.dz = ed.astDz || 0; } if (kind === "tank") o.cap = 1000;
     var e = ed.doc.add(o); ed.doc.commit(); ed.lastAsset = kind; return e;
   };
   B.assetGhost = function (ed, kind, p) { var rot = ed.astRot || 0, sn = ed.set.astSnap === false || !B.assetWallSnap ? null : B.assetWallSnap(ed.doc, { kind: kind, rot: rot, lvl: cur(ed) }, p); return { t: "asset", kind: kind, p: sn ? sn.p : p, rot: sn ? sn.rot : rot, lvl: cur(ed) }; };
@@ -251,14 +258,21 @@
     if (kind === "tank") cap = Math.max(200, Math.round(await ed.getNum("Tank capacity (litres)", { def: 1000 })));
     var snapOf = function (w) { return ed.set.astSnap === false || !B.assetWallSnap ? null : B.assetWallSnap(ed.doc, { kind: kind, rot: rot, sc: sc, lvl: cur(ed) }, w); };
     while (true) {
-      ed.preview = function (w) { var sn = snapOf(w); return [{ t: "asset", kind: kind, p: sn ? sn.p : w, rot: sn ? sn.rot : rot, sc: sc, cap: cap, lvl: cur(ed) }]; };
-      var p = await ed.getPoint("Place " + def.n + (def.cat === "Landscape" || def.mount === "ceiling" ? "" : " — it jumps flush to a wall when close") + " (Enter to finish)", { opt: true, kw: ["Turn", "Rotate", "Scale", "Wallsnap"] }); ed.preview = null;
+      ed.preview = function (w) { var sn = snapOf(w); return [{ t: "asset", kind: kind, p: sn ? sn.p : w, rot: sn ? sn.rot : rot, sc: sc, cap: cap, lvl: cur(ed), ref: ed.astRef || undefined, dz: ed.astDz || 0 }]; };
+      var refLbl = ed.astRef ? ", " + ({ floor: Math.round(ed.astDz || 0) + " mm above the floor", fceil: "under the false ceiling" + (ed.astDz ? " −" + Math.round(ed.astDz) : ""), ceiling: "under the slab" + (ed.astDz ? " −" + Math.round(ed.astDz) : ""), top: "on the slab top" + (ed.astDz ? " +" + Math.round(ed.astDz) : "") })[ed.astRef] : "";
+      var p = await ed.getPoint("Place " + def.n + refLbl + (def.cat === "Landscape" || def.mount === "ceiling" ? "" : " — it jumps flush to a wall when close") + " (Enter to finish; Height = floor / false ceiling / slab)", { opt: true, kw: ["Height", "Turn", "Rotate", "Scale", "Wallsnap"] }); ed.preview = null;
       if (p == null) break;
+      if (p === "Height") {   // what the height is measured from — no adding up of levels and thicknesses
+        var NM = { Automatic: "", Floor: "floor", "False ceiling": "fceil", "Slab underside": "ceiling", "Slab top": "top" }, curN = Object.keys(NM).filter(function (k) { return NM[k] === (ed.astRef || ""); })[0];
+        var pickR = await ed.getKw("Measure the height from", Object.keys(NM), curN || "Automatic"); ed.astRef = NM[pickR] || null;
+        if (ed.astRef) ed.astDz = await ed.getDist({ floor: "Bottom of the item above the floor", fceil: "Gap below the false ceiling (0 = touching)", ceiling: "Gap below the slab (0 = touching)", top: "Above the top of the slab" }[ed.astRef], { def: ed.astRef === "floor" ? (ed.astDz != null ? ed.astDz : def.mz || 0) : ed.astDz || 0 }); else ed.astDz = null;
+        continue;
+      }
       if (p === "Turn") { rot = ed.astRot = (rot + 90) % 360; continue; }   // quarter turn
       if (p === "Rotate") { rot = ed.astRot = await ed.getNum("Rotation (degrees)", { def: rot }); continue; }
       if (p === "Scale") { sc = await ed.getNum("Scale (1 = standard size)", { def: sc }); continue; }
       if (p === "Wallsnap") { ed.set.astSnap = ed.set.astSnap === false; ed.say(ed.set.astSnap ? "Items jump to walls." : "Items stay exactly where you click."); continue; }
-      var sn = snapOf(p), o = { t: "asset", kind: kind, p: sn ? sn.p : p, rot: sn ? sn.rot : rot, lvl: cur(ed), layer: layer }; if (sc !== 1) o.sc = sc; if (kind === "tank") o.cap = cap; ed.doc.add(o); n++;
+      var sn = snapOf(p), o = { t: "asset", kind: kind, p: sn ? sn.p : p, rot: sn ? sn.rot : rot, lvl: cur(ed), layer: layer }; if (ed.astRef) { o.ref = ed.astRef; o.dz = ed.astDz || 0; } if (sc !== 1) o.sc = sc; if (kind === "tank") o.cap = cap; ed.doc.add(o); n++;
     }
     ed.say(n + " × " + def.n + " placed.");
   });

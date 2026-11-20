@@ -119,7 +119,7 @@
     }
     if (e.t === "column") {
       if (e.shape === "circle") { out.segs.push({ k: "A", c: e.p, r: e.w / 2, s: 0, e: G.TAU, full: true }); out.fill.push({ circle: { c: e.p, r: e.w / 2 } }); return out; }
-      var q = rectAt(e.p, e.w, e.d, e.rot); out.segs = G.polySegs(q, true); out.fill.push({ pts: q, holes: [] }); return out;
+      var q = B.colPoly(e); out.segs = G.polySegs(q, true); out.fill.push({ pts: q, holes: [] }); return out;
     }
     if (e.t === "beam") { var bl = wallLine({ a: e.a, b: e.b, th: e.w }), h2 = G.mul(bl.n, e.w / 2); out.dashed = G.polySegs([G.add(e.a, h2), G.add(e.b, h2), G.sub(e.b, h2), G.sub(e.a, h2)], true); return out; }
     if (e.t === "footing") { var f = rectAt(e.p, e.L, e.B, e.rot); out.dashed = G.polySegs(f, true); if (e.pcc) out.dashed = out.dashed.concat(G.polySegs(rectAt(e.p, e.L + 2 * e.pcc.off, e.B + 2 * e.pcc.off, e.rot), true)); if (e.ped) out.segs = G.polySegs(rectAt(e.p, e.ped.w, e.ped.d, e.rot), true); return out; }
@@ -171,9 +171,31 @@
   B.stairGeom = stairGeom;
 
   /* room / area detection: walls as solid footprints (door gaps closed), columns; other building elements ignored */
+  /* column cross-sections. w × d is the overall size; tw = thickness of the legs of L / T / + sections; octagon and hexagon are measured across the flats (w). */
+  B.COL_SHAPES = [["rect", "Rectangular"], ["circle", "Circular"], ["octagon", "Octagonal"], ["hexagon", "Hexagonal"], ["L", "L shape"], ["T", "T shape"], ["plus", "Plus (+) shape"]];
+  B.colLegs = function (e) { return e.shape === "L" || e.shape === "T" || e.shape === "plus"; };
+  B.colRound = function (e) { return e.shape === "circle" || e.shape === "octagon" || e.shape === "hexagon"; };
+  B.colPoly = function (e) {
+    var w = e.w, d = e.d || e.w, t = Math.max(50, Math.min(e.tw || 230, w, d)), a = w / 2, b = d / 2, h = t / 2, P;
+    switch (e.shape) {
+      case "circle": P = []; for (var i = 0; i < 24; i++) P.push([a * Math.cos(i / 24 * G.TAU), a * Math.sin(i / 24 * G.TAU)]); break;
+      case "octagon": case "hexagon": var n = e.shape === "octagon" ? 8 : 6, R = a / Math.cos(Math.PI / n); P = []; for (var k = 0; k < n; k++) P.push([R * Math.cos(Math.PI / n + k / n * G.TAU), R * Math.sin(Math.PI / n + k / n * G.TAU)]); break;
+      case "L": P = [[-a, -b], [a, -b], [a, -b + t], [-a + t, -b + t], [-a + t, b], [-a, b]]; break;
+      case "T": P = [[-h, -b], [h, -b], [h, b - t], [a, b - t], [a, b], [-a, b], [-a, b - t], [-h, b - t]]; break;
+      case "plus": P = [[-h, -b], [h, -b], [h, -h], [a, -h], [a, h], [h, h], [h, b], [-h, b], [-h, h], [-a, h], [-a, -h], [-h, -h]]; break;
+      default: return rectAt(e.p, w, d, e.rot);
+    }
+    var r = (e.rot || 0) * Math.PI / 180, c = Math.cos(r), s = Math.sin(r); return P.map(function (q) { return [e.p[0] + q[0] * c - q[1] * s, e.p[1] + q[0] * s + q[1] * c]; });
+  };
+  B.colSection = function (e) {
+    var W0 = Math.round(e.w), D0 = Math.round(e.d || e.w); if (e.shape === "circle") return { A: Math.PI * e.w * e.w / 4, P: Math.PI * e.w, label: "Ø" + W0 };
+    var P = B.colPoly(e), per = 0; P.forEach(function (p, i) { per += G.dist(p, P[(i + 1) % P.length]); });
+    var nm = { octagon: "octagonal " + W0 + " across flats", hexagon: "hexagonal " + W0 + " across flats", L: "L " + W0 + "×" + D0 + ", " + Math.round(Math.min(e.tw || 230, e.w, e.d || e.w)) + " thick", T: "T " + W0 + "×" + D0 + ", " + Math.round(Math.min(e.tw || 230, e.w, e.d || e.w)) + " thick", plus: "+ " + W0 + "×" + D0 + ", " + Math.round(Math.min(e.tw || 230, e.w, e.d || e.w)) + " thick" }[e.shape];
+    return { A: Math.abs(G.plineArea(P)), P: per, label: nm || W0 + "×" + D0 };
+  };
   B.roomOpts = function (doc) {
     return { only: function (e) { return !TYPES[e.t] || e.t === "wall" || e.t === "column"; },
-      segs: function (e) { if (e.t === "wall") { var P = B.wallPoly(doc, e); return G.polySegs([P.sL, P.eL, P.eR, P.sR], true); } if (e.t === "column") return e.shape === "circle" ? [{ k: "A", c: e.p, r: e.w / 2, s: 0, e: G.TAU, full: true }] : G.polySegs(rectAt(e.p, e.w, e.d, e.rot), true); return null; } };
+      segs: function (e) { if (e.t === "wall") { var P = B.wallPoly(doc, e); return G.polySegs([P.sL, P.eL, P.eR, P.sR], true); } if (e.t === "column") return e.shape === "circle" ? [{ k: "A", c: e.p, r: e.w / 2, s: 0, e: G.TAU, full: true }] : G.polySegs(B.colPoly(e), true); return null; } };
   };
   /* Hip roof over an L / T / U … outline (every side parallel or square to the roof's frame, more than four corners).
      With the same slope on every side, the roof height at a point is slope × its distance to the nearest side, measured square to the frame —
@@ -347,8 +369,8 @@
       return rows;
     }
     if (e.t === "column") {
-      var Lc = B.level(d, e.lvl), Hc = e.h != null ? e.h : Lc.h, Ac = e.shape === "circle" ? Math.PI * e.w * e.w / 4 : e.w * e.d, pc = e.shape === "circle" ? Math.PI * e.w : 2 * (e.w + e.d);
-      push("rcc_col", "V", Ac * Hc, "RCC column " + (e.shape === "circle" ? "Ø" + Math.round(e.w) : Math.round(e.w) + "×" + Math.round(e.d)), (Ac / 1e6).toFixed(4) + " m² × " + m(Hc) + " m");
+      var Lc = B.level(d, e.lvl), Hc = e.h != null ? e.h : Lc.h, cs = B.colSection(e), Ac = cs.A, pc = cs.P;
+      push("rcc_col", "V", Ac * Hc, "RCC column " + cs.label, (Ac / 1e6).toFixed(4) + " m² × " + m(Hc) + " m");
       push("shut_col", "A", pc * Hc, "Shuttering — columns", m(pc) + " × " + m(Hc));
       if (!rfPush("steel_col", "columns")) push("steel_col", "M", Ac * Hc / 1e9 * bs.steel.column, "Reinforcement — columns (thumb rule " + bs.steel.column + " kg/m³)", "");
       return rows;

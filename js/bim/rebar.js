@@ -21,13 +21,13 @@
 
   /* ---------- defaults (a reasonable start — the engineer must check them against the design) ---------- */
   B.rfDefault = function (doc, e) {
-    if (e.t === "column") { var big = Math.max(e.w, e.d || e.w), A = e.shape === "circle" ? Math.PI * e.w * e.w / 4 : e.w * e.d; return { c: 40, main: { n: e.shape === "circle" ? 6 : big <= 300 ? 4 : big <= 450 ? 6 : 8, d: A <= 90000 ? 12 : 16 }, tie: { d: 8, s: 150 } }; }
+    if (e.t === "column") { if (B.colLegs(e)) return null;   /* L / T / + sections: no automatic bar layout — steel by the thumb rule */ var big = Math.max(e.w, e.d || e.w), A = B.colSection(e).A; return { c: 40, main: { n: B.colRound(e) ? 6 : big <= 300 ? 4 : big <= 450 ? 6 : 8, d: A <= 90000 ? 12 : 16 }, tie: { d: 8, s: 150 } }; }
     if (e.t === "beam") { var span = G.dist(e.a, e.b); return { c: 25, bot: { n: e.w >= 300 ? 3 : 2, d: span > 4500 ? 16 : 12 }, top: { n: 2, d: 12 }, st: { d: 8, s: 150 } }; }
     if (e.t === "footing") { var dd = Math.max(e.L, e.B) > 2000 ? 12 : 10; return { c: 50, x: { d: dd, s: 150 }, y: { d: dd, s: 150 } }; }
     if (e.t === "slab") { var bb = B.polyBox(e.pts), sx = bb[2] - bb[0], sy = bb[3] - bb[1]; return sx <= sy ? { c: 20, x: { d: 10, s: 150 }, y: { d: 8, s: 200 } } : { c: 20, x: { d: 8, s: 200 }, y: { d: 10, s: 150 } }; }
     return null;
   };
-  B.hasRf = function (e) { return !!(e && e.rf && B.RF_TYPES[e.t]); };
+  B.hasRf = function (e) { return !!(e && e.rf && B.RF_TYPES[e.t] && !(e.t === "column" && B.colLegs && B.colLegs(e))); };   // L / T / + columns: no bar layout, their steel is by the thumb rule
 
   /* ---------- helpers ---------- */
   function P3(p, z) { return [p[0], p[1], z]; }
@@ -46,7 +46,7 @@
     if (e.t === "column") {
       var c = rf.c, md = rf.main.d, td = rf.tie.d, hc = e.h != null ? e.h : L.h, ci = c + td + md / 2, ang = (e.rot || 0) * Math.PI / 180, u = [Math.cos(ang), Math.sin(ang)], v = [-u[1], u[0]], at = function (x, y) { return [e.p[0] + u[0] * x + v[0] * y, e.p[1] + u[1] * x + v[1] * y]; };
       var pos = [], n = Math.max(4, Math.round(rf.main.n || 4));
-      if (e.shape === "circle") { var R = e.w / 2 - ci; for (var i = 0; i < n; i++) pos.push(at(R * Math.cos(i / n * 2 * Math.PI), R * Math.sin(i / n * 2 * Math.PI))); }
+      if (B.colRound(e)) { var R = e.w / 2 - ci; for (var i = 0; i < n; i++) pos.push(at(R * Math.cos(i / n * 2 * Math.PI), R * Math.sin(i / n * 2 * Math.PI))); }
       else {
         var hx = e.w / 2 - ci, hy = (e.d || e.w) / 2 - ci; pos.push(at(-hx, -hy), at(hx, -hy), at(hx, hy), at(-hx, hy));
         var k = n - 4, kw = 2 * Math.round((k / 2) * e.w / (e.w + (e.d || e.w))), kd = k - kw, mw = kw / 2, md2 = Math.ceil(kd / 2), md1 = kd - md2;
@@ -62,7 +62,7 @@
       var lines = pos.map(function (p) { var out = []; var dir = G.norm(G.sub(p, e.p)); if (!isFinite(dir[0])) dir = u; if (legB) out.push(P3(G.add(p, G.mul(dir, legB)), zb)); out.push(P3(p, zb), P3(p, zt)); if (legT) out.push(P3(G.sub(p, G.mul(dir, legT)), zt)); return out; });
       set({ what: "Main bars", dia: md, sh: "st", nb: pos.length, cut: cut, f: "height " + mm(run) + (ft ? " (from footing bottom + cover)" : "") + (up ? " incl. lap " + lapD + "d into the column above" : "") + (legB ? " + leg " + mm(legB) : "") + (legT ? " + top leg " + mm(legT) : "") + ((legB ? 1 : 0) + (legT ? 1 : 0) ? " − " + ((legB ? 1 : 0) + (legT ? 1 : 0)) + "×2d" : "") + " = " + mm(cut) + " mm", lines: lines });
       var nt = Math.floor((hc - 100) / rf.tie.s + 1e-9) + 1, tl = [], zt0 = z0 + 50;
-      if (e.shape === "circle") { var Rt = e.w / 2 - c - td / 2, ring = Math.PI * (e.w - 2 * c - td) + lapD * td; for (var j = 0; j < nt; j++) { var zz = zt0 + j * rf.tie.s, pr = []; for (var q = 0; q <= 16; q++) pr.push(P3(at(Rt * Math.cos(q / 16 * 2 * Math.PI), Rt * Math.sin(q / 16 * 2 * Math.PI)), zz)); tl.push(pr); } set({ what: "Circular ties", dia: td, sh: "st", nb: nt, cut: ring, f: "π × (" + mm(e.w) + " − 2×" + c + " − " + td + ") + lap " + lapD + "d = " + mm(ring) + " mm; (" + mm(hc) + " − 100) ÷ " + rf.tie.s + " + 1 = " + nt + " nos", lines: tl }); }
+      if (B.colRound(e)) { var Rt = e.w / 2 - c - td / 2, ring = Math.PI * (e.w - 2 * c - td) + lapD * td; for (var j = 0; j < nt; j++) { var zz = zt0 + j * rf.tie.s, pr = []; for (var q = 0; q <= 16; q++) pr.push(P3(at(Rt * Math.cos(q / 16 * 2 * Math.PI), Rt * Math.sin(q / 16 * 2 * Math.PI)), zz)); tl.push(pr); } set({ what: "Circular ties", dia: td, sh: "st", nb: nt, cut: ring, f: "π × (" + mm(e.w) + " − 2×" + c + " − " + td + ") + lap " + lapD + "d = " + mm(ring) + " mm; (" + mm(hc) + " − 100) ÷ " + rf.tie.s + " + 1 = " + nt + " nos", lines: tl }); }
       else {
         var sc = stirrupCut(td, e.w, e.d || e.w, c), ax = e.w / 2 - c - td / 2, ay = (e.d || e.w) / 2 - c - td / 2;
         for (var j2 = 0; j2 < nt; j2++) { var z2 = zt0 + j2 * rf.tie.s; tl.push(loop([P3(at(-ax, -ay), z2), P3(at(ax, -ay), z2), P3(at(ax, ay), z2), P3(at(-ax, ay), z2)])); }

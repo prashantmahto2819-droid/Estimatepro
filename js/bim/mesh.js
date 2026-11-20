@@ -160,13 +160,15 @@
           case "wall": wall(M, doc, e, z0); break;
           case "door": case "window": case "opening": var hw = B.hostOf(doc, e); if (hw) { var Lh = B.level(d, hw.lvl); hosted(M, doc, e, Lh.elev + (hw.base || 0)); } break;
           case "slab": var zt = L.elev + (e.off || 0); prism(M, e.pts, zt - e.th, zt, LK("slab", e), e.holes, null, false, e.kind === "floor" ? LK("slab", e) : B.lookFor(d, "ceiling")); break;
-          case "column": var hc = e.h != null ? e.h : L.h; if (e.shape === "circle") { var cp = []; for (var i = 0; i < 24; i++) cp.push(G.polar(e.p, e.w / 2, i / 24 * G.TAU)); prism(M, cp, z0, z0 + hc, LK("frame", e)); } else box(M, e.p, e.w, e.d, e.rot, z0, z0 + hc, LK("frame", e)); break;
+          case "column": var hc = e.h != null ? e.h : L.h; if (e.shape && e.shape !== "rect") prism(M, B.colPoly(e), z0, z0 + hc, LK("frame", e)); else box(M, e.p, e.w, e.d, e.rot, z0, z0 + hc, LK("frame", e)); break;
           case "beam": var top = L.elev + L.h + (e.top || 0); boxAlong(M, e.a, e.b, e.w, top - e.d, top, LK("frame", e)); break;
           case "footing": var bot = L.elev - e.df, pc = e.pcc || { off: 150, th: 100 }; box(M, e.p, e.L + 2 * pc.off, e.B + 2 * pc.off, e.rot, bot - pc.th, bot, LK("found")); box(M, e.p, e.L, e.B, e.rot, bot, bot + e.D, LK("found", e)); if (e.ped) box(M, e.p, e.ped.w, e.ped.d, e.rot, bot + e.D, L.elev, LK("found", e)); break;
           case "roof": roof(M, doc, e, L.elev + (e.off || 0)); break;
           case "stair": var S = B.stairGeom(e); S.steps.forEach(function (st) { var a = st.a, u = st.u, n = st.n, q = [a, G.add(a, G.mul(u, st.T)), G.add(G.add(a, G.mul(u, st.T)), G.mul(n, st.last && S.flights.length > 1 && st.T !== e.T ? 2 * e.w + (e.gap || 100) : st.w)), G.add(a, G.mul(n, st.last && S.flights.length > 1 && st.T !== e.T ? 2 * e.w + (e.gap || 100) : st.w))]; prism(M, q, z0 + Math.max(0, st.z1 - e.R - (e.wt || 150) - 100), z0 + st.z1, LK("stair", e)); }); break;
           default: if (B.EXT && B.EXT[e.t] && B.EXT[e.t].mesh) B.EXT[e.t].mesh(M, doc, e, H); break;
-          case "room": prism(M, e.pts, L.elev - 2, L.elev + 3, B.look(e.look && B.LOOKS[e.look] ? e.look : B.FLOOR_LOOK[e.floor || ""] || "ips", e.col), null, 1, true); break;
+          case "room": prism(M, e.pts, L.elev - 2, L.elev + 3, B.look(e.look && B.LOOKS[e.look] ? e.look : B.FLOOR_LOOK[e.floor || ""] || "ips", e.col), null, 1, true);
+            if (e.ceil && B.fceilH) { var zf = L.elev + B.fceilH(doc, e); prism(M, e.pts, zf, zf + 12, B.lookFor(d, "ceiling"), null, null, true); }   // false ceiling board (underside at the set height)
+            break;
           case "railing": for (var k = 0; k + 1 < e.pts.length; k++) { var a2 = e.pts[k], b2 = e.pts[k + 1], len = G.dist(a2, b2), nP = Math.max(1, Math.round(len / 1200)); boxAlong(M, a2, b2, 50, z0 + (e.h || 1000) - 50, z0 + (e.h || 1000), LK("rail", e)); for (var j = 0; j <= nP; j++) box(M, G.lerp(a2, b2, j / nP), 40, 40, 0, z0, z0 + (e.h || 1000), LK("rail", e)); } break;
         }
       } catch (er) { console.warn("mesh", e.t, er); }

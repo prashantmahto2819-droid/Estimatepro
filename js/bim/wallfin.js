@@ -13,6 +13,7 @@
     wpc: { n: "Wall panel — WPC", th: 20, z1: null, look: "wpc_brown", key: "wall_panel", looks: ["wpc_brown", "wpc_grey", "wood", "wood_light", "hpl_wood"] },
     stone: { n: "Stone cladding", th: 30, z1: null, look: "stone_cladding", key: "stone_veneer", looks: ["stone_cladding", "stone_cladding_w", "kota", "granite", "marble", "stone", "brick"] }
   };
+  if (B.FIN_MORE) Object.assign(B.FIN, B.FIN_MORE);   // more panelling kinds from the catalogue files
   B.MAP = B.MAP || {};
   B.MAP.wall_tile = Object.assign({ c: [["cpwd23", "8.31"]], q: /ceramic glazed wall tiles|glazed wall tiles/i }, B.MAP.wall_tile || {});
   B.MAP.acp_panel = Object.assign({}, B.MAP.acp_panel || { q: /ACP.*panel|aluminium composite/i }, { c: [["cpwd23", "8.32"]] });

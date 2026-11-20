@@ -219,7 +219,21 @@
   });
 
   function xf(e) { var s = e.sc || 1, r = (e.rot || 0) * Math.PI / 180, c = Math.cos(r), sn = Math.sin(r), f = function (q) { return [e.p[0] + (q[0] * c - q[1] * sn) * s, e.p[1] + (q[0] * sn + q[1] * c) * s]; }; f.s = s; f.r = e.rot || 0; return f; }
-  function mountZ(doc, e, def) { var d = doc.d, L = B.level(d, e.lvl), bs = B.ensure(d); if (e.z != null) return L.elev + e.z; if (def.mount === "ceiling") return L.elev + L.h - bs.slabTh - (def.h || 60); if (def.mount === "wall") return L.elev + (def.mz || 1200); return L.elev + (def.mz || 0); }
+  /* Where an item sits in height. Instead of one "height above the level" the user picks what to measure from (e.ref) and a distance (e.dz):
+       floor   – item bottom is dz above the floor of its level
+       fceil   – item hangs under the false ceiling of the room it is in, dz below it (0 = touching)
+       ceiling – item hangs under the slab above (its underside), dz below it
+       top     – item stands on top of the slab above (terrace), dz above it
+     No e.ref = the item's own usual place (floor / wall height / ceiling), or the old e.z. */
+  B.MOUNT_REFS = [["floor", "Floor of this level"], ["fceil", "False ceiling"], ["ceiling", "Slab underside (ceiling)"], ["top", "Top of the slab above (terrace)"]];
+  /* false ceiling: height of its underside above the floor — the room's own value, else 300 mm under the slab (never below 2.1 m) */
+  B.fceilH = function (doc, room, lvl) { var L = B.level(doc.d, room ? room.lvl : lvl), soffit = L.h - B.ensure(doc.d).slabTh; return room && room.fch != null && room.fch > 0 ? Math.min(room.fch, soffit) : Math.max(Math.min(2100, soffit), soffit - 300); };
+  B.roomAt = function (doc, p, lvl, onlyCeil) { var hit = null; doc.d.ents.forEach(function (r) { if (hit || r.t !== "room" || r.lvl !== lvl || (onlyCeil && !r.ceil) || !r.pts) return; if (G.inPoly(p, r.pts)) hit = r; }); return hit; };
+  function mountZ(doc, e, def) { var d = doc.d, L = B.level(d, e.lvl), bs = B.ensure(d);
+    if (e.ref) { var dz = +e.dz || 0, hh = (def.h || 60) * (e.sc || 1), soffit = L.elev + L.h - bs.slabTh;
+      if (e.ref === "floor") return L.elev + dz; if (e.ref === "ceiling") return soffit - hh - dz; if (e.ref === "top") return L.elev + L.h + dz;
+      if (e.ref === "fceil") return L.elev + B.fceilH(doc, B.roomAt(doc, e.p, e.lvl, true), e.lvl) - hh - dz; }
+    if (e.z != null) return L.elev + e.z; if (def.mount === "ceiling") return L.elev + L.h - bs.slabTh - (def.h || 60); if (def.mount === "wall") return L.elev + (def.mz || 1200); return L.elev + (def.mz || 0); }
   B.assetZ = mountZ;
 
   var CAT_FILL = B.CAT_FILL = { Landscape: "rgba(90,160,70,.15)", Plumbing: "rgba(80,160,220,.12)", Electrical: "rgba(220,200,50,.12)", Furniture: "rgba(160,120,60,.15)", Kitchen: "rgba(180,140,80,.12)", Finishes: "rgba(120,140,180,.10)" };
