@@ -110,7 +110,30 @@
         boxAlong(M, p0, at(40), 40, zlo, zhi, leafCol); boxAlong(M, at(Lw - 40), p1, 40, zlo, zhi, leafCol);
         boxAlong(M, p0, p1, 40, zlo, zlo + 60, leafCol); boxAlong(M, p0, p1, 40, zhi - 60, zhi, leafCol); boxAlong(M, p0, p1, 30, zlo + HH * 0.5, zlo + HH * 0.5 + 30, leafCol);
         for (var gx = 110; gx < Lw - 60; gx += 110) boxAlong(M, at(gx - 8), at(gx + 8), 16, zlo + 60, zhi - 60, leafCol);
+      } else if (st === "groove") {   /* flush door with horizontal grooves (laminate look) */
+        boxAlong(M, p0, p1, 35, zlo, zhi, leafCol); var dk = B.look("steel_matt_black"); for (var gi = 1; gi < 5; gi++) boxAlong(M, at(0), at(Lw), 37, zlo + HH * gi / 5 - 4, zlo + HH * gi / 5 + 4, dk);
+      } else if (st === "vgroove") {   /* vertical grooves */
+        boxAlong(M, p0, p1, 35, zlo, zhi, leafCol); var dk2 = B.look("steel_matt_black"); for (var vx = 1; vx < 4; vx++) boxAlong(M, at(Lw * vx / 4 - 3), at(Lw * vx / 4 + 3), 37, zlo, zhi, dk2);
+      } else if (st === "panel6") {   /* six raised panels */
+        boxAlong(M, p0, p1, 35, zlo, zhi, leafCol); var mg = Math.min(100, Lw * 0.12), cw6 = (Lw - 3 * mg) / 2, rows6 = [[0.06, 0.30], [0.36, 0.62], [0.68, 0.94]];
+        rows6.forEach(function (r) { for (var c6 = 0; c6 < 2; c6++) boxAlong(M, at(mg + c6 * (cw6 + mg)), at(mg + c6 * (cw6 + mg) + cw6), 46, zlo + HH * r[0], zlo + HH * r[1], leafCol); });
+      } else if (st === "vision") {   /* flush door with a narrow vertical glass strip */
+        var gx0 = Lw * 0.68, gx1 = Lw * 0.82; boxAlong(M, p0, at(gx0), 35, zlo, zhi, leafCol); boxAlong(M, at(gx1), p1, 35, zlo, zhi, leafCol); boxAlong(M, at(gx0), at(gx1), 35, zlo, zlo + HH * 0.3, leafCol); boxAlong(M, at(gx0), at(gx1), 35, zlo + HH * 0.88, zhi, leafCol); boxAlong(M, at(gx0), at(gx1), 8, zlo + HH * 0.3, zlo + HH * 0.88, glass);
+      } else if (st === "halfglass") {   /* glass above, panel below */
+        var sw2 = 90; boxAlong(M, p0, at(sw2), 40, zlo, zhi, leafCol); boxAlong(M, at(Lw - sw2), p1, 40, zlo, zhi, leafCol); boxAlong(M, p0, p1, 40, zlo, zlo + HH * 0.45, leafCol); boxAlong(M, p0, p1, 40, zhi - sw2, zhi, leafCol); boxAlong(M, at(sw2), at(Lw - sw2), 8, zlo + HH * 0.45, zhi - sw2, glass); boxAlong(M, at(sw2 + 40), at(Lw - sw2 - 40), 48, zlo + HH * 0.08, zlo + HH * 0.38, leafCol);
+      } else if (st === "louvre") {   /* louvred (bathroom / store) */
+        boxAlong(M, p0, at(60), 38, zlo, zhi, leafCol); boxAlong(M, at(Lw - 60), p1, 38, zlo, zhi, leafCol); boxAlong(M, p0, p1, 38, zlo, zlo + 120, leafCol); boxAlong(M, p0, p1, 38, zhi - 80, zhi, leafCol); boxAlong(M, p0, p1, 38, zlo + HH * 0.5 - 30, zlo + HH * 0.5 + 30, leafCol);
+        for (var lz = zlo + 150; lz < zhi - 110; lz += 55) { if (Math.abs(lz - (zlo + HH * 0.5)) < 50) continue; boxAlong(M, at(60), at(Lw - 60), 30, lz, lz + 14, leafCol); }
+      } else if (st === "jali") {   /* frame with a lattice (jali) panel */
+        boxAlong(M, p0, at(80), 40, zlo, zhi, leafCol); boxAlong(M, at(Lw - 80), p1, 40, zlo, zhi, leafCol); boxAlong(M, p0, p1, 40, zlo, zlo + 200, leafCol); boxAlong(M, p0, p1, 40, zhi - 100, zhi, leafCol);
+        for (var jx = 80 + 70; jx < Lw - 100; jx += 70) boxAlong(M, at(jx - 6), at(jx + 6), 14, zlo + 200, zhi - 100, leafCol); for (var jz = zlo + 270; jz < zhi - 120; jz += 70) boxAlong(M, at(80), at(Lw - 80), 14, jz - 6, jz + 6, leafCol);
+      } else if (st === "carved") {   /* main door: centre raised field with a border and a top light */
+        boxAlong(M, p0, p1, 45, zlo, zhi, leafCol); var bm = Math.min(110, Lw * 0.12); boxAlong(M, at(bm), at(Lw - bm), 60, zlo + HH * 0.06, zlo + HH * 0.72, leafCol); boxAlong(M, at(bm + 60), at(Lw - bm - 60), 72, zlo + HH * 0.11, zlo + HH * 0.67, leafCol); boxAlong(M, at(bm + 130), at(Lw - bm - 130), 84, zlo + HH * 0.2, zlo + HH * 0.58, leafCol); boxAlong(M, at(bm), at(Lw - bm), 52, zlo + HH * 0.78, zlo + HH * 0.94, B.look("glass_frosted"));
       } else boxAlong(M, p0, p1, 35, zlo, zhi, leafCol);
+      /* handle: lever on a plate for ordinary doors, a long pull bar for main / glass doors */
+      if (o.handle !== "none" && st !== "grill") { var hk = B.look(o.handle === "gold" ? "steel_gold_pvd" : o.handle === "black" ? "steel_matt_black" : "steel_ss"), hx = Lw > 400 ? Lw - 70 : Lw / 2, pull = o.handle === "pull" || st === "carved";
+        if (pull) { boxAlong(M, at(hx - 12), at(hx + 12), 110, zlo + 800, zlo + 830, hk); boxAlong(M, at(hx - 12), at(hx + 12), 110, zlo + 1270, zlo + 1300, hk); boxAlong(M, at(hx - 10), at(hx + 10), 20 + 110, zlo + 760, zlo + 1340, hk); boxAlong(M, at(hx - 12), at(hx + 12), 70, zlo + 780, zlo + 1320, B.look("steel_ss")); }
+        else { boxAlong(M, at(hx - 22), at(hx + 22), 50, zlo + 960, zlo + 1120, hk); boxAlong(M, at(hx - 110), at(hx + 10), 120, zlo + 1030, zlo + 1050, hk); } }
     }
     if (o.kind === "double") { var m = G.mid(la, lb); leafShape(la, G.sub(m, G.mul(u, 3))); leafShape(G.add(m, G.mul(u, 3)), lb); }
     else leafShape(la, lb);
@@ -168,7 +191,7 @@
           case "stair": var S = B.stairGeom(e); S.steps.forEach(function (st) { var a = st.a, u = st.u, n = st.n, q = [a, G.add(a, G.mul(u, st.T)), G.add(G.add(a, G.mul(u, st.T)), G.mul(n, st.last && S.flights.length > 1 && st.T !== e.T ? 2 * e.w + (e.gap || 100) : st.w)), G.add(a, G.mul(n, st.last && S.flights.length > 1 && st.T !== e.T ? 2 * e.w + (e.gap || 100) : st.w))]; prism(M, q, z0 + Math.max(0, st.z1 - e.R - (e.wt || 150) - 100), z0 + st.z1, LK("stair", e)); }); break;
           default: if (B.EXT && B.EXT[e.t] && B.EXT[e.t].mesh) B.EXT[e.t].mesh(M, doc, e, H); break;
           case "room": prism(M, e.pts, L.elev - 2, L.elev + 3, B.look(e.look && B.LOOKS[e.look] ? e.look : B.FLOOR_LOOK[e.floor || ""] || "ips", e.col), null, 1, true);
-            if (e.ceil && B.fceilH) { var zf = L.elev + B.fceilH(doc, e); prism(M, e.pts, zf, zf + 12, B.lookFor(d, "ceiling"), null, null, true); }   // false ceiling board (underside at the set height)
+            if (e.ceil && B.fceilH) { var zf = L.elev + B.fceilH(doc, e); if (e.cdes && B.ceilDesign) B.ceilDesign(M, doc, e, zf, H); else prism(M, e.pts, zf, zf + 12, B.lookFor(d, "ceiling"), null, null, true); }   // false ceiling board (underside at the set height)
             break;
           case "railing": B.railMesh(M, e, z0, { d: d, box: box, boxAlong: boxAlong }); break;
         }

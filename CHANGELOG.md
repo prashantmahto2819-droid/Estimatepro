@@ -3,6 +3,10 @@
 This file is for the people maintaining the app. It is not published with the site (see `.assetsignore`).
 The text users see is `EP_NOTES` in `js/version.js`.
 
+## 2026.11.21-b
+- Room false ceiling designs: `room.cdes` (`B.CEIL_DES`: tray, double, island, border), `cbw` border width, `cdrop` step, `cled` LED look, `cspot` (`B.CEIL_SPOTS`). `B.ceilDesign(M, doc, e, zf, H)` in `runs.js` (called from the room case in `mesh.js`), inset by `offsetPath`; `B.ceilInfo` → LED length and spot count, appended to the room's quantities by a `B.qty` wrapper (`led_strip` L, `light_point` N). Concave rooms: the inset is a plain mitred offset, so very narrow necks can overlap.
+- Doors: leaf styles groove, vgroove, panel6, carved, vision, halfglass, louvre, jali added to `leafShape` (`mesh.js`); `door.handle` ("" lever steel, black, gold, pull, none).
+
 ## 2026.11.21-a
 - Cladding runs: `holesOn(doc, e, a, b)` (`B.runHoles`) finds doors / windows / openings of walls parallel to and within th/2 + 120 mm of a segment; `strip()` splits round them; qty deducts the area. Entity `cut: false` covers them instead.
 - Library items: own size `W`, `D`, `HH` (mm) → `B.assetFac` stretch factors, applied to the mesh vertices, normals and edges after `def.mesh` (anchored at the top for ceiling items), to the plan symbol and to measured quantities. It is a stretch: handles, legs and shutters stretch with it.
