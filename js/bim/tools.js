@@ -221,7 +221,7 @@
     var snapOf = function (w) { return ed.set.astSnap === false || !B.assetWallSnap ? null : B.assetWallSnap(ed.doc, { kind: kind, rot: rot, sc: sc, lvl: cur(ed) }, w); };
     while (true) {
       ed.preview = function (w) { var sn = snapOf(w); return [{ t: "asset", kind: kind, p: sn ? sn.p : w, rot: sn ? sn.rot : rot, sc: sc, cap: cap, lvl: cur(ed) }]; };
-      var p = await ed.getPoint("Place " + def.n + " — it jumps flush to a wall when close (Enter to finish)", { opt: true, kw: ["Turn", "Rotate", "Scale", "Wallsnap"] }); ed.preview = null;
+      var p = await ed.getPoint("Place " + def.n + (def.cat === "Landscape" || def.mount === "ceiling" ? "" : " — it jumps flush to a wall when close") + " (Enter to finish)", { opt: true, kw: ["Turn", "Rotate", "Scale", "Wallsnap"] }); ed.preview = null;
       if (p == null) break;
       if (p === "Turn") { rot = ed.astRot = (rot + 90) % 360; continue; }   // quarter turn
       if (p === "Rotate") { rot = ed.astRot = await ed.getNum("Rotation (degrees)", { def: rot }); continue; }
