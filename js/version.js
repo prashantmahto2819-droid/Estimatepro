@@ -1,3 +1,3 @@
 /* App version + "what's new" — the super admin is offered to send this on WhatsApp after each upload. Change both with every release. */
-window.EP_VER = "2026.11.20-i";
-window.EP_NOTES = "• Design Studio drawings: material hatches on the sheet — concrete, soil, brick and water are now easy to tell apart\n• Non-SOR: 23 more items — granite kitchen platform with fascia and supports, sink cut-out, sills and door surrounds; parapet jali, balusters, coping and railings (MS, cast iron, teak handrail); designer, parking, elevation and cool-roof tiles; texture paints, wallpaper, micro-concrete\n• All 356 Non-SOR analyses re-checked: every line has a rate and quantity";
+window.EP_VER = "2026.11.20-j";
+window.EP_NOTES = "• Σ Quantities: grills, gates and railings from the library are now measured, not just counted — MS grills, gates and railings in kg (approximate weight, shown in the formula), rolling shutter, collapsible gate and stone jali in sqm — and go straight to their CPWD items\n• Smoke detector, sprinkler, hose reel, call point, lightning conductor, glass shelf, towel rail and sign board now pick their schedule item automatically";

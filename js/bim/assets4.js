@@ -79,4 +79,22 @@
   mk("gate_rolling_shutter_3000", "Rolling shutter 3.0 × 2.7 m (with hood)", GR, 3000, 350, 3000, "rolling_shutter", { m: "wall", z: 0 }, [["l", -1500, 0, 1500, 0]], [["b", 0, 0, 3000, 30, 0, 2700, "sheet_gi"], ["b", 0, 60, 3100, 350, 2700, 3000, "steel"], ["b", -1500, 0, 80, 60, 0, 2700, "steel"], ["b", 1500, 0, 80, 60, 0, 2700, "steel"]]);
   mk("compound_grill_2400", "Compound wall grill panel 2.4 × 0.9 m (spear heads)", GR, 2400, 40, 1000, "ms_grill", { z: 1200 }, symBars(13, -1150, 1150), (function () { var o = [["b", 0, 0, 2400, 30, 80, 110, MSB], ["b", 0, 0, 2400, 30, 700, 730, MSB]].concat(bars(13, -1100, 1100, 0, 16, 16, 0, 850, MSB)); for (var i = 0; i < 13; i++) o.push(["c", -1100 + i * 183.3, 0, 16, 850, 980, MSB, 2]); return o; })());
   mk("tree_guard_ms", "Tree guard — MS flats, 600 dia × 1.5 m", GR, 650, 650, 1500, "tree_guard", { nb: 1 }, [["c", 0, 0, 300]], (function () { var o = [["c", 0, 0, 305, 0, 30, MSB], ["c", 0, 0, 305, 700, 730, MSB], ["c", 0, 0, 305, 1470, 1500, MSB]]; for (var i = 0; i < 12; i++) { var a = i / 12 * Math.PI * 2; o.push(["b", Math.cos(a) * 300, Math.sin(a) * 300, 20, 20, 0, 1500, MSB]); } return o; })());
+
+  /* how these are measured in Σ Quantities (instead of "1 no."), and the schedule item each goes to.
+     Weights are typical kg per sqm of elevation for the pattern drawn — approximate, shown as such in the formula. */
+  var QD = { ms_grill: { dim: "M", kg: 13 }, ms_grill_design: { dim: "M", kg: 16 }, ms_gate: { dim: "M", kg: 30 }, ms_railing: { dim: "M", kg: 15 }, ss_railing: { dim: "M", kg: 9 }, ss_grill: { dim: "M", kg: 10 },
+    laser_grill: { dim: "A" }, al_grill: { dim: "A" }, rolling_shutter: { dim: "A", h: 2700 }, collapsible_gate: { dim: "A" }, stone_jali: { dim: "A" }, glass_railing: { dim: "L" } };
+  Object.keys(A).forEach(function (id) { var df = A[id]; if ((df.cat === GR || df.cat === TE) && QD[df.key]) df.q = QD[df.key]; });
+  B.MAP = Object.assign(B.MAP || {}, {
+    ms_grill: { c: [["cpwd23", "9.48.1"], ["cpwd", "9.48.1"]], q: /M\.S\. grills of required pattern/i }, ms_grill_design: { c: [["cpwd23", "9.48.1"], ["cpwd", "9.48.1"]], q: /M\.S\. grills of required pattern/i },
+    ms_gate: { c: [["cpwd23", "10.25.2"], ["cpwd", "10.25.2"]], q: /steel work welded in built up sections/i }, ms_railing: { c: [["cpwd23", "10.26.1"], ["cpwd", "10.26.1"]], q: /hand rail of approved size/i },
+    ss_railing: { c: [["cpwd23", "10.28"], ["cpwd", "10.28"]], q: /stainless steel.*railing/i }, rolling_shutter: { c: [["cpwd23", "10.6.1"], ["cpwd", "10.6.1"]], q: /rolling shutters/i },
+    collapsible_gate: { c: [["cpwd23", "10.3"], ["cpwd", "10.3"]], q: /collapsible steel shutters/i }, stone_jali: { c: [["cpwd23", "7.33.1"]], q: /stone jali/i },
+    ss_grill: null, laser_grill: null, al_grill: null, glass_railing: null, tree_guard: null,
+    temple_dome: null, temple_shikhar: null, temple_kalash: null, temple_chhatri: null, temple_mandap: null, temple_pillar: null, temple_arch: null, temple_jharokha: null, temple_bell: null, temple_stambh: null, temple_small: null, cornice: null
+  });
+  /* older library items that had no schedule item */
+  B.MAP = Object.assign(B.MAP || {}, { shelf: { c: [["cpwd23", "17.33"]], q: /glass shelf/i }, robe_hook: { c: [["cpwd23", "17.73.1"]], q: /towel rail/i }, signboard: { c: [["cpwd23", "16.59.1"]], q: /retro reflective sign boards/i },
+    smoke_detector: { c: [["em22", "17.1.2"]], q: /smoke detector/i, books: ["em22"] }, sprinkler: { c: [["em22", "18.21.1"]], q: /quartzoid bulb type sprinklers/i, books: ["em22"] },
+    hose_reel: { c: [["em22", "18.17.1"]], q: /hose reel/i, books: ["em22"] }, fire_alarm: { c: [["em22", "17.1.3"]], q: /manual call box/i, books: ["em22"] }, lightning: { c: [["em22", "6.2"]], q: /lightning conductor finial/i, books: ["em22"] } });
 })();
