@@ -5,3 +5,4 @@ wrangler.jsonc
 .assetsignore
 node_modules
 CHANGELOG.md
+PENDING.md
