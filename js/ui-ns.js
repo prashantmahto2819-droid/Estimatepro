@@ -292,6 +292,8 @@
     var t = e.target, ds = t.dataset; if (!U.est || E().ro()) return;
     if (ds.nsf && ds.nsf.split("|")[1] === "rnd") { upd(ds.nsf.split("|")[0], function (it, n) { n.rnd = t.value; }); return; }
     if (ds.nsl) { var p = ds.nsl.split("|"); if (/^(sec|pick|rb|dry|qm|hm|inth|ra|opc|hlc)$/.test(p[2])) upd(p[0], function (it, n) { n.L[+p[1]][p[2]] = t.value; }); }
+    /* quantity typed with another unit (8 kg on a tonne line, 2 bags of cement, 20 sqft on a sqm line) → converted on leaving the box */
+    if (ds.nsl && ds.nsl.split("|")[2] === "q" && EP.ev(t.value) == null && t.value.trim()) { var pq = ds.nsl.split("|"), said = null; upd(pq[0], function (it, n) { var L = n.L[+pq[1]], cv = L && EP.qtyIn(t.value, EP.nsLineInfo(L).unit); if (cv) { L.q = String(+cv.v.toPrecision(6)); said = cv.from + " = " + L.q + " " + EP.nsLineInfo(L).unit; } }); if (said) U.toast(said); }
   });
   document.addEventListener("keydown", function (e) { if (e.key === "Escape" && e.target.dataset && e.target.dataset.nsq) { S.nsUi.q[e.target.dataset.nsq] = ""; U.render(); } });
   document.addEventListener("click", function (e) {

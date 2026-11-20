@@ -3,6 +3,11 @@
 This file is for the people maintaining the app. It is not published with the site (see `.assetsignore`).
 The text users see is `EP_NOTES` in `js/version.js`.
 
+## 2026.11.20-p
+- Shader: tile pattern (`pi==6`) is a straight grid with `fwidth` anti-aliased joints and per-tile tone; no brick bond.
+- `EP.qtyIn(text, unit)`; the NS analysis quantity box converts a typed unit (kg, bags, sqft, cft…) to the line's unit on change.
+- Check run: every estimate sub-section and every app screen renders without an exception in the test harness (items, suggested, header, abstract, analysis check, versions, history, export; users, design, help, library, basic, sors, backup, reviews, photos, scan, cad, samples, tutorials).
+
 ## 2026.11.20-o
 - Viewer: picture cut-outs — `sc.cutouts` ({p, h, w, src, flip}) from `H.cutouts` in `B.meshes`; `_cutTex()` loads a picture into a texture (unit 7), `_drawCuts()` draws alpha-tested upright cards turned to the camera (pass 7b). No shadows cast, not pickable in 3D.
 - `js/bim/assets7.js` (new): built-in vector figures and trees (`figure()`, `treePic()`), `B.addPic()` / `B.regPics()` for the user's own PNGs kept in `bim.pics` (shrunk to 768 px).

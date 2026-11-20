@@ -42,6 +42,16 @@
     try { var v = expr(); ws(); return i === s.length && isFinite(v) ? v : null; } catch (e) { return null; }
   };
 
+  /* A quantity typed with its own unit, turned into the unit the line needs: "8 kg" for a line in tonne → 0.008,
+     "2 bags" (cement, 50 kg) → 0.1 tonne, "20 sqft" for sqm → 1.858. Returns { v, from } or null when no conversion applies. */
+  EP.qtyIn = function (text, unit) {
+    var m = /^(.+?)\s*([a-zA-Z][a-zA-Z .²³]*)$/.exec(String(text == null ? "" : text).trim()); if (!m || !EP.units || !unit) return null;
+    var n = EP.ev(m[1]), u = m[2].trim().toLowerCase().replace(/\.$/, ""); if (n == null) return null;
+    if (/^bags?$/.test(u)) { if (!EP.units.canConv("kg", unit)) return null; return { v: EP.units.conv(n * 50, "kg", unit), from: n + " bag (50 kg each)" }; }
+    var g = EP.units.get(u), t = EP.units.get(unit); if (!g || !t || g.dim !== t.dim || g.id === t.id) return null;
+    return { v: EP.units.conv(n, g.id, t.id), from: n + " " + g.sym };
+  };
+
   /* ---------- books ---------- */
   function addBook(id, meta, list, ch, extra) {
     var b = Object.assign({ id: id, name: meta.name, short: meta.short, long: meta.long, kind: meta.kind || "plain", list: list, idx: {}, ch: ch || {}, an: null, basic: null, round: 0.05 }, extra || {});

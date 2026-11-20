@@ -128,9 +128,14 @@ void main(){
     col*=0.9+0.15*n;
   }else if(pi==5){/* paint */
     col*=0.97+0.06*vn(uv*20.0);
-  }else if(pi==6){/* tiles */
-    float b=bond(uv,1.0,1.0,0.03);
-    col=mix(col*0.6,col,b);
+  }else if(pi==6){/* tiles: straight grid, joints that stay clean at a distance, slight tone change tile to tile */
+    vec2 aa=fwidth(uv)*1.3; vec2 e=0.5-abs(fract(uv)-0.5);
+    vec2 m=smoothstep(vec2(0.012)-aa,vec2(0.012)+aa,e);
+    float far=clamp(max(aa.x,aa.y)*2.2,0.0,1.0);
+    float g=mix(min(m.x,m.y),0.96,far);
+    float tv=fract(sin(dot(floor(uv),vec2(12.9898,78.233)))*43758.5453);
+    col*=mix(0.965+0.07*tv,1.0,far);
+    col=mix(col*0.55,col,g);
   }else if(pi==7){/* wood */
     float g=sin(uv.x*30.0+fbm(uv*2.0)*5.0)*0.5+0.5;
     col*=0.7+0.3*g;
