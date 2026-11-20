@@ -3,6 +3,14 @@
 This file is for the people maintaining the app. It is not published with the site (see `.assetsignore`).
 The text users see is `EP_NOTES` in `js/version.js`.
 
+## 2026.11.20-n
+- `WALLFINISH` (`WF`, `DADO`): puts a `wall.fin` record on a clicked face, or on every wall along a room outline (`Room`), with kind / height / from / material options.
+- `js/bim/assets6.js` (new): boundary wall bays, grand gates, fountains.
+- `js/bim/assets5.js`: extra part types `x` (side profile extrusion), `w` (wheel), `g` (irregular ellipsoid), `k` (tube between two points), `q` (two-sided blade) through `xmesh()`; people, vehicles, trees and road pieces rebuilt with them. Still stylised geometry — photo-real people and cars need imported GLB models.
+- Decoration counted on request: `e.noq === false` → row keyed by the item id.
+- 3D: `v3mode("tour")` interpolates saved scene views; `v3mode("rec")` records the canvas with MediaRecorder (WebM).
+- Not done: moving people / vehicles in the view (the scene is one static buffer).
+
 ## 2026.11.20-m
 - `js/bim/assets5.js` (new): category "Decoration (view only)", 45 items, `def.deco = true`. `B.EXT.asset.qty` returns no rows for `def.deco` or `e.noq === true` (property "Count in the estimate").
 - Viewer: `uHead` uniform — a light at the eye position while walking; ambient 0.70 in walk mode.

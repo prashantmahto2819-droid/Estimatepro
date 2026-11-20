@@ -127,7 +127,7 @@
     "Draw": [["Lines", ["LINE", "PLINE", "XLINE", "RAY"]], ["Shapes", ["RECTANG", "CIRCLE", "ARC", "POLYGON", "ELLIPSE", "SPLINE", "POINT"]], ["Fill", ["HATCH", "BOUNDARY"]]],
     "Modify": [["Move and copy", ["MOVE", "COPY", "ROTATE", "SCALE", "MIRROR", "ARRAY", "STRETCH"]], ["Edit shape", ["OFFSET", "TRIM", "EXTEND", "FILLET", "CHAMFER", "BREAK", "JOIN", "EXPLODE"]], ["Properties", ["MATCHPROP", "GRIPLINK", "ERASE"]], ["Clipboard", ["COPYCLIP", "CUTCLIP", "PASTECLIP"]]],
     "Annotate": [["Text", ["TEXT", "MTEXT", "LEADER"]], ["Dimensions", ["DIMLINEAR", "DIMALIGNED", "DIMCONTINUE", "DIMBASELINE", "DIMANGULAR", "DIMRADIUS", "DIMDIAMETER", "DIMORDINATE"]], ["Building", ["DIMWALLS"]], ["Style", ["DIMSTYLE"]]],
-    "Building (BIM)": [["Structure", ["WALL", "COLUMN", "BEAM", "SLAB", "FOOTING"]], ["Openings", ["DOOR", "WINDOW", "OPENING"]], ["Roof, stairs and edges", ["ROOF", "STAIR", "RAILING", "PARAPET"]], ["Rooms and floors", ["ROOM", "LEVEL", "FLOORCOPY"]], ["Steel", ["REBAR", "BBS"]], ["Results", ["DIMWALLS", "BIM3D", "QUANTITIES"]]],
+    "Building (BIM)": [["Structure", ["WALL", "COLUMN", "BEAM", "SLAB", "FOOTING"]], ["Openings", ["DOOR", "WINDOW", "OPENING"]], ["Roof, stairs and edges", ["ROOF", "STAIR", "RAILING", "PARAPET"]], ["Rooms and floors", ["ROOM", "LEVEL", "FLOORCOPY"]], ["Wall finishes", ["WALLFINISH"]], ["Steel", ["REBAR", "BBS"]], ["Results", ["DIMWALLS", "BIM3D", "QUANTITIES"]]],
     "Site & services": [["Place", ["ASSET", "LANDAREA"]]],
     "Block": [["Blocks", ["BLOCK", "INSERT"]], ["Groups and order", ["GROUP", "UNGROUP", "DRAWORDER"]]],
     "Measure": [["Enquiry", ["DIST", "AREA", "ID", "LIST"]], ["Mark points", ["DIVIDE", "MEASURE"]], ["To estimate", ["TAKEOFF", "QUANTITIES"]]],

@@ -202,6 +202,50 @@
     } finally { ed.preview = null; ed.wpZ = null; ed.dirty = true; }
     if (pts.length > 1) ed.doc.add(Object.assign({ t: "railing", pts: pts, h: h, base: base || undefined, lvl: cur(ed), layer: lay(ed, "A-RAIL") }, extra()));
   }
+  /* WALLFINISH: tiles / dado / panelling / cladding put on wall faces by clicking — one face at a time, or every wall of a room.
+     The finish is the same wall.fin record the Properties panel edits (kind, face, from / to height, material). */
+  cmd("WALLFINISH", ["WF", "DADO"], async function (ed) {
+    ensureBim(ed); var kind = ed.wfKind || "dado", z0 = ed.wfZ0 || 0, z1 = ed.wfZ1 === undefined ? (B.FIN[kind] || {}).z1 : ed.wfZ1, look = ed.wfLook || null, n = 0;
+    function name() { return (B.FIN[kind] || B.FIN.tile).n.replace(/ \(.*\)$/, ""); }
+    function mat() { var P = B.FIN[kind] || B.FIN.tile, id = look && B.LOOKS[look] ? look : P.look; return (B.LOOKS[id] || {}).n || id; }
+    function lbl() { return name() + " — " + mat() + ", from " + Math.round(z0) + " to " + (z1 == null ? "the top of the wall" : Math.round(z1) + " mm"); }
+    function put(w, fc, s0, s1) {
+      var o = CAD.clone(w); o.fin = Object.assign({}, o.fin || {}); var nf = B.finNew(o, kind, fc); nf.f.z0 = z0; if (z1 == null) delete nf.f.z1; else nf.f.z1 = z1; if (look && B.LOOKS[look]) nf.f.look = look;
+      if (s0 != null) { nf.f.s0 = Math.round(s0); nf.f.s1 = Math.round(s1); }
+      o.fin[nf.id] = nf.f; ed.doc.mod(w.id, o); n++;
+    }
+    function side(w, p) { var c = B.wallLine(w); return G.cross2 ? (G.cross2(c.u, G.sub(p, c.a)) > 0 ? 0 : 1) : ((c.u[0] * (p[1] - c.a[1]) - c.u[1] * (p[0] - c.a[0])) > 0 ? 0 : 1); }
+    while (true) {
+      var p = await ed.getPoint(lbl() + " — click a wall on the side to finish, or Room for all walls of a room (Enter to finish)", { opt: true, kw: ["Room", "Kind", "Height", "From", "Material"] });
+      if (p == null) break;
+      if (p === "Kind") { var KN = {}; Object.keys(B.FIN).forEach(function (k) { KN[B.FIN[k].n] = k; }); var ck = Object.keys(KN).filter(function (k) { return KN[k] === kind; })[0]; kind = ed.wfKind = KN[await ed.getKw("Finish", Object.keys(KN), ck)] || kind; z1 = ed.wfZ1 = (B.FIN[kind] || {}).z1; look = ed.wfLook = null; continue; }
+      if (p === "Height") { var hv = await ed.getDist("Finish up to this height above the floor (0 = full wall height)", { def: z1 == null ? 0 : z1 }); z1 = ed.wfZ1 = hv > 0 ? hv : null; continue; }
+      if (p === "From") { z0 = ed.wfZ0 = Math.max(0, await ed.getDist("Finish starts at this height above the floor", { def: z0 })); continue; }
+      if (p === "Material") { var P0 = B.FIN[kind] || B.FIN.tile, MN = {}; (P0.looks || [P0.look]).forEach(function (id) { if (B.LOOKS[id]) MN[B.LOOKS[id].n] = id; }); look = ed.wfLook = MN[await ed.getKw("Material (more in Properties after placing)", Object.keys(MN), mat())] || look; continue; }
+      if (p === "Room") {
+        var q = await ed.getPoint("Click inside the room"); if (!q || typeof q === "string") continue;
+        var room = B.roomAt ? B.roomAt(ed.doc, q, cur(ed)) : null, loop = room && room.pts ? room.pts : null;
+        if (!loop) { ed.say("No room found there. Make the room with Room first (Building → Rooms and floors), or click the walls one by one."); continue; }
+        var before = n, walls = ed.doc.d.ents.filter(function (w) { return w.t === "wall" && (w.lvl || cur(ed)) === (room.lvl || cur(ed)); });
+        for (var i = 0; i < loop.length; i++) {
+          var a = loop[i], b = loop[(i + 1) % loop.length], el = G.dist(a, b); if (el < 50) continue; var eu = G.norm(G.sub(b, a)), mid = G.lerp(a, b, 0.5);
+          walls.forEach(function (w) {
+            var c = B.wallLine(w), wl = G.dist(c.a, c.b); if (Math.abs(eu[0] * c.u[1] - eu[1] * c.u[0]) > 0.03) return;
+            var off = Math.abs(c.u[0] * (mid[1] - c.a[1]) - c.u[1] * (mid[0] - c.a[0])); if (off > (w.th || 230) / 2 + 90) return;
+            var sa = G.dot(G.sub(a, c.a), c.u), sb = G.dot(G.sub(b, c.a), c.u), lo = Math.max(0, Math.min(sa, sb)), hi = Math.min(wl, Math.max(sa, sb)); if (hi - lo < 100) return;
+            var cen = [0, 0]; loop.forEach(function (v) { cen[0] += v[0] / loop.length; cen[1] += v[1] / loop.length; });
+            var whole = lo < 60 && hi > wl - 60; put(ed.doc.get(w.id), side(w, G.lerp(mid, cen, 0.02)), whole ? null : lo, whole ? null : hi);
+          });
+        }
+        ed.say(n > before ? name() + " put on " + (n - before) + " wall face(s) of " + (room.name || "the room") + "." : "No walls found along that room."); ed.dirty = true; continue;
+      }
+      if (typeof p === "string") continue;
+      var best = null, bd = 1e9; ed.doc.d.ents.forEach(function (w) { if (w.t !== "wall" || (w.lvl && w.lvl !== cur(ed))) return; var c = B.wallLine(w), s = G.dot(G.sub(p, c.a), c.u), wl = G.dist(c.a, c.b); if (s < -50 || s > wl + 50) return; var off = Math.abs(c.u[0] * (p[1] - c.a[1]) - c.u[1] * (p[0] - c.a[0])); if (off < bd) { bd = off; best = w; } });
+      if (!best || bd > (best.th || 230) / 2 + 600) { ed.say("Click on or just beside a wall."); continue; }
+      put(best, side(best, p)); ed.say(name() + " put on that face. Click the next wall, or Enter to finish."); ed.dirty = true;
+    }
+    if (n) ed.say(n + " wall face(s) finished. Select a wall to change the material, colour or heights in Properties.");
+  });
   cmd("RAILING", ["RL"], function (ed) { return railingCmd(ed, false); });
   cmd("PARAPET", ["PRP"], function (ed) { return railingCmd(ed, true); });
   cmd("LEVEL", ["LV"], async function (ed) { if (ed.onPanel) ed.onPanel("bim"); });

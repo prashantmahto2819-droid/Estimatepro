@@ -265,7 +265,7 @@
         if (def.q.dim === "L") rows.push({ k: def.key, dim: "L", v: Wm, label: def.n, f: mm(Wm) + " m run", z: z });
         else if (def.q.dim === "M") rows.push({ k: def.key, dim: "M", v: Wm * Hm / 1e6 * def.q.kg, label: def.n, f: mm(Wm) + " × " + mm(Hm) + " m × " + def.q.kg + " kg/m² (approximate weight — check with the fabrication drawing)", z: z });
         else rows.push({ k: def.key, dim: "A", v: Wm * Hm, label: def.n, f: mm(Wm) + " × " + mm(Hm), z: z }); }
-      else rows.push({ k: def.key, dim: "N", v: 1, label: def.n, f: "1 no.", z: z }); if (e.kind === "fan") rows.push({ k: "fan_point", dim: "N", v: 1, label: "Fan point wiring", f: "1 point", z: z }); return rows; },
+      else rows.push({ k: def.deco ? e.kind : def.key, dim: "N", v: 1, label: def.n, f: "1 no.", z: z });   /* a decoration item the user chose to count gets its own row */ if (e.kind === "fan") rows.push({ k: "fan_point", dim: "N", v: 1, label: "Fan point wiring", f: "1 point", z: z }); return rows; },
     mesh: function (M, doc, e, H) { var def = A[e.kind] || A.tree, d = doc.d, LK = function (id) { if (id === "landscape_bench") return B.lookFor(d, "landscape", e.look && B.LOOKS[e.look] ? e.look : "wood", e.col); return B.look(id); }; def.mesh(M, xf(e), mountZ(doc, e, def), LK, H, e); }
   };
   /* ---------- landscape areas ---------- */
