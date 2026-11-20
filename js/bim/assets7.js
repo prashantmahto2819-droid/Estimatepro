@@ -55,7 +55,7 @@
   function cut(id, name, hmm, src, wmm) {
     mk(id, name, CU, wmm || Math.round(hmm * 0.4), 200, hmm, "deco", { nb: 1 }, [["c", 0, 0, 180], ["l", -260, 0, 260, 0], ["l", 0, -120, 0, 120]], []);
     A[id].deco = true; A[id].cut = { src: src, h: hmm, w: wmm };
-    A[id].mesh = function (M, X, z0, LK, H, e) { var c = X([0, 0]), s = X.s, cu = A[id].cut; if (H.cutouts) H.cutouts.push({ p: [c[0] * K, c[1] * K, z0 * K], h: cu.h * s * K, w: cu.w ? cu.w * s * K : 0, src: cu.src, flip: !!(e && e.flip) }); };
+    A[id].mesh = function (M, X, z0, LK, H, e) { var c = X([0, 0]), s = X.s, cu = A[id].cut; if (H.cutouts) H.cutouts.push({ p: [c[0] * K, c[1] * K, z0 * K], h: cu.h * s * K, w: cu.w ? cu.w * s * K : 0, src: cu.src, flip: !!(e && e.flip), walk: ((e && +e.walk) || 0) * s * K, dir: [Math.cos((X.r || 0) * Math.PI / 180), Math.sin((X.r || 0) * Math.PI / 180)], seed: (c[0] * 0.0013 + c[1] * 0.0007) % 7 }); };
   }
   var G1 = ["#2f6a2c", "#3f8433", "#56a03c", "#74b84a"], G2 = ["#25552a", "#2f6a2c", "#3f8433", "#56a03c"];
   cut("cut_man_walk", "Cut-out — man walking, blue shirt", 1750, figure({ top: "#2f5f9e", bottom: "#33373d", walk: 1 }));

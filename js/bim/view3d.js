@@ -45,7 +45,8 @@ in vec4 vC;
 in float vI;
 in vec3 vM;
 uniform vec3 uSun,uEye,uSunCol,uSky,uGnd,uHor;
-uniform float uSel,uCut,uShadow,uSMs,uStyle,uFog,uAmb,uHead;
+uniform float uSel,uCut,uShadow,uSMs,uStyle,uFog,uAmb,uHead,uXr;
+uniform vec4 uBox;
 uniform int uK;
 uniform sampler2D uSM;
 uniform bool uLinear;
@@ -97,6 +98,7 @@ vec3 toLinear(vec3 c){return pow(c,vec3(2.2));}
 
 void main(){
   if(vP.z>uCut) discard;
+  if(vP.x<uBox.x||vP.x>uBox.y||vP.y<uBox.z||vP.y>uBox.w) discard;   /* section box */
   vec3 N=normalize(vN);
   if(!gl_FrontFacing) N=-N;
 
@@ -199,7 +201,7 @@ void main(){
     col=mix(col,uHor,clamp(f,0.0,0.85));
   }
 
-  fragColor=vec4(col,alpha);
+  fragColor=vec4(col,alpha*uXr);
 }`;
 
 /* Sky shader */
@@ -599,6 +601,7 @@ P.prototype.loop=function(){
   this._raf=requestAnimationFrame(()=>this.loop());
   if(this.spin&&!this.walk){ const now=performance.now(); this.yaw+=((now-(this._spinT||now))/1000)*0.25; this._spinT=now; this.dirty=true; } else this._spinT=0;
   if(this.walk&&this._keys&&this._keys.size) this._walkKeys();
+  if(this.play){ this._playT=performance.now()/1000; this.dirty=true; }
   if(!this.dirty) return;
   this.dirty=false;
   this.render(false);
@@ -860,7 +863,7 @@ P.prototype.render=function(pick){
     D('lp valid='+gl.isProgram(this.lp)+' link='+gl.getProgramParameter(this.lp,gl.LINK_STATUS));
     D('sp valid='+gl.isProgram(this.sp)+' link='+gl.getProgramParameter(this.sp,gl.LINK_STATUS));
     /* check main program uniforms */
-    var mu=this.mp.u, mnames='uVP uL uSun uEye uSunCol uSky uGnd uHor uSel uCut uShadow uSMs uStyle uFog uAmb uHead uK uSM'.split(' ');
+    var mu=this.mp.u, mnames='uVP uL uSun uEye uSunCol uSky uGnd uHor uSel uCut uShadow uSMs uStyle uFog uAmb uHead uXr uBox uK uSM'.split(' ');
     var mloc=[]; for(var i=0;i<mnames.length;i++) mloc.push(mnames[i]+'='+(mu[mnames[i]]!==null&&mu[mnames[i]]!==undefined?'OK':'NULL'));
     D('mp uniforms: '+mloc.join(' '));
     /* check sky program uniforms */
@@ -920,6 +923,7 @@ P.prototype.render=function(pick){
       gl.drawArrays(gl.TRIANGLES,0,this.gndN);
     }
     gl.bindVertexArray(null);
+    if(this.cuts&&this.cuts.length) this._drawCuts(lvp,null,this.sunDir());   /* picture cut-outs cast their outline as a shadow */
     gl.colorMask(true,true,true,true);       /* restore colour writes */
     gl.bindFramebuffer(gl.FRAMEBUFFER,null);
   }
@@ -972,6 +976,7 @@ P.prototype.render=function(pick){
   gl.uniform3fv(u.uHor,lt.hor||[0.75,0.78,0.82]);
   gl.uniform1f(u.uSel,this.sel);
   gl.uniform1f(u.uCut,this.cut);
+  gl.uniform4f(u.uBox,-1e9,1e9,-1e9,1e9); gl.uniform1f(u.uXr,1.0);   /* the ground is never cut or made see-through */
   gl.uniform1f(u.uShadow,this.shadows?1:0);
   gl.uniform1f(u.uSMs,this.smSize);
   gl.uniform1f(u.uStyle,this.style);
@@ -999,7 +1004,10 @@ P.prototype.render=function(pick){
     gl.enable(gl.POLYGON_OFFSET_FILL);
     gl.polygonOffset(1,1);
     gl.bindVertexArray(this.vaoOpF);
+    { const bx=this.box||[-1e9,1e9,-1e9,1e9]; gl.uniform4f(u.uBox,bx[0],bx[1],bx[2],bx[3]); gl.uniform1f(u.uXr,this.xray?0.28:1.0); }
+    if(this.xray){ gl.enable(gl.BLEND); gl.blendFunc(gl.SRC_ALPHA,gl.ONE_MINUS_SRC_ALPHA); gl.depthMask(false); }   /* x-ray: see through everything */
     gl.drawArrays(gl.TRIANGLES,0,this.opN);
+    if(this.xray){ gl.disable(gl.BLEND); gl.depthMask(true); }
     gl.disable(gl.POLYGON_OFFSET_FILL);
     if(!this._opErr){this._opErr=true;var e=gl.getError();if(e)console.error('[3D-DIAG] opaque GL err='+e+' opN='+this.opN);}
   }
@@ -1008,6 +1016,7 @@ P.prototype.render=function(pick){
   if(this.edges && this.lnN>0 && this.vaoLine){
     gl.useProgram(this.lp);
     gl.uniformMatrix4fv(this.lp.u.uVP,false,vp);
+    if(this.box) gl.uniform4f(this.lp.u.uLC,0,0,0,0); else
     gl.uniform4f(this.lp.u.uLC,0.15,0.15,0.15,0.35);
     gl.enable(gl.BLEND);
     gl.blendFunc(gl.SRC_ALPHA,gl.ONE_MINUS_SRC_ALPHA);
@@ -1377,7 +1386,7 @@ P.prototype._cutTex=function(src){
   img.onerror=function(){ t.err='load'; };
   img.src=src; return t;
 };
-P.prototype._drawCuts=function(vp,eye){
+P.prototype._drawCuts=function(vp,eye,sunD){
   const gl=this.gl;
   if(!this.bp){ this.bp=this.prog(gl,CUT_VS,CUT_FS); if(!this.bp) return; this.bU={vp:gl.getUniformLocation(this.bp,'uVP'),t:gl.getUniformLocation(this.bp,'uT'),lit:gl.getUniformLocation(this.bp,'uLit'),lin:gl.getUniformLocation(this.bp,'uLin')};
     this.bVAO=gl.createVertexArray(); this.bBuf=gl.createBuffer(); gl.bindVertexArray(this.bVAO); gl.bindBuffer(gl.ARRAY_BUFFER,this.bBuf);
@@ -1387,8 +1396,13 @@ P.prototype._drawCuts=function(vp,eye){
   gl.bindVertexArray(this.bVAO); gl.bindBuffer(gl.ARRAY_BUFFER,this.bBuf); gl.activeTexture(gl.TEXTURE7); gl.disable(gl.CULL_FACE);
   for(const c of this.cuts){
     const t=this._cutTex(c.src); if(!t.ready) continue; if(this.cut<1e8&&c.p[2]>this.cut) continue;
-    let dx=eye[0]-c.p[0], dy=eye[1]-c.p[1]; const dl=Math.hypot(dx,dy)||1; dx/=dl; dy/=dl;
-    const h=c.h, w=c.w||h*t.asp, rx=-dy*w/2, ry=dx*w/2, x=c.p[0], y=c.p[1], z=c.p[2], u0=c.flip?1:0, u1=c.flip?0:1;
+    let x=c.p[0], y=c.p[1], fl=!!c.flip; const z=c.p[2];
+    if(this.play&&c.walk>0.2){   /* walks back and forth along its direction at about 1.2 m/s */
+      const T=c.walk/1.2, ph=((this._playT||0)+(c.seed||0))%(2*T), back=ph>T, d=back?(2*T-ph)*1.2:ph*1.2; x+=c.dir[0]*d; y+=c.dir[1]*d; if(back) fl=!fl;
+    }
+    if(this.box&&(x<this.box[0]||x>this.box[1]||y<this.box[2]||y>this.box[3])) continue;
+    let dx=sunD?sunD[0]:eye[0]-x, dy=sunD?sunD[1]:eye[1]-y; const dl=Math.hypot(dx,dy)||1; dx/=dl; dy/=dl;
+    const h=c.h, w=c.w||h*t.asp, rx=-dy*w/2, ry=dx*w/2, u0=fl?1:0, u1=fl?0:1;
     const v=new Float32Array([x-rx,y-ry,z,u0,0, x+rx,y+ry,z,u1,0, x+rx,y+ry,z+h,u1,1, x-rx,y-ry,z,u0,0, x+rx,y+ry,z+h,u1,1, x-rx,y-ry,z+h,u0,1]);
     gl.bufferData(gl.ARRAY_BUFFER,v,gl.DYNAMIC_DRAW); gl.bindTexture(gl.TEXTURE_2D,t.tex); gl.drawArrays(gl.TRIANGLES,0,6);
   }
