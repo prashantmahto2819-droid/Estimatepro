@@ -126,7 +126,9 @@
     if (e.t === "slab") { var sl = (e.pts || []).map(function (p) { return [p[0], p[1], 0]; }); out.dashed = G.plineSegs(sl, true); (e.holes || []).forEach(function (h) { out.dashed = out.dashed.concat(G.polySegs(h, true)); var hb = [Infinity, Infinity, -Infinity, -Infinity]; h.forEach(function (p) { G.ext(hb, p); }); L([hb[0], hb[1]], [hb[2], hb[3]], out.dashed); L([hb[0], hb[3]], [hb[2], hb[1]], out.dashed); }); return out; }
     if (e.t === "roof") {
       var rp = e.pts || []; out.dashed = G.polySegs(rp, true);
-      if (e.kind === "gable" || e.kind === "hip") { var r = roofRidge(e); if (r) { L(r.a, r.b); if (e.kind === "hip") r.hips.forEach(function (h) { L(h[0], h[1]); }); } }
+      var ho = e.kind === "hip" ? B.hipOrtho(e) : null;
+      if (ho) ho.creases.forEach(function (c) { L(c[0], c[1]); });
+      else if (e.kind === "gable" || e.kind === "hip") { var r = roofRidge(e); if (r) { L(r.a, r.b); if (e.kind === "hip") r.hips.forEach(function (h) { L(h[0], h[1]); }); } }
       if (e.kind === "shed") { var bb = polyBox(rp), ctr = [(bb[0] + bb[2]) / 2, (bb[1] + bb[3]) / 2], dr = [Math.cos((e.dir || 0) * Math.PI / 180), Math.sin((e.dir || 0) * Math.PI / 180)]; L(G.sub(ctr, G.mul(dr, 600)), G.add(ctr, G.mul(dr, 600))); L(G.add(ctr, G.mul(dr, 600)), G.add(G.add(ctr, G.mul(dr, 400)), G.mul(G.perp(dr), 150))); }
       return out;
     }
@@ -147,7 +149,7 @@
     var bb = polyBox(th ? P.map(toL) : P), W = bb[2] - bb[0], H = bb[3] - bb[1], along = e.dir != null ? Math.abs(Math.cos(e.dir * Math.PI / 180 - th)) > 0.5 : W >= H, cy = (bb[1] + bb[3]) / 2, cx = (bb[0] + bb[2]) / 2, half = (along ? H : W) / 2, hip = e.kind === "hip" ? half : 0;
     var C = [[bb[0], bb[1]], [bb[2], bb[1]], [bb[2], bb[3]], [bb[0], bb[3]]].map(toW);   // corners of the frame: 00, 10, 11, 01
     var a = toW(along ? [bb[0] + hip, cy] : [cx, bb[1] + hip]), b = toW(along ? [bb[2] - hip, cy] : [cx, bb[3] - hip]);
-    return { a: a, b: b, half: half, along: along, c: C, hips: along ? [[C[0], a], [C[3], a], [C[1], b], [C[2], b]] : [[C[0], a], [C[1], a], [C[3], b], [C[2], b]] };
+    return { a: a, b: b, half: half, along: along, c: C, th: th, hips: along ? [[C[0], a], [C[3], a], [C[1], b], [C[2], b]] : [[C[0], a], [C[1], a], [C[3], b], [C[2], b]] };
   }
   B.roofRidge = roofRidge;
   /* stair: steps along dir from p; dog-leg turns back after a landing */
@@ -173,6 +175,67 @@
     return { only: function (e) { return !TYPES[e.t] || e.t === "wall" || e.t === "column"; },
       segs: function (e) { if (e.t === "wall") { var P = B.wallPoly(doc, e); return G.polySegs([P.sL, P.eL, P.eR, P.sR], true); } if (e.t === "column") return e.shape === "circle" ? [{ k: "A", c: e.p, r: e.w / 2, s: 0, e: G.TAU, full: true }] : G.polySegs(rectAt(e.p, e.w, e.d, e.rot), true); return null; } };
   };
+  /* Hip roof over an L / T / U … outline (every side parallel or square to the roof's frame, more than four corners).
+     With the same slope on every side, the roof height at a point is slope × its distance to the nearest side, measured square to the frame —
+     so every eave stays level and valleys form at the inside corners. The outline is cut into small cells; a cell lying on one roof plane is kept whole,
+     a cell crossed by one hip / valley / ridge line is cut exactly along it. Returns { polys: [[[x, y, run], …]], creases: [[p, q, run1, run2]], top } (run = horizontal distance
+     from the eave, height = run × tan(slope)), or null when the outline is not of this kind. Cached per element. */
+  var hipCache = new WeakMap();
+  B.hipOrtho = function (e) {
+    if (hipCache.has(e)) return hipCache.get(e); var res = hipOrthoCalc(e); hipCache.set(e, res); return res;
+  };
+  function hipOrthoCalc(e) {
+    var P0 = e.pts, R = P0 && P0.length > 4 ? roofRidge(e) : null; if (!R) return null;
+    var th = R.th || 0, c = Math.cos(th), s = Math.sin(th), toL = function (p) { return [p[0] * c + p[1] * s, -p[0] * s + p[1] * c]; }, toW = function (p) { return [p[0] * c - p[1] * s, p[0] * s + p[1] * c]; };
+    var Q = P0.map(toL), TOL = 5; if (G.plineArea(Q) < 0) Q.reverse();
+    /* drop corners that lie on a straight side, then every side must be parallel to an axis of the frame */
+    Q = Q.filter(function (p, i) { var a = Q[(i + Q.length - 1) % Q.length], b = Q[(i + 1) % Q.length]; return Math.abs(G.cross(G.sub(p, a), G.sub(b, p))) > TOL * (G.dist(a, p) + G.dist(p, b)) / 2 || G.dot(G.sub(p, a), G.sub(b, p)) < 0; });
+    if (Q.length <= 4) return null;
+    var E = [], okAll = true;
+    Q.forEach(function (a, i) { var b = Q[(i + 1) % Q.length]; if (Math.abs(a[0] - b[0]) <= TOL) E.push({ ax: 0, c: (a[0] + b[0]) / 2, lo: Math.min(a[1], b[1]), hi: Math.max(a[1], b[1]) }); else if (Math.abs(a[1] - b[1]) <= TOL) E.push({ ax: 1, c: (a[1] + b[1]) / 2, lo: Math.min(a[0], b[0]), hi: Math.max(a[0], b[0]) }); else okAll = false; });
+    if (!okAll) return null;
+    Q = Q.map(function (p, i) { var e0 = E[(i + Q.length - 1) % Q.length], e1 = E[i], q = [p[0], p[1]]; q[e0.ax] = e0.c; q[e1.ax] = e1.c; return q; });   // exactly square
+    /* the roof plane at a point: the nearest side; beyond the end of a side (inside corners) it is the side that turns the corner */
+    function at(p) {
+      var bd = Infinity, bax = 0, bc = 0;
+      for (var i = 0; i < E.length; i++) { var ed = E[i], perp = Math.abs(p[ed.ax] - ed.c), o = p[1 - ed.ax], over = Math.max(ed.lo - o, o - ed.hi, 0), d = perp, ax = ed.ax, cc = ed.c; if (over > perp) { d = over; ax = 1 - ed.ax; cc = o < ed.lo ? ed.lo : ed.hi; } if (d < bd - 1e-7) { bd = d; bax = ax; bc = cc; } }
+      return { d: bd, ax: bax, c: bc, k: bax + ":" + Math.round(bc * 10) };
+    }
+    var uniq = function (a) { a = a.slice().sort(function (x, y) { return x - y; }); return a.filter(function (v, i) { return !i || v - a[i - 1] > 0.5; }); };
+    var xs = uniq(Q.map(function (p) { return p[0]; })), ys = uniq(Q.map(function (p) { return p[1]; }));
+    /* Every hip, valley and ridge lies on one of a few lines: the two diagonals through each crossing of a side's line in x with a side's line in y,
+       and the lines midway between two parallel sides. Cutting the outline along all of them leaves pieces that each lie on a single roof plane. */
+    var lines = [];   // a·x + b·y = c
+    xs.forEach(function (x) { ys.forEach(function (y) { lines.push([1, -1, x - y], [1, 1, x + y]); }); });
+    for (var i1 = 0; i1 < xs.length; i1++) for (var i2 = i1 + 1; i2 < xs.length; i2++) lines.push([1, 0, (xs[i1] + xs[i2]) / 2]);
+    for (var j1 = 0; j1 < ys.length; j1++) for (var j2 = j1 + 1; j2 < ys.length; j2++) lines.push([0, 1, (ys[j1] + ys[j2]) / 2]);
+    lines = lines.filter(function (l, i) { return !lines.some(function (m, k) { return k < i && m[0] === l[0] && m[1] === l[1] && Math.abs(m[2] - l[2]) < 0.5; }); });
+    if (lines.length > 260) return null;   // a very intricate outline: leave it to the simple roof
+    var cells = [];
+    for (var i = 0; i < xs.length - 1; i++) for (var j = 0; j < ys.length - 1; j++) if (G.inPoly([(xs[i] + xs[i + 1]) / 2, (ys[j] + ys[j + 1]) / 2], Q)) cells.push([[xs[i], ys[j]], [xs[i + 1], ys[j]], [xs[i + 1], ys[j + 1]], [xs[i], ys[j + 1]]]);
+    function half(pts, l, sg) { var o = []; for (var i = 0; i < pts.length; i++) { var a = pts[i], b = pts[(i + 1) % pts.length], ga = sg * (l[0] * a[0] + l[1] * a[1] - l[2]), gb = sg * (l[0] * b[0] + l[1] * b[1] - l[2]); if (ga <= 1e-6) o.push(a); if ((ga < -1e-6 && gb > 1e-6) || (ga > 1e-6 && gb < -1e-6)) { var t = ga / (ga - gb); o.push([a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t]); } } return o; }
+    lines.forEach(function (l) {
+      var next = [];
+      cells.forEach(function (cl) { var mn = Infinity, mx = -Infinity; cl.forEach(function (q) { var v = l[0] * q[0] + l[1] * q[1] - l[2]; if (v < mn) mn = v; if (v > mx) mx = v; }); if (mn > -1e-6 || mx < 1e-6) { next.push(cl); return; } var a = half(cl, l, 1), b = half(cl, l, -1); if (a.length >= 3) next.push(a); if (b.length >= 3) next.push(b); });
+      cells = next;
+    });
+    var polys = [], cr = [], top = 0, edgeMap = {}, rk = function (q) { return Math.round(q[0] * 20) + "_" + Math.round(q[1] * 20); };
+    cells.forEach(function (cl) {
+      var cx = 0, cy = 0; cl.forEach(function (q) { cx += q[0]; cy += q[1]; }); cx /= cl.length; cy /= cl.length;
+      if (Math.abs(G.plineArea(cl)) < 1) return;
+      var pl = at([cx, cy]), sg = [cx, cy][pl.ax] >= pl.c ? 1 : -1, hs = cl.map(function (q) { var r = Math.max(0, sg * (q[pl.ax] - pl.c)); if (r > top) top = r; return r; });
+      polys.push(cl.map(function (q, i) { var w = toW(q); return [w[0], w[1], hs[i]]; }));
+      cl.forEach(function (q, i) { var q2 = cl[(i + 1) % cl.length], ka = rk(q), kb = rk(q2); if (ka === kb) return; var key = ka < kb ? ka + "|" + kb : kb + "|" + ka, prev = edgeMap[key]; if (prev) { if (prev.k !== pl.k && (hs[i] > 0.5 || hs[(i + 1) % cl.length] > 0.5)) cr.push([q, q2, hs[i], hs[(i + 1) % cl.length]]); } else edgeMap[key] = { k: pl.k }; });   // an edge shared by two pieces on different planes is a hip / valley / ridge
+    });
+    /* join the little pieces of each hip / valley / ridge line into one segment */
+    var groups = {};
+    cr.forEach(function (sg2) { var a = sg2[0], b = sg2[1], dx = b[0] - a[0], dy = b[1] - a[1], kind, off, ta, tb; if (Math.abs(dx) < 1e-6 && Math.abs(dy) < 1e-6) return;
+      if (Math.abs(dy) < 1e-6 * Math.abs(dx) + 1e-6) { kind = "h"; off = a[1]; ta = a[0]; tb = b[0]; } else if (Math.abs(dx) < 1e-6 * Math.abs(dy) + 1e-6) { kind = "v"; off = a[0]; ta = a[1]; tb = b[1]; } else if (dx * dy > 0) { kind = "p"; off = a[1] - a[0]; ta = a[0]; tb = b[0]; } else { kind = "n"; off = a[1] + a[0]; ta = a[0]; tb = b[0]; }
+      var key = kind + Math.round(off); (groups[key] = groups[key] || []).push(ta <= tb ? { t0: ta, t1: tb, a: a, b: b, r0: sg2[2], r1: sg2[3] } : { t0: tb, t1: ta, a: b, b: a, r0: sg2[3], r1: sg2[2] }); });
+    var creases = [];
+    Object.keys(groups).forEach(function (k) { var L2 = groups[k].sort(function (p, q) { return p.t0 - q.t0; }), cur = null; L2.forEach(function (x) { if (cur && x.t0 <= cur.t1 + 2) { if (x.t1 > cur.t1) { cur.t1 = x.t1; cur.b = x.b; cur.r1 = x.r1; } } else { if (cur) creases.push(cur); cur = { t0: x.t0, t1: x.t1, a: x.a, b: x.b, r0: x.r0, r1: x.r1 }; } }); if (cur) creases.push(cur); });
+    return { polys: polys, creases: creases.map(function (x) { return [toW(x.a), toW(x.b), x.r0, x.r1]; }), top: top, outline: Q.map(toW) };
+  }
   /* Outer outline(s) of the walls of a level — the outside faces of the building, one closed loop (counter-clockwise) per group of joined walls.
      The centre lines are split where walls meet or cross, the outside of that network is walked, and each edge is pushed out by half its wall thickness.
      Returns [{ pts, area }] largest first; walls that do not close a loop give nothing. */

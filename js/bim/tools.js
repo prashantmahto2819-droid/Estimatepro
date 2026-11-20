@@ -88,8 +88,14 @@
     ensureBim(ed); var w = ed.cW || 300, d = ed.cD || 300, rot = 0, shape = "rect";
     while (true) {
       ed.preview = function (p) { return [{ t: "column", p: p, w: w, d: d, rot: rot, shape: shape, lvl: cur(ed) }]; };
-      var p = await ed.getPoint("Column " + (shape === "circle" ? "Ø" + w : w + "×" + d) + " — click to place (Enter to finish)", { opt: true, kw: ["Size", "Round", "Rotate"] });
+      var p = await ed.getPoint("Column " + (shape === "circle" ? "Ø" + w : w + "×" + d) + " — click to place, or Corners for every wall corner and junction (Enter to finish)", { opt: true, kw: ["Corners", "Size", "Round", "Rotate"] });
       if (p == null) return;
+      if (p === "Corners") {   // one column at every corner / junction of this level's walls that has none yet
+        var lv = cur(ed), nodes = [], have = ed.doc.d.ents.filter(function (x) { return x.t === "column" && x.lvl === lv; });
+        ed.doc.d.ents.forEach(function (x) { if (x.t !== "wall" || x.lvl !== lv) return; var c = B.wallLine(x), ang = Math.atan2(c.u[1], c.u[0]) * 180 / Math.PI; [c.a, c.b].forEach(function (q) { var n = nodes.filter(function (m) { return G.dist(m.p, q) <= Math.max(5, x.th * 0.6); })[0]; if (n) n.n++; else nodes.push({ p: q, n: 1, rot: ((ang % 90) + 90) % 90 }); }); });
+        var made = 0; nodes.forEach(function (n) { if (have.some(function (h) { return G.dist(h.p, n.p) < Math.max(h.w, h.d || h.w) / 2 + 50; })) return; ed.doc.add({ t: "column", p: [n.p[0], n.p[1]], w: w, d: shape === "circle" ? w : d, rot: shape === "circle" ? 0 : n.rot, shape: shape, lvl: lv, layer: lay(ed, "S-COL") }); made++; });
+        ed.say(made ? made + " column(s) placed at the wall corners and junctions of this level." : nodes.length ? "Every wall corner of this level already has a column." : "No walls on this level yet."); continue;
+      }
       if (p === "Size") { w = ed.cW = await ed.getDist("Width", { def: w }); d = ed.cD = await ed.getDist("Depth", { def: d }); shape = "rect"; continue; }
       if (p === "Round") { w = ed.cW = await ed.getDist("Diameter", { def: w }); shape = "circle"; continue; }
       if (p === "Rotate") { rot = await ed.getAngle("Rotation", { def: rot }); continue; }
@@ -164,7 +170,15 @@
     setMode(mode, base);
     function lbl() { return "Railing start — on " + (mode === "Floor" ? "the floor of this level" : mode === "Roof top" ? "the roof / slab top (+" + Math.round(base) + " mm)" : "+" + Math.round(base) + " mm above the floor") + ", " + Math.round(h) + " mm high"; }
     while (true) {
-      first = await ed.getPoint(lbl(), { kw: ["Floor", "Roof top", "Elevation", "Height", "Iso"] });
+      first = await ed.getPoint(lbl() + " — or Around a slab / terrace in one step", { kw: ["Around", "Floor", "Roof top", "Elevation", "Height", "Iso"] });
+      if (first === "Around") {   // a closed railing all round a slab, flat roof or closed outline, just inside its edge
+        var pk = await ed.getEnt("Select the slab, flat roof or closed outline to rail", { filter: function (x) { return ((x.t === "slab" || x.t === "roof" || x.t === "land") && x.pts && x.pts.length > 2) || !!CAD.loopOf(x); } });
+        var src = pk.e, loop = src.pts && src.t !== "pline" ? src.pts.map(function (q) { return [q[0], q[1]]; }) : G.loopPts(CAD.loopOf(src)), ins = G.offset({ t: "pline", pts: ccw(loop).map(function (q) { return [q[0], q[1], 0]; }), closed: true }, -75, [1e12, 1e12]);
+        var rp = (ins && ins.pts && ins.pts.length > 2 ? ins.pts : ccw(loop)).map(function (q) { return [q[0], q[1]]; }); rp.push([rp[0][0], rp[0][1]]);
+        var onTop = src.t === "slab" || src.t === "roof", rb = onTop ? (src.off || 0) : base;
+        ed.wpZ = null; ed.doc.add({ t: "railing", pts: rp, h: h, base: rb || undefined, lvl: onTop && src.lvl ? src.lvl : cur(ed), layer: lay(ed, "A-RAIL") });
+        ed.say("Railing placed all round" + (onTop ? " on top of the " + src.t : "") + ", " + Math.round(h) + " mm high."); ed.dirty = true; return;
+      }
       if (first === "Floor") setMode("Floor"); else if (first === "Roof top") { setMode("Roof top"); ed.say("Railing will sit on the roof top (" + Math.round(base) + " mm above this level). Use Iso to pick the roof corners in the isometric view."); }
       else if (first === "Elevation") setMode("Elevation", await ed.getDist("Height of the railing base above this level's floor", { def: base }));
       else if (first === "Height") h = ed.rlH = await ed.getDist("Railing height", { def: h });

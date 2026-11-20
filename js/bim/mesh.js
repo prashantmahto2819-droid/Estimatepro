@@ -125,6 +125,13 @@
       for (var i = 0; i < P.length; i++) { var p = P[i], q = P[(i + 1) % P.length]; M.quad(v3(p, zf(p) - th), v3(q, zf(q) - th), v3(q, zf(q)), v3(p, zf(p)), col); M.edge(v3(p, zf(p)), v3(q, zf(q))); }
       return;
     }
+    var HO = e.kind === "hip" && B.hipOrtho ? B.hipOrtho(e) : null;
+    if (HO) {   // L / T / U … outline: one roof plane per side, valleys at the inside corners
+      HO.polys.forEach(function (pg) { var q = pg.map(function (p) { return v3(p, zBase + p[2] * tn); }), b = pg.map(function (p) { return v3(p, zBase + p[2] * tn - th); }); for (var i = 1; i < q.length - 1; i++) { M.tri(q[0], q[i], q[i + 1], col); M.tri(b[0], b[i + 1], b[i], under); } });
+      HO.creases.forEach(function (c) { M.edge(v3(c[0], zBase + c[2] * tn), v3(c[1], zBase + c[3] * tn)); });
+      for (var k = 0; k < HO.outline.length; k++) { var p0 = HO.outline[k], p1 = HO.outline[(k + 1) % HO.outline.length]; M.quad(v3(p0, zBase - th), v3(p1, zBase - th), v3(p1, zBase), v3(p0, zBase), col); M.edge(v3(p0, zBase), v3(p1, zBase)); }
+      return;
+    }
     var R = B.roofRidge(e); if (!R) { prism(M, P, zBase - th, zBase, col, null, null, false, under); return; }
     var zr = zBase + R.half * tn;
     var c00 = R.c[0], c10 = R.c[1], c11 = R.c[2], c01 = R.c[3], ra = R.a, rb = R.b, Z = function (p, z) { return v3(p, z); };

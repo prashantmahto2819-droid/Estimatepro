@@ -347,7 +347,7 @@
       case "spline": case "leader": case "road": verts(e.pts, false, false); break;
       case "slab": case "roof": case "room": case "land": verts(e.pts, true, true); break;
       case "railing": verts(e.pts, false, true); break;
-      case "door": case "window": case "opening": var pl = B && B.place ? B.place(this.doc, e) : null; if (pl) g.push({ p: pl.p, k: "at" }); break;   // slides along its wall
+      case "door": case "window": case "opening": var pl = B && B.place ? B.place(this.doc, e) : null; if (pl) { var hw0 = (e.w || 0) / 2; g.push({ p: pl.p, k: "at" }, { p: G.add(pl.p, G.mul(pl.u, -hw0)), k: "w0" }, { p: G.add(pl.p, G.mul(pl.u, hw0)), k: "w1" }); } break;   // middle: slides along its wall; sides: width
       case "column": case "footing": case "stair": case "asset": case "model3d": case "dsmodel": if (e.p) g.push({ p: e.p, k: "p" }); break;
       case "circle": g.push({ p: e.c, k: "c" }); [0, 90, 180, 270].forEach(function (a) { g.push({ p: G.polar(e.c, e.r, a * Math.PI / 180), k: "r" }); }); break;
       case "arc": var s = G.segsOf(e)[0]; g.push({ p: e.c, k: "c" }, { p: G.segStart(s), k: "a1" }, { p: G.segEnd(s), k: "a2" }, { p: G.segAt(s, 0.5), k: "r" }); break;
@@ -423,7 +423,12 @@
         else o.pts[i] = [p[0], p[1]].concat(e.pts[i].length > 2 ? [e.pts[i][2]] : []);
         break;
       case "door": case "window": case "opening":
-        var pl = EP.bim && EP.bim.place ? EP.bim.place(this.doc, e) : null; if (pl) { var hw = (e.w || 0) / 2, L = pl.c.L; o.at = Math.max(Math.min(hw, L / 2), Math.min(L - hw, G.dot(G.sub(p, pl.c.a), pl.c.u))); }
+        var pl = EP.bim && EP.bim.place ? EP.bim.place(this.doc, e) : null;
+        if (pl) {
+          var hw = (e.w || 0) / 2, L = pl.c.L, sp = Math.max(0, Math.min(L, G.dot(G.sub(p, pl.c.a), pl.c.u)));
+          if (k === "w0" || k === "w1") { var fixed = k === "w1" ? e.at - hw : e.at + hw, nw = Math.max(300, Math.round(Math.abs(sp - fixed) / 10) * 10); o.w = nw; o.at = k === "w1" ? fixed + nw / 2 : fixed - nw / 2; }   // the other side stays; width in steps of 10 mm, never under 300
+          else o.at = Math.max(Math.min(hw, L / 2), Math.min(L - hw, sp));
+        }
         break;
       case "circle": if (k === "c") o.c = p; else o.r = G.dist(e.c, p); break;
       case "arc": if (k === "c") o.c = p; else if (k === "r") o.r = G.dist(e.c, p); else if (k === "a1") o.a1 = G.ang(e.c, p) * 180 / Math.PI; else o.a2 = G.ang(e.c, p) * 180 / Math.PI; break;
