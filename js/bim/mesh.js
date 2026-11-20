@@ -150,7 +150,7 @@
   /* ---------- everything ---------- */
   B.meshes = function (doc, opts) {
     opts = opts || {}; var d = doc.d, bs = B.ensure(d), out = [], byId = [], ids = {}, maxElev = opts.upTo;
-    B.ctx.doc = doc; var H = { look: function (cat, id, col) { return B.lookFor(d, cat, id, col); }, prism: prism, box: box, boxAlong: boxAlong, noGround: false }; var LK = function (cat, e) { return B.lookFor(d, cat, e && e.look, e && e.col); };
+    B.ctx.doc = doc; var H = { look: function (cat, id, col) { return B.lookFor(d, cat, id, col); }, prism: prism, box: box, boxAlong: boxAlong, noGround: false, cutouts: [] }; var LK = function (cat, e) { return B.lookFor(d, cat, e && e.look, e && e.col); };
     d.ents.forEach(function (e) {
       if (!B.is(e) || (opts.only && !opts.only.has(e.id))) return; if (!opts.only && !doc.visible(e) && !opts.allLevels && !(e.lvl && opts.levels)) { var Lr = d.layers[e.layer]; if (Lr && (!Lr.on || Lr.frz)) return; }
       var L = B.level(d, e.lvl || (B.hostOf(doc, e) || {}).lvl), z0 = (L ? L.elev : 0) + (e.base || 0);
@@ -180,6 +180,6 @@
     if (opts.rebar && B.rebarMesh) B.rebarMesh(doc, function (id) { return new Mesh(ids[id]); }, { filter: function (e) { return !!ids[e.id]; } }).forEach(function (M) { out.push({ id: byId[M.id - 1], idx: M.id, v: M.v, e: [] }); });
     var bb = [Infinity, Infinity, Infinity, -Infinity, -Infinity, -Infinity];
     out.forEach(function (m) { for (var i = 0; i < m.v.length; i += 14) { bb[0] = Math.min(bb[0], m.v[i]); bb[1] = Math.min(bb[1], m.v[i + 1]); bb[2] = Math.min(bb[2], m.v[i + 2]); bb[3] = Math.max(bb[3], m.v[i]); bb[4] = Math.max(bb[4], m.v[i + 1]); bb[5] = Math.max(bb[5], m.v[i + 2]); } });
-    return { groups: out, byIdx: byId, bbox: isFinite(bb[0]) ? bb : [-5, -5, 0, 5, 5, 3], ngl: bs.ngl * K, ground: B.lookFor(d, "ground"), noGround: H.noGround };
+    return { groups: out, byIdx: byId, bbox: isFinite(bb[0]) ? bb : [-5, -5, 0, 5, 5, 3], ngl: bs.ngl * K, ground: B.lookFor(d, "ground"), noGround: H.noGround, cutouts: H.cutouts };
   };
 })();

@@ -22,7 +22,8 @@
   function dwIcon(e, win) { var k = win ? (e.kind === "fixed" ? "fixed" : e.kind === "louvre" ? "louvre" : e.kind === "grill" ? "grill" : "win") : (DW_ICON[e.kind] ? e.kind : "single"); if (!win && e.style === "glass") k = "win"; if (!win && e.style === "grill") k = "grill"; return "<svg viewBox='0 0 24 24' width='44' height='44' fill='none' stroke='currentColor' stroke-width='1.2' stroke-linecap='round' aria-hidden='true'>" + DW_ICON[k] + "</svg>"; }
   CAD.PANELS.lib = function (ed) {
     var d = ed.doc.d, cats = {}, q = (ed._libQ || "").trim().toLowerCase(), hit = function (txt) { return !q || q.split(/\s+/).every(function (w) { return txt.indexOf(w) >= 0; }); };
-    var h = "<div class='cad-ph'>Library — click Place, then click in the drawing</div><input class='in small' type='search' placeholder='Search items (e.g. basin, mirror, double door, sofa…)' data-libq='1' value='" + esc(ed._libQ || "") + "' style='width:100%;margin:4px 0' aria-label='Search the library'><p class='muted small'>App-made symbols and 3D shapes (not manufacturer models). Each placed item is counted in Σ Quantities with the SOR item shown (change it there).</p>";
+    if (B.regPics) B.regPics(d);
+    var h = "<div class='cad-ph'>Library — click Place, then click in the drawing</div><div class='row' style='gap:6px;flex-wrap:wrap;align-items:center;margin:2px 0'><button type='button' class='btn sec sm' data-picadd='1' title='A PNG picture with a transparent background (a person, tree, car seen from the side…). It stands upright in 3D and turns to face the camera.'>＋ Add your own picture (PNG cut-out)</button><input type='file' accept='image/png,image/webp' data-picfile='1' hidden></div><input class='in small' type='search' placeholder='Search items (e.g. basin, mirror, double door, sofa…)' data-libq='1' value='" + esc(ed._libQ || "") + "' style='width:100%;margin:4px 0' aria-label='Search the library'><p class='muted small'>App-made symbols and 3D shapes (not manufacturer models). Each placed item is counted in Σ Quantities with the SOR item shown (change it there).</p>";
     function dw(lib, win) { var t = win ? "win" : "door", cards = lib.filter(function (x) { return hit((x.id + " " + x.name + " " + (x.kind || "") + " " + (x.mat || "") + " " + (win ? "window" : "door")).toLowerCase()); }); if (!cards.length) return ""; return "<details class='libcat'" + (q || !win ? " open" : "") + "><summary class='cad-ph'>" + (win ? "Windows" : "Doors") + " (" + cards.length + ")</summary><div class='libgrid'>" + cards.map(function (x) { return "<div class='libcard'><div class='libic'>" + dwIcon(x, win) + "</div><div class='libtx'><b>" + esc(x.id + " — " + x.name) + "</b><span class='muted small'>" + esc((x.kind || "") + (x.style ? ", " + x.style : "") + " · " + x.w + "×" + x.h + (win ? ", sill " + x.sill : "")) + "</span></div><div class='libbt'><button type='button' class='btn sec sm' data-libdw='" + t + ":" + x.id + "'>Place</button></div></div>"; }).join("") + "</div></details>"; }
     h += dw(B.DOORS, false) + dw(B.WINDOWS, true);
     Object.keys(B.ASSET_LIB).forEach(function (k) { var a = B.ASSET_LIB[k]; if (hit((a.n + " " + a.cat + " " + k).toLowerCase())) (cats[a.cat] = cats[a.cat] || []).push(k); });
@@ -116,8 +117,22 @@
     C.root.addEventListener("dragover", function (ev) { if (!dragKind || !ev.target.closest || !ev.target.closest(".cad-cv")) return; ev.preventDefault(); var w = dropPt(ev); ed.preview = function () { return [B.assetGhost(ed, dragKind, w)]; }; ed.dirty = true; });
     C.root.addEventListener("drop", function (ev) { if (!dragKind) return; var k = dragKind, on = ev.target.closest && ev.target.closest(".cad-cv"); ev.preventDefault(); var w = on ? dropPt(ev) : null; endDrag(); if (!w) return; var e = B.placeAsset(ed, k, w); if (e) { ed.sel = new Set([e.id]); ed.emitSel(); ed.dirty = true; } });
     C.root.addEventListener("dragend", endDrag);
+    /* own picture: read the PNG, shrink it (keeps transparency), ask its real height, keep it in the drawing and start placing */
+    C.root.addEventListener("change", function (ev) {
+      var t = ev.target; if (!t || !t.dataset || !t.dataset.picfile || !t.files || !t.files[0]) return; var file = t.files[0];
+      if (file.size > 12e6) { U.toast("That picture is too big (over 12 MB). Use a smaller PNG."); return; }
+      var rd = new FileReader(); rd.onload = function () { var img = new Image(); img.onload = function () {
+        var k = Math.min(1, 768 / Math.max(img.naturalWidth, img.naturalHeight)), cw = Math.max(2, Math.round(img.naturalWidth * k)), ch = Math.max(2, Math.round(img.naturalHeight * k)), cv = document.createElement("canvas"); cv.width = cw; cv.height = ch; var cx = cv.getContext("2d"); cx.drawImage(img, 0, 0, cw, ch);
+        var px = cx.getImageData(0, 0, cw, ch).data, clear = 0; for (var i = 3; i < px.length; i += 4 * 97) if (px[i] < 128) clear++;
+        var src = cv.toDataURL("image/png"), hv = window.prompt("Real height of this picture in metres (a person is about 1.7, a tree 6 to 10):", "1.7"), hm = parseFloat(hv); if (!(hm > 0)) hm = 1.7;
+        var kind = B.addPic(ed, file.name.replace(/\.[a-z0-9]+$/i, "").slice(0, 40), src, cw / ch, Math.round(hm * 1000)); CAD.ui.renderPanels();
+        U.toast(clear ? "Picture added — click in the drawing to place it." : "Picture added, but it has no transparent background, so it will show as a rectangle. Use a PNG with the background removed.");
+        ed.assetKind = kind; ed.exec("ASSET");
+      }; img.onerror = function () { U.toast("That file could not be read as a picture."); }; img.src = rd.result; }; rd.readAsDataURL(file);
+    });
     C.root.addEventListener("click", function (ev) {
       var t = ev.target.closest("button"); if (!t) return; var ds = t.dataset;
+      if (ds.picadd) { var pf = C.root.querySelector("[data-picfile]"); if (pf) { pf.value = ""; pf.click(); } return; }
       if (ds.libplace) { ed.assetKind = ds.libplace; ed.exec("ASSET"); var cv = C.root.querySelector(".cad-cv"); if (cv) cv.focus(); return; }
       if (ds.libprev) { assetPreview(ds.libprev); return; }
       if (ds.libdw) { var pp = ds.libdw.split(":"), lib0 = pp[0] === "win" ? B.WINDOWS : B.DOORS, pr0 = lib0.filter(function (x) { return x.id === pp[1]; })[0]; if (pr0) { ed.preset = ed.preset || {}; ed.preset[pp[0] === "win" ? "window" : "door"] = pr0; ed.exec(pp[0] === "win" ? "WINDOW" : "DOOR"); var cv3 = C.root.querySelector(".cad-cv"); if (cv3) cv3.focus(); } return; }

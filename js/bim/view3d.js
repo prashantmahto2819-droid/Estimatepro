@@ -641,6 +641,7 @@ P.prototype.setScene=function(sc,keepCam){
 
   /* store raw transparent data for back-to-front sorting */
   this.trRaw=trData.length>0?new Float32Array(trData):null;
+  this.cuts=sc.cutouts||[];
   this.opRaw=opData;   /* kept for ray casting (measure, walk start) */
 
   /* create VBOs */
@@ -1010,6 +1011,9 @@ P.prototype.render=function(pick){
     gl.disable(gl.BLEND);
   }
 
+  /* 7b. Picture cut-outs (people, trees…): upright cards that turn to face the camera */
+  if(this.cuts&&this.cuts.length) this._drawCuts(vp,eyePos);
+
   /* 8. Transparent geometry (sorted back-to-front) */
   if(this.trN>0 && this.vaoTrF){
     gl.useProgram(this.mp);
@@ -1344,6 +1348,46 @@ P.prototype.bind=function(){
     self.dist=Math.max(0.1,self.dist);
     self.dirty=true;
   },{passive:false});
+};
+
+/* ---------- picture cut-outs ---------- */
+const CUT_VS=`#version 300 es
+in vec3 aP; in vec2 aUV; uniform mat4 uVP; out vec2 vUV;
+void main(){ vUV=aUV; gl_Position=uVP*vec4(aP,1.0); }`;
+const CUT_FS=`#version 300 es
+precision highp float; in vec2 vUV; uniform sampler2D uT; uniform float uLit,uLin; out vec4 o;
+void main(){ vec4 c=texture(uT,vUV); if(c.a<0.5) discard; vec3 k=c.rgb*uLit; if(uLin>0.5) k=pow(k,vec3(2.2)); o=vec4(k,1.0); }`;
+P.prototype._cutTex=function(src){
+  const gl=this.gl; this._ctex=this._ctex||{}; let t=this._ctex[src]; if(t) return t;
+  t=this._ctex[src]={tex:null,ready:false}; const img=new Image(), self=this;
+  img.onload=function(){ if(self.dead) return; try{
+    /* draw through a canvas so SVG pictures get a real pixel size */
+    const mx=1024, k=Math.min(1,mx/Math.max(img.naturalWidth||512,img.naturalHeight||512)), cw=Math.max(2,Math.round((img.naturalWidth||512)*k)), ch=Math.max(2,Math.round((img.naturalHeight||512)*k));
+    const cv=document.createElement('canvas'); cv.width=cw; cv.height=ch; cv.getContext('2d').drawImage(img,0,0,cw,ch);
+    const tx=gl.createTexture(); gl.activeTexture(gl.TEXTURE7); gl.bindTexture(gl.TEXTURE_2D,tx); gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL,true);
+    gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,gl.RGBA,gl.UNSIGNED_BYTE,cv); gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL,false); gl.generateMipmap(gl.TEXTURE_2D);
+    gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.LINEAR_MIPMAP_LINEAR); gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE); gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE);
+    gl.activeTexture(gl.TEXTURE0); t.tex=tx; t.ready=true; t.asp=cw/ch; self.dirty=true; }catch(e){ t.err=String(e); } };
+  img.onerror=function(){ t.err='load'; };
+  img.src=src; return t;
+};
+P.prototype._drawCuts=function(vp,eye){
+  const gl=this.gl;
+  if(!this.bp){ this.bp=this.prog(gl,CUT_VS,CUT_FS); if(!this.bp) return; this.bU={vp:gl.getUniformLocation(this.bp,'uVP'),t:gl.getUniformLocation(this.bp,'uT'),lit:gl.getUniformLocation(this.bp,'uLit'),lin:gl.getUniformLocation(this.bp,'uLin')};
+    this.bVAO=gl.createVertexArray(); this.bBuf=gl.createBuffer(); gl.bindVertexArray(this.bVAO); gl.bindBuffer(gl.ARRAY_BUFFER,this.bBuf);
+    const a=gl.getAttribLocation(this.bp,'aP'), b=gl.getAttribLocation(this.bp,'aUV'); gl.enableVertexAttribArray(a); gl.vertexAttribPointer(a,3,gl.FLOAT,false,20,0); gl.enableVertexAttribArray(b); gl.vertexAttribPointer(b,2,gl.FLOAT,false,20,12); gl.bindVertexArray(null); }
+  const sun=this.sunDir?this.sunDir():[0,0,1], lit=0.62+0.38*Math.max(0,Math.min(1,sun[2]*1.6));
+  gl.useProgram(this.bp); gl.uniformMatrix4fv(this.bU.vp,false,vp); gl.uniform1i(this.bU.t,7); gl.uniform1f(this.bU.lit,lit); gl.uniform1f(this.bU.lin,this.linear?1:0);
+  gl.bindVertexArray(this.bVAO); gl.bindBuffer(gl.ARRAY_BUFFER,this.bBuf); gl.activeTexture(gl.TEXTURE7); gl.disable(gl.CULL_FACE);
+  for(const c of this.cuts){
+    const t=this._cutTex(c.src); if(!t.ready) continue; if(this.cut<1e8&&c.p[2]>this.cut) continue;
+    let dx=eye[0]-c.p[0], dy=eye[1]-c.p[1]; const dl=Math.hypot(dx,dy)||1; dx/=dl; dy/=dl;
+    const h=c.h, w=c.w||h*t.asp, rx=-dy*w/2, ry=dx*w/2, x=c.p[0], y=c.p[1], z=c.p[2], u0=c.flip?1:0, u1=c.flip?0:1;
+    const v=new Float32Array([x-rx,y-ry,z,u0,0, x+rx,y+ry,z,u1,0, x+rx,y+ry,z+h,u1,1, x-rx,y-ry,z,u0,0, x+rx,y+ry,z+h,u1,1, x-rx,y-ry,z+h,u0,1]);
+    gl.bufferData(gl.ARRAY_BUFFER,v,gl.DYNAMIC_DRAW); gl.bindTexture(gl.TEXTURE_2D,t.tex); gl.drawArrays(gl.TRIANGLES,0,6);
+  }
+  gl.bindVertexArray(null); gl.activeTexture(gl.TEXTURE0);
 };
 
 /* ---------- walk-through (first person) ---------- */

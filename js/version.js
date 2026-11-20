@@ -1,5 +1,5 @@
 /* App version + "what's new" — the super admin is offered to send this on WhatsApp after each upload. Change both with every release. */
-window.EP_VER = "2026.11.20-n";
-window.EP_NOTES = "• Wall finish / dado (Building tab): choose tiles, panelling or cladding and the height, then click a wall face — or Room to finish every wall of a room up to that height\n• Library: designer boundary walls (8), Maharaja and fort gates (6) and fountains (8)\n• Decoration rebuilt: shaped cars with round wheels, trees with branches and leaf clusters, palms, people, road with kerbs and footpaths, street light\n• Decoration items can be counted in the estimate when you want: Properties → Count in the estimate → Yes\n• 3D: 🎞 Tour flies the camera through your saved Scenes; ⏺ Record saves the 3D view as a video";
+window.EP_VER = "2026.11.20-o";
+window.EP_NOTES = "• Library → Cut-outs: picture people and trees that stand upright in 3D and always face the camera — 10 figures (men, women, children, worker) and 6 trees\n• ＋ Add your own picture (PNG cut-out): put your own PNG with a transparent background — a person, a tree, anything — into the drawing at its real height. View only, never in the estimate";
 /* pictures of this update: [file in /updates, caption]. Shown to the owner with the WhatsApp "what's new" message. */
-window.EP_PICS = [["updates/n-street.jpg", "Cars, people, trees and road"], ["updates/n-gate.jpg", "Maharaja gate and boundary wall"], ["updates/n-fountains.jpg", "Fountains"], ["updates/n-dado.jpg", "Dado tiles up to a height"]];
+window.EP_PICS = [["updates/o-cutouts.jpg", "Picture cut-outs: people and trees"]];

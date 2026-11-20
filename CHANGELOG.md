@@ -3,6 +3,11 @@
 This file is for the people maintaining the app. It is not published with the site (see `.assetsignore`).
 The text users see is `EP_NOTES` in `js/version.js`.
 
+## 2026.11.20-o
+- Viewer: picture cut-outs — `sc.cutouts` ({p, h, w, src, flip}) from `H.cutouts` in `B.meshes`; `_cutTex()` loads a picture into a texture (unit 7), `_drawCuts()` draws alpha-tested upright cards turned to the camera (pass 7b). No shadows cast, not pickable in 3D.
+- `js/bim/assets7.js` (new): built-in vector figures and trees (`figure()`, `treePic()`), `B.addPic()` / `B.regPics()` for the user's own PNGs kept in `bim.pics` (shrunk to 768 px).
+- Not done: moving people / vehicles; photographs are not shipped with the app (licensing) — the owner adds his own PNGs.
+
 ## 2026.11.20-n
 - `WALLFINISH` (`WF`, `DADO`): puts a `wall.fin` record on a clicked face, or on every wall along a room outline (`Room`), with kind / height / from / material options.
 - `js/bim/assets6.js` (new): boundary wall bays, grand gates, fountains.
