@@ -3,6 +3,9 @@
 This file is for the people maintaining the app. It is not published with the site (see `.assetsignore`).
 The text users see is `EP_NOTES` in `js/version.js`.
 
+## 2026.11.20-t
+- Light fittings light the scene: `H.lights` → `sc.lights` ([x, y, z, strength] in m) collected in `B.EXT.asset.mesh` for items in category Lighting or named light / lamp / chandelier; the 16 nearest go to `uPL[]` each frame (no shadows from them, so light passes through walls). `night` flag: night sky palette, sun off, stronger fittings.
+
 ## 2026.11.20-s
 - `hipConvex(e)` in `js/bim/bim.js`: hip roof on convex outlines with slanting sides (exact: faces tile the outline, rise = distance to the nearest side). Used by `B.hipOrtho` when the orthogonal builder returns null. Still not handled: slanting outlines with inside corners, and gable roofs on slanting outlines.
 

@@ -49,6 +49,9 @@ in vec3 vM;
 uniform vec3 uSun,uEye,uSunCol,uSky,uGnd,uHor;
 uniform float uSel,uCut,uShadow,uSMs,uStyle,uFog,uAmb,uHead,uXr;
 uniform vec4 uBox;
+uniform vec4 uPL[16];   /* light fittings: xyz + strength */
+uniform int uPLn;
+uniform float uPLk;
 uniform int uK;
 uniform sampler2D uSM;
 uniform bool uLinear;
@@ -180,6 +183,8 @@ void main(){
   float sh=shadow();
   vec3 amb=mix(uGnd,uSky,N.z*0.5+0.5)*uAmb;
   vec3 lit=amb + uSunCol*diff*sh;
+  /* light fittings (no shadows): warm point lights that fall off with distance */
+  for(int i=0;i<16;i++){ if(i>=uPLn) break; vec3 toL=uPL[i].xyz-vP; float dL=length(toL); float nl=max(dot(N,toL/max(dL,1e-4)),0.0); lit+=vec3(1.0,0.90,0.72)*uPL[i].w*uPLk*(0.18+0.82*nl)/(1.0+dL*dL*0.16); }
   /* walk-through: a soft warm light carried by the viewer, so rooms the sun does not reach are still readable */
   if(uHead>0.01){ vec3 toE=uEye-vP; float dE=length(toE); lit+=vec3(1.0,0.95,0.86)*uHead*(0.35+0.65*max(dot(N,toE/max(dE,1e-4)),0.0))/(1.0+dE*dE*0.012); }
 
@@ -654,7 +659,7 @@ P.prototype.setScene=function(sc,keepCam){
 
   /* store raw transparent data for back-to-front sorting */
   this.trRaw=trData.length>0?new Float32Array(trData):null;
-  this.cuts=sc.cutouts||[];
+  this.cuts=sc.cutouts||[]; this.lights=sc.lights||[];
   for(const m of movers){ const buf=this.vbo(gl,m.v instanceof Float32Array?m.v:new Float32Array(m.v)); this.movers.push({buf:buf,vF:this.makeVAO(gl,buf,true),vS:this.makeVAO(gl,buf,false),n:m.v.length/ST|0,mv:m.mv,seed:(m.v[0]*1.7+m.v[1]*0.9)%5}); }
   this.opRaw=opData;   /* kept for ray casting (measure, walk start) */
 
@@ -795,6 +800,7 @@ P.prototype.light=function(){
     (0.88+0.04*warmth)*dayFrac*1.3,
     (0.78-0.12*warmth)*dayFrac*1.3
   ];
+  if(this.night) return{sunCol:[0,0,0],sky:[0.07,0.08,0.14],gnd:[0.03,0.03,0.05],zen:[0.015,0.02,0.07],hor:[0.05,0.06,0.12]};
   if(dayFrac<0.01) return{sunCol:[0,0,0],sky:[0.03,0.03,0.06],gnd:[0.02,0.02,0.03],zen:[0.02,0.02,0.06],hor:[0.04,0.04,0.06]};
   const sky=[0.48*dayFrac+0.06,0.58*dayFrac+0.06,0.78*dayFrac+0.06];
   const gnd=[0.28*dayFrac+0.04,0.26*dayFrac+0.04,0.20*dayFrac+0.03];
@@ -869,7 +875,7 @@ P.prototype.render=function(pick){
     D('lp valid='+gl.isProgram(this.lp)+' link='+gl.getProgramParameter(this.lp,gl.LINK_STATUS));
     D('sp valid='+gl.isProgram(this.sp)+' link='+gl.getProgramParameter(this.sp,gl.LINK_STATUS));
     /* check main program uniforms */
-    var mu=this.mp.u, mnames='uVP uL uSun uEye uSunCol uSky uGnd uHor uSel uCut uShadow uSMs uStyle uFog uAmb uHead uXr uBox uK uSM'.split(' ');
+    var mu=this.mp.u, mnames='uVP uL uSun uEye uSunCol uSky uGnd uHor uSel uCut uShadow uSMs uStyle uFog uAmb uHead uXr uBox uPLn uPLk uK uSM'.split(' ');
     var mloc=[]; for(var i=0;i<mnames.length;i++) mloc.push(mnames[i]+'='+(mu[mnames[i]]!==null&&mu[mnames[i]]!==undefined?'OK':'NULL'));
     D('mp uniforms: '+mloc.join(' '));
     /* check sky program uniforms */
@@ -988,7 +994,10 @@ P.prototype.render=function(pick){
   gl.uniform1f(u.uSMs,this.smSize);
   gl.uniform1f(u.uStyle,this.style);
   gl.uniform1f(u.uFog,this.fog?1:0);
-  gl.uniform1f(u.uAmb,this.walk?0.70:0.50); gl.uniform1f(u.uHead,this.walk?0.9:0.0);   /* brighter fill light indoors while walking */
+  { const L=this.lights||[], t=this.walk&&this.we?this.we:this.t, near=L.map(function(l){return{l:l,d:(l[0]-t[0])*(l[0]-t[0])+(l[1]-t[1])*(l[1]-t[1])+(l[2]-t[2])*(l[2]-t[2])};}).sort(function(a,b){return a.d-b.d;}).slice(0,16), arr=new Float32Array(64);
+    near.forEach(function(x,i){ arr[i*4]=x.l[0]; arr[i*4+1]=x.l[1]; arr[i*4+2]=x.l[2]; arr[i*4+3]=x.l[3]||1; });
+    if(!this._plLoc) this._plLoc=gl.getUniformLocation(this.mp,'uPL'); gl.uniform4fv(this._plLoc,arr); gl.uniform1i(u.uPLn,this.lightsOn===false?0:near.length); gl.uniform1f(u.uPLk,this.night?1.0:0.22); }
+  gl.uniform1f(u.uAmb,this.night?(this.walk?0.42:0.75):this.walk?0.70:0.50); gl.uniform1f(u.uHead,this.walk?(this.night?0.22:0.9):0.0);   /* brighter fill light indoors while walking */
   gl.uniform1i(u.uK,this.kern);
   if(u.uLinear) gl.uniform1i(u.uLinear,this.linear?1:0);
 
