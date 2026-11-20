@@ -3,6 +3,9 @@
 This file is for the people maintaining the app. It is not published with the site (see `.assetsignore`).
 The text users see is `EP_NOTES` in `js/version.js`.
 
+## 2026.11.20-w
+- Own material pictures: `bim.texs` (max 5), `B.addTex`, `B.regTex` → looks `tex_<id>` with pattern 20 + slot and `B.TEXSLOTS`; shader samplers `uTx0…4` on texture units 2…6 (`_matTex`, REPEAT, mipmaps); world-space mapping scaled by the picture's real width. Not in PDF / DXF output; plan fill uses the picture's average colour.
+
 ## 2026.11.20-v
 - `B.parseGLTF`: base colour textures are baked into vertex colours after the images decode (`res.baking` promise, `res.baked`, `B.onGlbBaked` → redraw). Per-vertex sampling: colour areas and palette textures are right, grain inside a triangle is lost. Not read: KHR_texture_transform, normal / roughness maps, Draco.
 

@@ -54,6 +54,7 @@ uniform int uPLn;
 uniform float uPLk;
 uniform int uK;
 uniform sampler2D uSM;
+uniform sampler2D uTx0,uTx1,uTx2,uTx3,uTx4;   /* the user's own material pictures (pattern 20…24) */
 uniform bool uLinear;
 out vec4 fragColor;
 
@@ -173,6 +174,8 @@ void main(){
   }else if(pi==15){/* soil */
     col*=0.75+0.4*fbm(uv*5.0);
   }
+
+  if(pi>=20){ vec3 t; if(pi==20) t=texture(uTx0,uv).rgb; else if(pi==21) t=texture(uTx1,uv).rgb; else if(pi==22) t=texture(uTx2,uv).rgb; else if(pi==23) t=texture(uTx3,uv).rgb; else t=texture(uTx4,uv).rgb; col=t; }
 
   /* style override: 1=colors(flat), 2=white model */
   if(uStyle>1.5) col=vec3(0.92);
@@ -1001,6 +1004,9 @@ P.prototype.render=function(pick){
   gl.uniform1i(u.uK,this.kern);
   if(u.uLinear) gl.uniform1i(u.uLinear,this.linear?1:0);
 
+  /* own material pictures on units 2…6 */
+  { const TS=(EP.bim.TEXSLOTS||[]); if(!this._txLoc) this._txLoc=[0,1,2,3,4].map(i=>gl.getUniformLocation(this.mp,'uTx'+i));
+    for(let i=0;i<5;i++){ const t=TS[i]?this._matTex(TS[i]):this._matTex(null); gl.activeTexture(gl.TEXTURE2+i); gl.bindTexture(gl.TEXTURE_2D,t.tex||this._matTex(null).tex); gl.uniform1i(this._txLoc[i],2+i); } }
   /* bind shadow map */
   gl.activeTexture(gl.TEXTURE0);
   gl.bindTexture(gl.TEXTURE_2D,this.smTex);
@@ -1388,6 +1394,24 @@ P.prototype._drawMovers=function(prog,full){
     gl.uniform3f(prog._off,m.mv.dir[0]*d,m.mv.dir[1]*d,0); gl.bindVertexArray(full?m.vF:m.vS); gl.drawArrays(gl.TRIANGLES,0,m.n);
   }
   gl.uniform3f(prog._off,0,0,0); gl.bindVertexArray(null);
+};
+
+/* ---------- own material pictures: repeating textures ---------- */
+P.prototype._matTex=function(src){
+  const gl=this.gl; this._mtex=this._mtex||{}; const key=src||'__white'; let t=this._mtex[key]; if(t) return t;
+  t=this._mtex[key]={tex:gl.createTexture(),ready:false}; gl.activeTexture(gl.TEXTURE7); gl.bindTexture(gl.TEXTURE_2D,t.tex);
+  gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,1,1,0,gl.RGBA,gl.UNSIGNED_BYTE,new Uint8Array([200,200,200,255])); gl.activeTexture(gl.TEXTURE0);
+  if(!src){ t.ready=true; return t; }
+  const img=new Image(), self=this;
+  img.onload=function(){ if(self.dead) return; try{
+    const k=Math.min(1,1024/Math.max(img.naturalWidth,img.naturalHeight)), cw=Math.max(2,Math.round(img.naturalWidth*k)), ch=Math.max(2,Math.round(img.naturalHeight*k));
+    const cv=document.createElement('canvas'); cv.width=cw; cv.height=ch; cv.getContext('2d').drawImage(img,0,0,cw,ch);
+    gl.activeTexture(gl.TEXTURE7); gl.bindTexture(gl.TEXTURE_2D,t.tex); gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL,true);
+    gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,gl.RGBA,gl.UNSIGNED_BYTE,cv); gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL,false); gl.generateMipmap(gl.TEXTURE_2D);
+    gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.LINEAR_MIPMAP_LINEAR); gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.REPEAT); gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.REPEAT);
+    gl.activeTexture(gl.TEXTURE0); t.ready=true; self.dirty=true; }catch(e){ t.err=String(e); } };
+  img.src=src; return t;
 };
 
 /* ---------- picture cut-outs ---------- */

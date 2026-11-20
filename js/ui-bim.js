@@ -41,6 +41,7 @@
   function lookOpts(cur, def) { return (def ? "<option value=''>" + esc(def) + "</option>" : "") + B.lookOptions().map(function (o) { return "<option value='" + o[0] + "'" + (o[0] === cur ? " selected" : "") + ">" + esc(o[1]) + "</option>"; }).join(""); }
   /* --- visual material library popup --- */
   var MAT_CATS = [
+    ["mypic", "My pictures", /^tex_/],
     ["paint", "Paints & Wall coverings", /^paint_|^plaster$|^wallpaper_|^gypsum|^concrete_micro$/],
     ["masonry", "Masonry & Sandstone", /^brick$|^block$|^stone$|^concrete$|^sandstone_/],
     ["stone", "Granite, Marble & Tops", /^granite|^marble|^onyx|^quartz|^corian|^terrazzo$|^kota$|^stone_(kota|jaisalmer|tandur)/],

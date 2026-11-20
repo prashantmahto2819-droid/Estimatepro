@@ -1,6 +1,6 @@
 # Estimate Pro — pending work (kept with the code; not published)
 
-Last updated at version 2026.11.20-v.
+Last updated at version 2026.11.20-w.
 
 ## A. Waiting for the owner
 1. Connect the app's Supabase project (ref starts `eaygozhjsmohfcuiazfm`) to the build session. Then: admin dashboard switches (module on / off), WhatsApp update messages with real pictures, shared cut-out / model library for all users.
@@ -27,7 +27,7 @@ Last updated at version 2026.11.20-v.
 ## B. 3D Studio — to build (no server needed)
 1. (done in -u for one device: My 3D models.) (-v: texture colours baked per vertex.) Still open: true per-pixel textures, Draco files, a shared library for all users (needs the server), thumbnails, plan symbol from the model outline.
 2. (done in -t: fittings light the scene, Night view.) Still open: lights do not cast shadows and pass through walls; emissive glow on the fitting itself.
-3. Picture textures on surfaces (own tile / marble / wallpaper photo on a wall or floor).
+3. (done in -w: up to 5 own material pictures per drawing.) Still open: rotate / offset the picture on a surface, more than 5, a device library of materials.
 4. Sky and background picture; ground materials by area.
 5. Reflections on glass and water; softer shadows.
 6. Vehicles that turn at the end of the path, wheels that turn; people with a walking cycle.
