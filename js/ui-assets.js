@@ -44,6 +44,7 @@
     if (q && !Object.keys(cats).length && h.indexOf("libcat") < 0) h += "<p class='muted small'>Nothing matches “" + esc(q) + "”.</p>";
     h += "<div class='cad-ph'>Landscape areas</div><div class='row' style='gap:6px;flex-wrap:wrap'>" + Object.keys(B.LAND).map(function (k) { return "<button type='button' class='btn sec sm' data-libland='" + k + "'><span class='lk-sw' style='background:" + B.LAND[k][2].replace(/[\d.]+\)$/, "1)") + "'></span>" + esc(B.LAND[k][0]) + "</button>"; }).join("") + "</div>";
     h += "<div class='cad-ph'>Your own 3D models</div><p class='muted small'>Import a GLB / glTF 2.0 file (furniture, equipment, vehicles…). Textures are shown as plain colours; compressed (Draco) files are not supported.</p><button type='button' class='btn sec sm' data-cad='impglb'>Import 3D model (GLB / glTF)…</button>";
+    h += myModelsHtml();
     var models = Object.keys(d.assets || {}).filter(function (id) { return d.assets[id].kind === "glb"; }); if (models.length) h += "<div class='small' style='margin-top:6px'>" + models.map(function (id) { var a = d.assets[id], g = B.GLB[id]; return "<div class='row' style='gap:6px;align-items:center;margin:2px 0'><span class='grow'>" + esc(a.name) + " <span class='muted'>(" + (g ? Math.round(g.n / 3).toLocaleString("en-IN") + " triangles" : "loading…") + ")</span></span><button type='button' class='btn ghost sm' data-libglb='" + esc(id) + "'>Place again</button></div>"; }).join("") + "</div>";
     return h;
   };
@@ -98,8 +99,16 @@
   function importGlb(ed, C) {
     var inp = document.createElement("input"); inp.type = "file"; inp.accept = ".glb,.gltf,model/gltf-binary,model/gltf+json";
     inp.onchange = async function () {
-      var file = inp.files[0]; if (!file) return; var buf, g;
-      try { buf = await file.arrayBuffer(); g = B.parseGLTF(buf, file.name); } catch (er) { U.toast("Couldn't read the model: " + er.message); return; }
+      var file = inp.files[0]; if (!file) return; var buf;
+      try { buf = await file.arrayBuffer(); } catch (er) { U.toast("Couldn't read the file: " + er.message); return; }
+      await placeGlb(ed, C, buf, file);
+    };
+    inp.click();
+  }
+  /* put a GLB (from a file or from "My 3D models") into this drawing and select it */
+  async function placeGlb(ed, C, buf, file) {
+    { var g;
+      try { g = B.parseGLTF(buf, file.name); } catch (er) { U.toast("Couldn't read the model: " + er.message); return; }
       var id = CAD.uid(), A = Object.assign({}, ed.doc.d.assets || {}), size = Math.max(g.bbox[3] - g.bbox[0], g.bbox[4] - g.bbox[1], g.bbox[5] - g.bbox[2]), sc = size > 500 ? 0.001 : size > 60 ? 0.01 : 1;
       A[id] = { name: file.name, mime: "model/gltf-binary", kind: "glb", size: file.size };
       if (U.off) await U.off.put("cadasset:" + id, new Blob([buf], { type: "model/gltf-binary" }));
@@ -107,8 +116,29 @@
       ed.doc.begin("Import 3D model"); ed.doc.set("assets", A); var e = ed.doc.add({ t: "model3d", asset: id, p: w, rot: 0, sc: sc, z: 0, lvl: b.cur, name: file.name.replace(/\.(glb|gltf)$/i, ""), layer: "0" }); ed.doc.commit();
       ed.sel = new Set([e.id]); ed.emitSel(); C.panel = "props"; CAD.ui.renderPanels(); ed.dirty = true;
       U.toast(file.name + ": " + Math.round(g.n / 3).toLocaleString("en-IN") + " triangles" + (sc !== 1 ? " — scaled × " + sc + " (the file looks like " + (sc === 0.001 ? "millimetres" : "centimetres") + ")" : "") + (g.truncated ? " — very large model, cut at the limit" : "") + ". Move it with MOVE; it is saved with the drawing.");
-    };
-    inp.click();
+    }
+  }
+  /* ----- "My 3D models on this device": GLB files kept in IndexedDB, grouped by kind, ready for every drawing ----- */
+  var MD = { list: null, loading: false }, MCATS = ["Furniture", "Sanitary & bath", "Kitchen", "Lighting & fans", "False ceiling & panelling", "Partitions & doors", "Vehicles", "Landscape & outdoor", "Other"];
+  function mdlDB() { return new Promise(function (res, rej) { try { var rq = indexedDB.open("ep_models", 1); rq.onupgradeneeded = function () { rq.result.createObjectStore("m", { keyPath: "id" }); }; rq.onsuccess = function () { res(rq.result); }; rq.onerror = function () { rej(rq.error); }; } catch (e) { rej(e); } }); }
+  function mdlTx(mode, fn) { return mdlDB().then(function (db) { return new Promise(function (res) { var tx = db.transaction("m", mode), out = fn(tx.objectStore("m")); tx.oncomplete = function () { res(out && out.result); }; tx.onerror = function () { res(null); }; }); }).catch(function () { return null; }); }
+  function mdlLoad() { if (MD.loading) return; MD.loading = true; mdlTx("readonly", function (st) { return st.getAll(); }).then(function (l) { MD.list = (l || []).map(function (x) { return { id: x.id, name: x.name, cat: x.cat, size: x.size, tris: x.tris }; }); MD.loading = false; if (CAD.ui && CAD.ui.renderPanels) CAD.ui.renderPanels(); }); }
+  function myModelsHtml() {
+    var h = "<div class='row' style='gap:6px;flex-wrap:wrap;margin:6px 0 2px'><button type='button' class='btn sec sm' data-mdladd='1' title='GLB / glTF files of furniture, sanitary ware, vehicles… are kept on this device and can be placed in any drawing'>＋ Add 3D models to my library (GLB)</button><input type='file' accept='.glb,.gltf,model/gltf-binary' multiple data-mdlfile='1' hidden></div>";
+    if (MD.list === null) { mdlLoad(); return h; } if (!MD.list.length) return h;
+    var by = {}; MD.list.forEach(function (m) { (by[m.cat] = by[m.cat] || []).push(m); });
+    return h + "<details class='libcat' open><summary class='cad-ph'>My 3D models on this device (" + MD.list.length + ")</summary>" + Object.keys(by).map(function (c) { return "<div class='muted small' style='margin:4px 0 2px'><b>" + esc(c) + "</b></div>" + by[c].map(function (m) { return "<div class='row' style='gap:6px;align-items:center;margin:2px 0'><span class='grow small'>" + esc(m.name) + " <span class='muted'>(" + (m.tris ? m.tris.toLocaleString("en-IN") + " triangles, " : "") + (m.size / 1e6).toFixed(1) + " MB)</span></span><button type='button' class='btn sec sm' data-mdlplace='" + m.id + "'>Place</button><button type='button' class='btn ghost sm' data-mdldel='" + m.id + "' title='Remove from this device (drawings that use it keep it)'>✕</button></div>"; }).join(""); }).join("") + "</details>";
+  }
+  function mdlAddFiles(ed, C, files) {
+    files = Array.from(files).slice(0, 20); var n = 0, catAsked = null;
+    (async function next() {
+      var file = files.shift(); if (!file) { MD.list = null; CAD.ui.renderPanels(); if (n) U.toast(n + " model(s) added to My 3D models. Press Place to put one in the drawing."); return; }
+      if (file.size > 25e6) { U.toast(file.name + " is over 25 MB — too big for the library."); return next(); }
+      var buf, g; try { buf = await file.arrayBuffer(); g = B.parseGLTF(buf, file.name); } catch (er) { U.toast(file.name + ": " + er.message); return next(); }
+      if (catAsked == null) { var ans = window.prompt("Which kind are these models? Type the number:\n" + MCATS.map(function (c, i) { return (i + 1) + " = " + c; }).join("\n"), "1"); catAsked = MCATS[(parseInt(ans, 10) || 9) - 1] || "Other"; }
+      await mdlTx("readwrite", function (st) { return st.put({ id: "m" + Date.now().toString(36) + n, name: file.name.replace(/\.(glb|gltf)$/i, "").slice(0, 50), cat: catAsked, size: file.size, tris: Math.round(g.n / 3), buf: buf }); });
+      n++; next();
+    })();
   }
 
   /* ---------- exports ---------- */
@@ -129,6 +159,7 @@
     C.root.addEventListener("drop", function (ev) { if (!dragKind) return; var k = dragKind, on = ev.target.closest && ev.target.closest(".cad-cv"); ev.preventDefault(); var w = on ? dropPt(ev) : null; endDrag(); if (!w) return; var e = B.placeAsset(ed, k, w); if (e) { ed.sel = new Set([e.id]); ed.emitSel(); ed.dirty = true; } });
     C.root.addEventListener("dragend", endDrag);
     /* own picture: read the PNG, shrink it (keeps transparency), ask its real height, keep it in the drawing and start placing */
+    C.root.addEventListener("change", function (ev) { var t = ev.target; if (t && t.dataset && t.dataset.mdlfile && t.files && t.files.length) mdlAddFiles(ed, C, t.files); });
     C.root.addEventListener("change", function (ev) {
       var t = ev.target; if (!t || !t.dataset || !t.dataset.picfile || !t.files || !t.files.length) return; var files = Array.from(t.files).slice(0, 12), last = null, n = 0;
       (function next() {
@@ -148,6 +179,9 @@
 
     C.root.addEventListener("click", function (ev) {
       var t = ev.target.closest("button"); if (!t) return; var ds = t.dataset;
+      if (ds.mdladd) { var mf = C.root.querySelector("[data-mdlfile]"); if (mf) { mf.value = ""; mf.click(); } return; }
+      if (ds.mdlplace) { mdlTx("readonly", function (st) { return st.get(ds.mdlplace); }).then(function (m) { if (!m || !m.buf) { U.toast("That model is no longer on this device."); return; } placeGlb(ed, C, m.buf, { name: m.name + ".glb", size: m.size }); }); return; }
+      if (ds.mdldel) { mdlTx("readwrite", function (st) { return st.delete(ds.mdldel); }).then(function () { MD.list = null; CAD.ui.renderPanels(); }); return; }
       if (ds.mypic) { var mp = (MY.list || []).filter(function (x) { return x.id === ds.mypic; })[0]; if (!mp) return; var pics0 = (ed.doc.d.bim && ed.doc.d.bim.pics) || {}, had = Object.keys(pics0).filter(function (k) { return pics0[k].src === mp.src; })[0]; ed.assetKind = had ? "pic_" + had : B.addPic(ed, mp.name, mp.src, mp.asp, mp.h); CAD.ui.renderPanels(); ed.exec("ASSET"); return; }
       if (ds.mypicdel) { picDel(ds.mypicdel).then(function () { MY.list = null; CAD.ui.renderPanels(); }); return; }
       if (ds.picadd) { var pf = C.root.querySelector("[data-picfile]"); if (pf) { pf.value = ""; pf.click(); } return; }

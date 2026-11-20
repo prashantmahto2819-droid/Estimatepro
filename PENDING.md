@@ -1,18 +1,23 @@
 # Estimate Pro — pending work (kept with the code; not published)
 
-Last updated at version 2026.11.20-t.
+Last updated at version 2026.11.20-u.
 
 ## A. Waiting for the owner
 1. Connect the app's Supabase project (ref starts `eaygozhjsmohfcuiazfm`) to the build session. Then: admin dashboard switches (module on / off), WhatsApp update messages with real pictures, shared cut-out / model library for all users.
 2. Files to supply (use only files with a licence that allows commercial use):
-   - Cars / vehicles as GLB (5–10 models, under about 2 MB each: hatchback, sedan, SUV, pickup, bus, scooter, auto).
+   - GLB models, a few of each kind, small files (ideally under 2–5 MB, not Draco-compressed). The owner can add them himself with Library → "＋ Add 3D models to my library (GLB)" (kept on that device); to ship them to every user they must come to the build session or the shared server library:
+     - Vehicles: hatchback, sedan, SUV, pickup, bus, scooter, auto.
+     - Sanitary & bath: WC (floor and wall-hung), basins, vanity, urinal, shower, bathtub, taps, accessories.
+     - Furniture: sofa sets, beds, dining, wardrobes, office tables and chairs, TV unit.
+     - Kitchen: modular units, hob, chimney, sink, fridge.
+     - Lighting & fans, false-ceiling pieces, partitions, doors.
    - People and tree cut-outs as PNG with transparent background (10–20).
    - Optional: furniture / sanitary GLB models, sky pictures (JPG) for the background.
 3. Decisions: the 30 quick rates that differ from their analysis (tipper, tanker…); whether 1:30 / 1:40 / 1:60 scales may be used on Design Studio sheets.
 4. Commercial plans (owner will describe).
 
 ## B. 3D Studio — to build (no server needed)
-1. Model library from GLB files inside the app (today GLB is imported per drawing).
+1. (done in -u for one device: My 3D models.) Still open: GLB textures (models show plain colours), Draco files, a shared library for all users (needs the server), thumbnails, plan symbol from the model outline.
 2. (done in -t: fittings light the scene, Night view.) Still open: lights do not cast shadows and pass through walls; emissive glow on the fitting itself.
 3. Picture textures on surfaces (own tile / marble / wallpaper photo on a wall or floor).
 4. Sky and background picture; ground materials by area.

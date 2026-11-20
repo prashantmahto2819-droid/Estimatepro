@@ -3,6 +3,9 @@
 This file is for the people maintaining the app. It is not published with the site (see `.assetsignore`).
 The text users see is `EP_NOTES` in `js/version.js`.
 
+## 2026.11.20-u
+- `ui-assets.js`: `placeGlb(ed, C, buf, file)` (shared by file import and the library); "My 3D models on this device" in IndexedDB `ep_models` (`mdlAddFiles`, `myModelsHtml`), kinds in `MCATS`, up to 20 files of 25 MB at a time. GLB limits unchanged: textures show as plain colours, Draco-compressed files are not read.
+
 ## 2026.11.20-t
 - Light fittings light the scene: `H.lights` → `sc.lights` ([x, y, z, strength] in m) collected in `B.EXT.asset.mesh` for items in category Lighting or named light / lamp / chandelier; the 16 nearest go to `uPL[]` each frame (no shadows from them, so light passes through walls). `night` flag: night sky palette, sun off, stronger fittings.
 
