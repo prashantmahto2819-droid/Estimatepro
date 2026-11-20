@@ -175,7 +175,8 @@
       } catch (er) { console.warn("mesh", e.t, er); }
       var str = B.RF_TYPES && B.RF_TYPES[e.t];   // x-ray for the rebar view: structure faint, the rest almost invisible
       if (opts.rebar) for (var vi = 9; vi < M.v.length; vi += 14) M.v[vi] = Math.min(M.v[vi], str ? 0.18 : 0.06);
-      out.push({ id: e.id, idx: idx + 1, v: M.v, e: opts.rebar && !str ? [] : M.e });
+      var mv = e.t === "asset" && +e.walk > 0 && !((B.ASSET_LIB[e.kind] || {}).cut) ? { d: +e.walk * (e.sc || 1) * K, dir: [Math.cos((e.rot || 0) * Math.PI / 180), Math.sin((e.rot || 0) * Math.PI / 180)] } : null;   /* a vehicle that drives along its direction when ▶ Play is on */
+      out.push({ id: e.id, idx: idx + 1, v: M.v, e: (opts.rebar && !str) || mv ? [] : M.e, mv: mv });
     });
     if (opts.rebar && B.rebarMesh) B.rebarMesh(doc, function (id) { return new Mesh(ids[id]); }, { filter: function (e) { return !!ids[e.id]; } }).forEach(function (M) { out.push({ id: byId[M.id - 1], idx: M.id, v: M.v, e: [] }); });
     var bb = [Infinity, Infinity, Infinity, -Infinity, -Infinity, -Infinity];

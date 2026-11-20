@@ -3,6 +3,11 @@
 This file is for the people maintaining the app. It is not published with the site (see `.assetsignore`).
 The text users see is `EP_NOTES` in `js/version.js`.
 
+## 2026.11.20-r
+- Moving vehicles: `B.meshes` marks a non-cut-out asset with `walk > 0` as `mv: { d, dir }`; `setScene` keeps such groups out of the merged buffer (`this.movers`, own VAOs) and `_drawMovers()` draws them in the main and shadow passes with `uOff`. Not pickable / measurable while separate; no edge lines.
+- `ui-assets.js`: own pictures also stored in IndexedDB `ep_pics` ("My pictures on this device"), multi-file add.
+- Pictures from the web are not bundled: free cut-out libraries allow use in one's own renders, not redistribution inside an app, and those sites cannot be reached from the build workspace.
+
 ## 2026.11.20-q
 - Cut-outs are drawn into the shadow map turned towards the sun (`_drawCuts(lvp, null, sunDir)`), so they cast their outline.
 - `play` flag: cut-outs with `walk` (m) move back and forth along the item's rotation at 1.2 m/s; asset properties `walk`, `flip`.

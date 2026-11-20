@@ -27,14 +27,16 @@ layout(location=2)in vec4 aC;
 layout(location=3)in float aI;
 layout(location=4)in vec3 aM;
 uniform mat4 uVP,uL;
+uniform vec3 uOff;
 out vec3 vP,vN,vL;
 out vec4 vC;
 out float vI;
 out vec3 vM;
 void main(){
-  vP=aP; vN=aN; vC=aC; vI=aI; vM=aM;
-  vL=(uL*vec4(aP,1.0)).xyz;
-  gl_Position=uVP*vec4(aP,1.0);
+  vec3 p=aP+uOff;
+  vP=p; vN=aN; vC=aC; vI=aI; vM=aM;
+  vL=(uL*vec4(p,1.0)).xyz;
+  gl_Position=uVP*vec4(p,1.0);
 }`;
 
 /* Main fragment shader — Poisson PCF, improved lighting */
@@ -253,7 +255,8 @@ const SVS=`#version 300 es
 precision highp float;
 layout(location=0)in vec3 aP;
 uniform mat4 uVP;
-void main(){gl_Position=uVP*vec4(aP,1.0);}`;
+uniform vec3 uOff;
+void main(){gl_Position=uVP*vec4(aP+uOff,1.0);}`;
 const SFS=`#version 300 es
 precision highp float;
 out vec4 fragColor;
@@ -622,12 +625,14 @@ P.prototype.setScene=function(sc,keepCam){
   this._delVAOs();
 
   /* split groups into opaque and transparent */
-  let op=[],tr=[];
+  let op=[],tr=[]; const movers=[];
+  (this.movers||[]).forEach(function(m){ gl.deleteVertexArray(m.vF); gl.deleteVertexArray(m.vS); gl.deleteBuffer(m.buf); }); this.movers=[];
   const groups=sc.groups||[];
   for(const gRaw of groups){
     /* groups may be {id,idx,v,e} objects or raw Float32Arrays */
     const g=gRaw.v||gRaw;
     if(!g||!g.length) continue;
+    if(gRaw.mv){ movers.push({v:g,mv:gRaw.mv}); continue; }
     let transparent=false;
     for(let i=0;i<g.length;i+=ST){
       if(g[i+9]<0.99){transparent=true;break;}
@@ -650,6 +655,7 @@ P.prototype.setScene=function(sc,keepCam){
   /* store raw transparent data for back-to-front sorting */
   this.trRaw=trData.length>0?new Float32Array(trData):null;
   this.cuts=sc.cutouts||[];
+  for(const m of movers){ const buf=this.vbo(gl,m.v instanceof Float32Array?m.v:new Float32Array(m.v)); this.movers.push({buf:buf,vF:this.makeVAO(gl,buf,true),vS:this.makeVAO(gl,buf,false),n:m.v.length/ST|0,mv:m.mv,seed:(m.v[0]*1.7+m.v[1]*0.9)%5}); }
   this.opRaw=opData;   /* kept for ray casting (measure, walk start) */
 
   /* create VBOs */
@@ -923,6 +929,7 @@ P.prototype.render=function(pick){
       gl.drawArrays(gl.TRIANGLES,0,this.gndN);
     }
     gl.bindVertexArray(null);
+    if(this.movers&&this.movers.length){ this._drawMovers(this.sp,false); gl.useProgram(this.sp); }
     if(this.cuts&&this.cuts.length) this._drawCuts(lvp,null,this.sunDir());   /* picture cut-outs cast their outline as a shadow */
     gl.colorMask(true,true,true,true);       /* restore colour writes */
     gl.bindFramebuffer(gl.FRAMEBUFFER,null);
@@ -1009,8 +1016,8 @@ P.prototype.render=function(pick){
     gl.drawArrays(gl.TRIANGLES,0,this.opN);
     if(this.xray){ gl.disable(gl.BLEND); gl.depthMask(true); }
     gl.disable(gl.POLYGON_OFFSET_FILL);
-    if(!this._opErr){this._opErr=true;var e=gl.getError();if(e)console.error('[3D-DIAG] opaque GL err='+e+' opN='+this.opN);}
   }
+  if(this.movers&&this.movers.length){ this._drawMovers(this.mp,true); gl.useProgram(this.mp); }
 
   /* 7. Edges */
   if(this.edges && this.lnN>0 && this.vaoLine){
@@ -1362,6 +1369,16 @@ P.prototype.bind=function(){
     self.dist=Math.max(0.1,self.dist);
     self.dirty=true;
   },{passive:false});
+};
+
+/* ---------- moving vehicles: groups kept out of the merged buffer and drawn with an offset ---------- */
+P.prototype._drawMovers=function(prog,full){
+  const gl=this.gl; gl.useProgram(prog); prog._off=prog._off||gl.getUniformLocation(prog,'uOff');
+  for(const m of this.movers){
+    let d=0; if(this.play&&m.mv.d>0.5){ d=(((this._playT||0)+m.seed)*5.5)%m.mv.d; }   /* about 20 km/h, then starts again */
+    gl.uniform3f(prog._off,m.mv.dir[0]*d,m.mv.dir[1]*d,0); gl.bindVertexArray(full?m.vF:m.vS); gl.drawArrays(gl.TRIANGLES,0,m.n);
+  }
+  gl.uniform3f(prog._off,0,0,0); gl.bindVertexArray(null);
 };
 
 /* ---------- picture cut-outs ---------- */
