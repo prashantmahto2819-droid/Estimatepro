@@ -300,9 +300,10 @@
     }
     function mat4(n) { if (n.matrix) return n.matrix.slice(); var t = n.translation || [0, 0, 0], r = n.rotation || [0, 0, 0, 1], s = n.scale || [1, 1, 1], x = r[0], y = r[1], z = r[2], w = r[3]; return [(1 - 2 * (y * y + z * z)) * s[0], 2 * (x * y + z * w) * s[0], 2 * (x * z - y * w) * s[0], 0, 2 * (x * y - z * w) * s[1], (1 - 2 * (x * x + z * z)) * s[1], 2 * (y * z + x * w) * s[1], 0, 2 * (x * z + y * w) * s[2], 2 * (y * z - x * w) * s[2], (1 - 2 * (x * x + y * y)) * s[2], 0, t[0], t[1], t[2], 1]; }
     function mm(a, b) { var o = new Array(16); for (var i = 0; i < 4; i++) for (var j = 0; j < 4; j++) { var s = 0; for (var k = 0; k < 4; k++) s += a[k * 4 + j] * b[i * 4 + k]; o[i * 4 + j] = s; } return o; }
-    var P = [], Cc = [], LIMIT = 600000;
+    var P = [], Cc = [], LIMIT = 600000, TX = [];   // TX: runs of vertices that take their colour from a picture (base colour texture)
     function prim(p, M) {
       if (p.mode != null && p.mode !== 4) return; var pos = acc(p.attributes.POSITION), idx = p.indices != null ? acc(p.indices).d : null, mat = p.material != null && json.materials ? json.materials[p.material] : null, pbr = mat && mat.pbrMetallicRoughness, bc = (pbr && pbr.baseColorFactor) || [0.8, 0.8, 0.8, 1], vc = p.attributes.COLOR_0 != null ? acc(p.attributes.COLOR_0) : null, alpha = mat && mat.alphaMode === "BLEND" ? bc[3] : 1;
+      var bt = pbr && pbr.baseColorTexture, tdef = bt && json.textures && json.textures[bt.index], uvA = bt && p.attributes["TEXCOORD_" + (bt.texCoord || 0)] != null ? acc(p.attributes["TEXCOORD_" + (bt.texCoord || 0)]) : null, run = tdef && tdef.source != null && uvA ? { img: tdef.source, v0: P.length / 3, uv: [] } : null; if (run && !(pbr && pbr.baseColorFactor)) bc = [1, 1, 1, 1];   // glTF default factor is white: the picture gives the colour
       var n = idx ? idx.length : pos.count;
       for (var k = 0; k < n; k++) {
         if (P.length / 3 >= LIMIT) return; var vi = idx ? idx[k] : k, x = pos.d[vi * 3], y = pos.d[vi * 3 + 1], z = pos.d[vi * 3 + 2];
@@ -310,14 +311,34 @@
         P.push(X, -Z, Y);   // glTF is y-up → drawing z-up
         var r = bc[0], g = bc[1], b = bc[2]; if (vc) { r *= vc.d[vi * vc.n]; g *= vc.d[vi * vc.n + 1]; b *= vc.d[vi * vc.n + 2]; }
         Cc.push(Math.pow(r, 1 / 2.2), Math.pow(g, 1 / 2.2), Math.pow(b, 1 / 2.2), alpha);
+        if (run) run.uv.push(uvA.d[vi * 2], uvA.d[vi * 2 + 1]);
       }
+      if (run && run.uv.length) TX.push(run);
     }
     function walk(ni, parent) { var n = json.nodes[ni], M = mm(parent, mat4(n)); if (n.mesh != null) json.meshes[n.mesh].primitives.forEach(function (p) { prim(p, M); }); (n.children || []).forEach(function (c) { walk(c, M); }); }
     var I = [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1], sc = json.scenes && json.scenes[json.scene || 0];
     if (sc) sc.nodes.forEach(function (ni) { walk(ni, I); }); else (json.meshes || []).forEach(function (m) { m.primitives.forEach(function (p) { prim(p, I); }); });
     if (!P.length) throw new Error("No triangles found in the model");
     var bb = [Infinity, Infinity, Infinity, -Infinity, -Infinity, -Infinity]; for (var i = 0; i < P.length; i += 3) for (var k2 = 0; k2 < 3; k2++) { bb[k2] = Math.min(bb[k2], P[i + k2]); bb[k2 + 3] = Math.max(bb[k2 + 3], P[i + k2]); }
-    return { pos: new Float32Array(P), col: new Float32Array(Cc), n: P.length / 3, bbox: bb, name: name || "", truncated: P.length / 3 >= LIMIT };
+    var res = { pos: new Float32Array(P), col: new Float32Array(Cc), n: P.length / 3, bbox: bb, name: name || "", truncated: P.length / 3 >= LIMIT };
+    /* pictures on the model: each vertex takes the colour of its place in the picture (done after the pictures have loaded).
+       This shows colour areas and palette textures correctly; fine grain inside one triangle is averaged out. */
+    if (TX.length && typeof createImageBitmap === "function" && typeof document !== "undefined") {
+      var need = {}; TX.forEach(function (r) { need[r.img] = 1; });
+      var jobs = Object.keys(need).map(function (k) {
+        var im = json.images && json.images[k], blob = null; if (!im) return Promise.resolve(null);
+        try { if (im.bufferView != null) { var bv = json.bufferViews[im.bufferView], b0 = buffers[bv.buffer]; blob = new Blob([new Uint8Array(b0, bv.byteOffset || 0, bv.byteLength)], { type: im.mimeType || "image/png" }); }
+          else if (im.uri && /^data:/.test(im.uri)) { var mt = /^data:(.*?);base64,(.*)$/.exec(im.uri), st = atob(mt[2]), u8 = new Uint8Array(st.length); for (var q = 0; q < st.length; q++) u8[q] = st.charCodeAt(q); blob = new Blob([u8], { type: mt[1] || "image/png" }); } } catch (e) { blob = null; }
+        if (!blob) return Promise.resolve(null);
+        return createImageBitmap(blob).then(function (bmp) { var k2 = Math.min(1, 512 / Math.max(bmp.width, bmp.height)), w = Math.max(1, Math.round(bmp.width * k2)), h = Math.max(1, Math.round(bmp.height * k2)), cv = document.createElement("canvas"); cv.width = w; cv.height = h; var cx = cv.getContext("2d", { willReadFrequently: true }); cx.drawImage(bmp, 0, 0, w, h); return { id: k, w: w, h: h, px: cx.getImageData(0, 0, w, h).data }; }).catch(function () { return null; });
+      });
+      res.baking = Promise.all(jobs).then(function (imgs) {
+        var by = {}, n = 0; imgs.forEach(function (im) { if (im) by[im.id] = im; });
+        TX.forEach(function (r) { var im = by[r.img]; if (!im) return; for (var v = 0; v < r.uv.length / 2; v++) { var uu = r.uv[v * 2], vv = r.uv[v * 2 + 1]; uu -= Math.floor(uu); vv -= Math.floor(vv); var x = Math.min(im.w - 1, Math.floor(uu * im.w)), y = Math.min(im.h - 1, Math.floor(vv * im.h)), o = (y * im.w + x) * 4, c = (r.v0 + v) * 4; res.col[c] *= im.px[o] / 255; res.col[c + 1] *= im.px[o + 1] / 255; res.col[c + 2] *= im.px[o + 2] / 255; n++; } });
+        res.baked = n; delete res.baking; if (n && B.onGlbBaked) B.onGlbBaked(res); return n;
+      });
+    }
+    return res;
   };
   function mxf(e, g) { var s = (e.sc || 1) * 1000, r = (e.rot || 0) * Math.PI / 180, c = Math.cos(r), sn = Math.sin(r), cx = (g.bbox[0] + g.bbox[3]) / 2, cy = (g.bbox[1] + g.bbox[4]) / 2; return function (x, y) { x -= cx; y -= cy; return [e.p[0] + (x * c - y * sn) * s, e.p[1] + (x * sn + y * c) * s]; }; }
   B.EXT.model3d = {

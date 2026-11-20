@@ -43,7 +43,7 @@
     });
     if (q && !Object.keys(cats).length && h.indexOf("libcat") < 0) h += "<p class='muted small'>Nothing matches “" + esc(q) + "”.</p>";
     h += "<div class='cad-ph'>Landscape areas</div><div class='row' style='gap:6px;flex-wrap:wrap'>" + Object.keys(B.LAND).map(function (k) { return "<button type='button' class='btn sec sm' data-libland='" + k + "'><span class='lk-sw' style='background:" + B.LAND[k][2].replace(/[\d.]+\)$/, "1)") + "'></span>" + esc(B.LAND[k][0]) + "</button>"; }).join("") + "</div>";
-    h += "<div class='cad-ph'>Your own 3D models</div><p class='muted small'>Import a GLB / glTF 2.0 file (furniture, equipment, vehicles…). Textures are shown as plain colours; compressed (Draco) files are not supported.</p><button type='button' class='btn sec sm' data-cad='impglb'>Import 3D model (GLB / glTF)…</button>";
+    h += "<div class='cad-ph'>Your own 3D models</div><p class='muted small'>Import a GLB / glTF 2.0 file (furniture, equipment, vehicles…). Pictures on the model (textures) give each part its colour; fine grain is smoothed. Compressed (Draco) files are not supported.</p><button type='button' class='btn sec sm' data-cad='impglb'>Import 3D model (GLB / glTF)…</button>";
     h += myModelsHtml();
     var models = Object.keys(d.assets || {}).filter(function (id) { return d.assets[id].kind === "glb"; }); if (models.length) h += "<div class='small' style='margin-top:6px'>" + models.map(function (id) { var a = d.assets[id], g = B.GLB[id]; return "<div class='row' style='gap:6px;align-items:center;margin:2px 0'><span class='grow'>" + esc(a.name) + " <span class='muted'>(" + (g ? Math.round(g.n / 3).toLocaleString("en-IN") + " triangles" : "loading…") + ")</span></span><button type='button' class='btn ghost sm' data-libglb='" + esc(id) + "'>Place again</button></div>"; }).join("") + "</div>";
     return h;
@@ -95,6 +95,8 @@
   B.previewIds = function (ed, ids, title, note) { preview(title, ed.doc, new Set(ids), note); };
 
   /* ---------- GLB / glTF import ---------- */
+  /* a model's pictures finished loading → its colours changed: redraw plan and 3D */
+  B.onGlbBaked = function () { var C = EP.S && EP.S.cad; if (!C || !C.ed) return; try { C.ed.doc.flush(); C.ed.dirty = true; CAD.HOOKS.change.forEach(function (fn) { try { fn(C.ed, C); } catch (er) {} }); } catch (e) {} };
   async function loadGlb(ed, id) { if (B.GLB[id]) return B.GLB[id]; var blob = await CAD.ui.assetBlob(id); if (!blob) return null; try { B.GLB[id] = B.parseGLTF(await blob.arrayBuffer(), (ed.doc.d.assets[id] || {}).name); } catch (er) { console.warn(er); return null; } ed.doc.flush(); ed.dirty = true; return B.GLB[id]; }
   function importGlb(ed, C) {
     var inp = document.createElement("input"); inp.type = "file"; inp.accept = ".glb,.gltf,model/gltf-binary,model/gltf+json";

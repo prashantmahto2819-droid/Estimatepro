@@ -3,6 +3,9 @@
 This file is for the people maintaining the app. It is not published with the site (see `.assetsignore`).
 The text users see is `EP_NOTES` in `js/version.js`.
 
+## 2026.11.20-v
+- `B.parseGLTF`: base colour textures are baked into vertex colours after the images decode (`res.baking` promise, `res.baked`, `B.onGlbBaked` → redraw). Per-vertex sampling: colour areas and palette textures are right, grain inside a triangle is lost. Not read: KHR_texture_transform, normal / roughness maps, Draco.
+
 ## 2026.11.20-u
 - `ui-assets.js`: `placeGlb(ed, C, buf, file)` (shared by file import and the library); "My 3D models on this device" in IndexedDB `ep_models` (`mdlAddFiles`, `myModelsHtml`), kinds in `MCATS`, up to 20 files of 25 MB at a time. GLB limits unchanged: textures show as plain colours, Draco-compressed files are not read.
 
