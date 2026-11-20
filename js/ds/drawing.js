@@ -472,6 +472,16 @@
     var out = ['<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ' + fstr(W) + " " + fstr(H) + '" width="' + pystr(width_px) + '" ' +
       'height="' + F(width_px * H / W, 0) + '" style="background:#fff;font-family:Arial,Helvetica,sans-serif">',
       '<rect x="0" y="0" width="' + fstr(W) + '" height="' + fstr(H) + '" fill="#ffffff"/>'];
+    /* material hatches for the on-screen / SVG sheet (PDF and DXF keep flat fills): concrete stipple, soil and brick hatch, water lines */
+    var pat = function (id, w, h, bg, body) { return '<pattern id="dsf-' + id + '" patternUnits="userSpaceOnUse" width="' + w + '" height="' + h + '"><rect width="' + w + '" height="' + h + '" fill="' + _rgb(bg) + '"/>' + body + "</pattern>"; };
+    out.push("<defs>" +
+      pat("concrete", 7, 7, FILLS.concrete, '<g fill="#8f8f8a"><circle cx="1.1" cy="1.4" r="0.16"/><circle cx="4.6" cy="0.8" r="0.13"/><circle cx="3.1" cy="3.6" r="0.17"/><circle cx="6.1" cy="4.4" r="0.13"/><circle cx="1.5" cy="5.6" r="0.14"/><circle cx="4.9" cy="6.1" r="0.12"/></g><g fill="none" stroke="#8f8f8a" stroke-width="0.12"><path d="M5.3 2.2l0.7 0.2l-0.5 0.6z"/><path d="M2.2 2.3l0.6 -0.5l0.3 0.7z"/><path d="M0.5 3.7l0.7 0.1l-0.4 0.6z"/><path d="M3.4 5.2l0.6 0.3l-0.6 0.4z"/></g>') +
+      pat("soil", 5, 5, FILLS.soil, '<g stroke="#9a7b4a" stroke-width="0.14" fill="none"><path d="M0 5L5 0M-1 1L1 -1M4 6L6 4"/><path d="M0.6 2.2h1.1M3 3.9h1.2"/></g>') +
+      pat("brick", 2.4, 2.4, FILLS.brick, '<path d="M0 2.4L2.4 0M-0.6 0.6L0.6 -0.6M1.8 3L3 1.8" stroke="#b0553a" stroke-width="0.13" fill="none"/>') +
+      pat("water", 9, 3, FILLS.water, '<path d="M0.8 1h3.4M5.4 2.3h2.6" stroke="#3b7fc4" stroke-width="0.14" fill="none"/>') +
+      "</defs>");
+    var PATS = { concrete: 1, soil: 1, brick: 1, water: 1 };
+    var fillOf = function (f) { return PATS[f] ? "url(#dsf-" + f + ")" : _rgb(FILLS[f]); };
     var fy = function (y) { return H - y; };
     _paper_prims(sheet).forEach(function (pr) {
       var kind = pr[0], d = pr[1], layer = pr[2];
@@ -485,7 +495,7 @@
         var pts = d[0], closed = d[1], fill = d[2];
         var ps = pts.map(function (p) { return F(p[0], 2) + "," + F(fy(p[1]), 2); }).join(" ");
         var tag = closed ? "polygon" : "polyline";
-        st = !fill ? stroke : stroke.replace('fill="none"', 'fill="' + _rgb(FILLS[fill]) + '"');
+        st = !fill ? stroke : stroke.replace('fill="none"', 'fill="' + fillOf(fill) + '"');
         out.push("<" + tag + ' points="' + ps + '" ' + st + "/>");
       } else if (kind === "circle") {
         var x = d[0], y = d[1], r = d[2], fl = d[3];
