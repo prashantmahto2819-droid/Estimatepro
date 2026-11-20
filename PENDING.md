@@ -1,6 +1,6 @@
 # Estimate Pro — pending work (kept with the code; not published)
 
-Last updated at version 2026.11.21-z.
+Last updated at version 2026.11.21-a.
 
 ## A. Waiting for the owner
 1. Connect the app's Supabase project (ref starts `eaygozhjsmohfcuiazfm`) to the build session. Then: admin dashboard switches (module on / off), WhatsApp update messages with real pictures, shared cut-out / model library for all users.
@@ -45,9 +45,9 @@ Last updated at version 2026.11.21-z.
 
 11. Materials: (done in -y: 386 looks — paint shade card, putty / primer / distemper, enamel, textures, tiles, granite, marble, wood, laminate, metal, glass, ACP; any material of a library item can be swapped in Properties.) Still open: picture-based (photo) materials built in for all users (needs the files above), bump / roughness maps, material favourites and search by colour, brand shade codes.
 12. Plaster and façade decoration: (done in -y: 37 pieces — cornices, bands, surrounds, quoins, columns, balusters, jali, kangura.) (-z: RUN draws cornices, bands, skirting, LED lines from point to point with mitred corners.) Still open: arches and curved pieces, runs that follow a wall face by one click, profile at the free ends (returns), grooves cut into the plaster of a wall face, custom profile drawn by the user.
-13. ACP / POP: (done in -y: ACP sheet finishes for WALLFINISH, 11 ACP pieces, 7 POP ceiling designs with lights.) (-z: CLADDING draws WPC louvres / planks, ACP panels / planks, HPL, stone strips, fins and glass panels from point to point, with LED in joints / top / bottom.) Still open: openings (windows) cut out of a cladding run, cladding on ceilings and on sloping lines, panel layout starting from a chosen corner, POP ceiling drawn as an outline inside a room with steps and cove, automatic spot-light grid.
+13. ACP / POP: (done in -y: ACP sheet finishes for WALLFINISH, 11 ACP pieces, 7 POP ceiling designs with lights.) (-z: CLADDING draws WPC louvres / planks, ACP panels / planks, HPL, stone strips, fins and glass panels from point to point, with LED in joints / top / bottom.) (-a: cladding is cut round the doors and windows of the wall behind, area deducted.) Still open: cladding on ceilings and on sloping lines, panel layout starting from a chosen corner, POP ceiling drawn as an outline inside a room with steps and cove, automatic spot-light grid.
 14. Lights: (done in -y: 30 more decorative / garden lights.) (-z: LED and lamp surfaces glow; LED colour per run.) Still open: light colour and strength per fitting in Properties, shadows from fittings, bloom round lamps, light cones on walls.
-15. Furniture / doors / fittings: parametric sizes (width, height, number of shutters, handle type) for wardrobes, TV units, beds and kitchen units; door designs (panel, flush with grooves, glass, jali) on the door element itself.
+15. Furniture / doors / fittings: (-a: any library item takes its own width, depth and height — a plain stretch.) Still open: true parametric units where the number of shutters, shelves and handles follows the size, for wardrobes, TV units, beds and kitchen units; door designs (panel, flush with grooves, glass, jali) on the door element itself.
 
 ## C. CAD Studio — to build
 1. (done in -x: SHEET puts plan + elevations + sections in one frame at one scale and plots with the title block.) Still open: several sheets per drawing, views at different scales on one sheet, print sets, sheet in portrait.

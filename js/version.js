@@ -1,5 +1,5 @@
 /* App version + "what's new" — the super admin is offered to send this on WhatsApp after each upload. Change both with every release. */
-window.EP_VER = "2026.11.21-z";
-window.EP_NOTES = "• Cladding by points: Building (BIM) → Cladding (WPC / ACP) — click the start and end points along a wall; WPC louvres and planks, ACP panels and wooden planks, HPL, stone strips, aluminium fins, glass panels; height, panel size and material in Properties\n• LED lights with cladding: LED in the joints, at the top, at the bottom or all — with the LED length counted in Σ Quantities\n• Mouldings and light lines by points: Moulding / LED line — cornice, plaster band, dado rail, skirting, plinth band, pelmet, LED strip, LED profile, cove LED, neon line; corners join neatly\n• LED strips and lamps now glow in the 3D view, day and 🌙 Night";
+window.EP_VER = "2026.11.21-a";
+window.EP_NOTES = "• Cladding (WPC / ACP) is now cut round the doors and windows of the wall behind it, and their area is deducted from the quantity\n• Own size for any library item: select a wardrobe, TV unit, bed, counter or light → Properties → Own size — type the width, depth or height you need";
 /* pictures of this update: [file in /updates, caption]. Shown to the owner with the WhatsApp "what's new" message. */
-window.EP_PICS = [["updates/z-cladding.jpg", "ACP panels and WPC louvres drawn by points, with LED lines — day and night"]];
+window.EP_PICS = [["updates/a2-cut.jpg", "ACP cladding cut round the door and window; a wardrobe made wider and taller"]];

@@ -3,6 +3,10 @@
 This file is for the people maintaining the app. It is not published with the site (see `.assetsignore`).
 The text users see is `EP_NOTES` in `js/version.js`.
 
+## 2026.11.21-a
+- Cladding runs: `holesOn(doc, e, a, b)` (`B.runHoles`) finds doors / windows / openings of walls parallel to and within th/2 + 120 mm of a segment; `strip()` splits round them; qty deducts the area. Entity `cut: false` covers them instead.
+- Library items: own size `W`, `D`, `HH` (mm) → `B.assetFac` stretch factors, applied to the mesh vertices, normals and edges after `def.mesh` (anchored at the top for ceiling items), to the plan symbol and to measured quantities. It is a stretch: handles, legs and shutters stretch with it.
+
 ## 2026.11.21-z
 - `js/bim/runs.js` (new): BIM type `run` (`B.TYPES.run`, `B.EXT.run`: plan, xform, qty, mesh), catalogue `B.RUNS` — profile family (`fam: "p"`, stepped profile `pr` swept with mitred corners by `offsetPath`) and cladding family (`fam: "c"`, generators `batten` and `grid`). Entity: `{kind, pts, closed, side, z, h, mw, rh, led, ledLook, look, noq}`. LED modes `B.RUN_LED`; LED length `B.runLedLen`; point lights pushed to `H.lights`. Qty: profile = L (keys `run_cornice`, `run_band`, `skirting`, `false_ceiling`), cladding = A (`wall_panel`, `acp_panel`, `stone_veneer`), LED = L (`led_strip`). `run_cornice`, `run_band`, `led_strip` have no SOR mapping yet. Commands RUN (MOULDING, CORNICE, LEDLINE, SKIRTING) and CLADDING (CLAD, WPC, ACP, LOUVRE) with Type / Flip / Undo / Close. Properties in `ui-assets.js`.
 - Shader pattern 16 (`PT.emit`): surface never darker than 1.2 × its colour; all `led_*` looks and `lamp` use it.

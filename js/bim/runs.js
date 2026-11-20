@@ -64,6 +64,16 @@
     if (m === "joint" || m === "all") { var step = D.gen === "batten" ? Math.max(mw * 8, 600) : mw; segsOf(path(e), e.closed).forEach(function (s) { n += Math.max(0, Math.floor(G.dist(s[0], s[1]) / step)) * H; }); }
     return n;
   };
+  /* doors / windows / openings of walls that run along the segment a → b: [{ d0, d1, z0, z1 }] (d along the segment, z absolute) */
+  function holesOn(doc, e, a, b) {
+    var out = [], d = doc.d, len = G.dist(a, b); if (len < 5 || e.cut === false) return out; var u = G.norm(G.sub(b, a)), walls = {};
+    d.ents.forEach(function (w) { if (w.t !== "wall" || (e.lvl && w.lvl && w.lvl !== e.lvl)) return; var uw = G.norm(G.sub(w.b, w.a)); if (Math.abs(u[0] * uw[1] - u[1] * uw[0]) > 0.03) return;
+      var rel = G.sub(w.a, a), dist = Math.abs(rel[0] * u[1] - rel[1] * u[0]); if (dist <= (w.th || 230) / 2 + 120) walls[w.id] = w; });
+    d.ents.forEach(function (h) { if ((h.t !== "door" && h.t !== "window" && h.t !== "opening") || !walls[h.host]) return; var w = walls[h.host], uw = G.norm(G.sub(w.b, w.a)), c = G.add(w.a, G.mul(uw, h.at || 0)), dc = (c[0] - a[0]) * u[0] + (c[1] - a[1]) * u[1], hw = (h.w || 900) / 2;
+      if (dc + hw <= 0 || dc - hw >= len) return; var Lw = B.level(d, w.lvl), zb = (Lw ? Lw.elev : 0) + (w.base || 0) + (h.t === "door" ? 0 : (h.sill || 0)); out.push({ d0: dc - hw, d1: dc + hw, z0: zb, z1: zb + (h.h || 2100) }); });
+    return out;
+  }
+  B.runHoles = holesOn;
   function mesh(M, doc, e, H) {
     var D = def(e), L = B.level(doc.d, e.lvl), z0 = (L ? L.elev : 0) + (e.z == null ? D.z : e.z), side = +e.side === -1 ? -1 : 1, p = path(e); if (p.length < 2) return;
     var own = B.look(e.look && B.LOOKS[e.look] ? e.look : D.look, e.col), led = B.look(ledLookOf(e));
@@ -76,7 +86,10 @@
     var Hh = e.h || D.h, mw = Math.max(10, e.mw || D.mw), z1 = z0 + Hh, mode = e.led || "", joint = mode === "joint" || mode === "all", top = mode === "top" || mode === "both" || mode === "all", bot = mode === "bottom" || mode === "both" || mode === "all";
     segsOf(p, e.closed).forEach(function (s) {
       var a = s[0], b = s[1], len = G.dist(a, b); if (len < 5) return; var u = G.norm(G.sub(b, a)), nv = [u[1] * side, -u[0] * side];
-      var at = function (d, off) { return [a[0] + u[0] * d + nv[0] * off, a[1] + u[1] * d + nv[1] * off]; }, strip = function (d0, d1, o0, o1, za, zb, look) { if (d1 - d0 < 0.5 || zb - za < 0.5) return; H.boxAlong(M, at(d0, (o0 + o1) / 2), at(d1, (o0 + o1) / 2), Math.abs(o1 - o0), za, zb, look); };
+      var at = function (d, off) { return [a[0] + u[0] * d + nv[0] * off, a[1] + u[1] * d + nv[1] * off]; }, holes = holesOn(doc, e, a, b), strip = function (d0, d1, o0, o1, za, zb, look, hi) { if (d1 - d0 < 0.5 || zb - za < 0.5) return;
+        for (var q = hi || 0; q < holes.length; q++) { var h = holes[q]; if (h.d1 <= d0 || h.d0 >= d1 || h.z1 <= za || h.z0 >= zb) continue;
+          strip(d0, h.d0, o0, o1, za, zb, look, q + 1); strip(h.d1, d1, o0, o1, za, zb, look, q + 1); var m0 = Math.max(d0, h.d0), m1 = Math.min(d1, h.d1); strip(m0, m1, o0, o1, za, h.z0, look, q + 1); strip(m0, m1, o0, o1, h.z1, zb, look, q + 1); return; }
+        H.boxAlong(M, at(d0, (o0 + o1) / 2), at(d1, (o0 + o1) / 2), Math.abs(o1 - o0), za, zb, look); };
       var zb0 = z0 + (bot ? 30 : 0), zt1 = z1 - (top ? 30 : 0);
       if (D.gen === "batten") {
         if (D.back) strip(0, len, 0, D.back, z0, z1, own);
@@ -101,7 +114,8 @@
     qty: function (doc, e) { var D = def(e), L = runLen(e), z = e.lvl ? B.below(doc.d, e.lvl) : "super", m = function (v) { return (v / 1000).toFixed(2); }, rows = [];
       if (e.noq === true) return rows;
       if (D.fam === "p") { if (D.key !== "led_strip") rows.push({ k: D.key, dim: "L", v: L, label: D.n, f: m(L) + " m run", z: z }); }
-      else { var Hh = e.h || D.h; rows.push({ k: D.key, dim: "A", v: L * Hh, label: D.n, f: m(L) + " × " + m(Hh), z: z }); }
+      else { var Hh = e.h || D.h, Lv = B.level(doc.d, e.lvl), zr0 = (Lv ? Lv.elev : 0) + (e.z == null ? D.z : e.z), ded = 0; segsOf(path(e), e.closed).forEach(function (sg) { var ln = G.dist(sg[0], sg[1]); holesOn(doc, e, sg[0], sg[1]).forEach(function (h) { var w = Math.min(ln, h.d1) - Math.max(0, h.d0), hh = Math.min(zr0 + Hh, h.z1) - Math.max(zr0, h.z0); if (w > 0 && hh > 0) ded += w * hh; }); });
+        rows.push({ k: D.key, dim: "A", v: Math.max(0, L * Hh - ded), label: D.n, f: m(L) + " × " + m(Hh) + (ded > 0 ? " − openings " + (ded / 1e6).toFixed(2) + " m²" : ""), z: z }); }
       var ll = B.runLedLen(e); if (ll > 0) rows.push({ k: "led_strip", dim: "L", v: ll, label: "LED strip / profile light", f: m(ll) + " m run", z: z });
       return rows; },
     mesh: mesh
