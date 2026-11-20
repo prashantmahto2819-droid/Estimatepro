@@ -126,7 +126,7 @@
     if (e.t === "slab") { var sl = (e.pts || []).map(function (p) { return [p[0], p[1], 0]; }); out.dashed = G.plineSegs(sl, true); (e.holes || []).forEach(function (h) { out.dashed = out.dashed.concat(G.polySegs(h, true)); var hb = [Infinity, Infinity, -Infinity, -Infinity]; h.forEach(function (p) { G.ext(hb, p); }); L([hb[0], hb[1]], [hb[2], hb[3]], out.dashed); L([hb[0], hb[3]], [hb[2], hb[1]], out.dashed); }); return out; }
     if (e.t === "roof") {
       var rp = e.pts || []; out.dashed = G.polySegs(rp, true);
-      var ho = e.kind === "hip" ? B.hipOrtho(e) : null;
+      var ho = e.kind === "hip" || e.kind === "gable" ? B.hipOrtho(e) : null;
       if (ho) ho.creases.forEach(function (c) { L(c[0], c[1]); });
       else if (e.kind === "gable" || e.kind === "hip") { var r = roofRidge(e); if (r) { L(r.a, r.b); if (e.kind === "hip") r.hips.forEach(function (h) { L(h[0], h[1]); }); } }
       if (e.kind === "shed") { var bb = polyBox(rp), ctr = [(bb[0] + bb[2]) / 2, (bb[1] + bb[3]) / 2], dr = [Math.cos((e.dir || 0) * Math.PI / 180), Math.sin((e.dir || 0) * Math.PI / 180)]; L(G.sub(ctr, G.mul(dr, 600)), G.add(ctr, G.mul(dr, 600))); L(G.add(ctr, G.mul(dr, 600)), G.add(G.add(ctr, G.mul(dr, 400)), G.mul(G.perp(dr), 150))); }
@@ -217,6 +217,15 @@
     Q.forEach(function (a, i) { var b = Q[(i + 1) % Q.length]; if (Math.abs(a[0] - b[0]) <= TOL) E.push({ ax: 0, c: (a[0] + b[0]) / 2, lo: Math.min(a[1], b[1]), hi: Math.max(a[1], b[1]) }); else if (Math.abs(a[1] - b[1]) <= TOL) E.push({ ax: 1, c: (a[1] + b[1]) / 2, lo: Math.min(a[0], b[0]), hi: Math.max(a[0], b[0]) }); else okAll = false; });
     if (!okAll) return null;
     Q = Q.map(function (p, i) { var e0 = E[(i + Q.length - 1) % Q.length], e1 = E[i], q = [p[0], p[1]]; q[e0.ax] = e0.c; q[e1.ax] = e1.c; return q; });   // exactly square
+    /* gable roof: the end of each wing is a gable wall, not a roof plane — a side between two outside corners that is not wider than its wing is long (the narrowest ends first; two neighbouring sides are never both gables) */
+    var nE = E.length, EALL = E, gableEnds = [];
+    if (e.kind === "gable") {
+      var convex = Q.map(function (p, i) { var a = Q[(i + nE - 1) % nE], b = Q[(i + 1) % nE]; return G.cross(G.sub(p, a), G.sub(b, p)) > 0; }), len = E.map(function (x) { return x.hi - x.lo; }), isG = E.map(function () { return false; });
+      var ratio = E.map(function (x, i) { var p = (i + nE - 1) % nE, n = (i + 1) % nE; return convex[i] && convex[n] ? Math.max(len[p], len[n]) / Math.max(len[i], 1) : 0; });   // how much longer the wing runs than this end is wide
+      E.map(function (x, i) { return i; }).sort(function (i, j) { return ratio[j] - ratio[i]; }).forEach(function (i) { var p = (i + nE - 1) % nE, n = (i + 1) % nE; if (ratio[i] >= 0.999 && !isG[p] && !isG[n]) isG[i] = true; });
+      gableEnds = E.filter(function (x, i) { return isG[i]; }); E = E.filter(function (x, i) { return !isG[i]; });
+      if (E.length < 2) return null;
+    }
     /* the roof plane at a point: the nearest side; beyond the end of a side (inside corners) it is the side that turns the corner */
     function at(p) {
       var bd = Infinity, bax = 0, bc = 0;
@@ -256,7 +265,12 @@
       var key = kind + Math.round(off); (groups[key] = groups[key] || []).push(ta <= tb ? { t0: ta, t1: tb, a: a, b: b, r0: sg2[2], r1: sg2[3] } : { t0: tb, t1: ta, a: b, b: a, r0: sg2[3], r1: sg2[2] }); });
     var creases = [];
     Object.keys(groups).forEach(function (k) { var L2 = groups[k].sort(function (p, q) { return p.t0 - q.t0; }), cur = null; L2.forEach(function (x) { if (cur && x.t0 <= cur.t1 + 2) { if (x.t1 > cur.t1) { cur.t1 = x.t1; cur.b = x.b; cur.r1 = x.r1; } } else { if (cur) creases.push(cur); cur = { t0: x.t0, t1: x.t1, a: x.a, b: x.b, r0: x.r0, r1: x.r1 }; } }); if (cur) creases.push(cur); });
-    return { polys: polys, creases: creases.map(function (x) { return [toW(x.a), toW(x.b), x.r0, x.r1]; }), top: top, outline: Q.map(toW) };
+    /* gable walls: along each gable end, the roof line above it */
+    var gables = gableEnds.map(function (ge) {
+      var pts = {}; cells.forEach(function (cl) { if (Math.abs(G.plineArea(cl)) < 1) return; cl.forEach(function (q) { if (Math.abs(q[ge.ax] - ge.c) < 0.05 && q[1 - ge.ax] >= ge.lo - 0.05 && q[1 - ge.ax] <= ge.hi + 0.05) pts[Math.round(q[1 - ge.ax] * 20)] = q; }); });
+      return Object.keys(pts).map(Number).sort(function (a, b) { return a - b; }).map(function (k) { var q = pts[k], w = toW(q); return [w[0], w[1], at(q).d]; });
+    }).filter(function (g) { return g.length >= 2; });
+    return { polys: polys, creases: creases.map(function (x) { return [toW(x.a), toW(x.b), x.r0, x.r1]; }), top: top, outline: Q.map(toW), gables: gables, eaves: E.map(function (x) { var a = [0, 0], b = [0, 0]; a[x.ax] = b[x.ax] = x.c; a[1 - x.ax] = x.lo; b[1 - x.ax] = x.hi; return [toW(a), toW(b)]; }) };
   }
   /* Outer outline(s) of the walls of a level — the outside faces of the building, one closed loop (counter-clockwise) per group of joined walls.
      The centre lines are split where walls meet or cross, the outside of that network is walked, and each edge is pushed out by half its wall thickness.

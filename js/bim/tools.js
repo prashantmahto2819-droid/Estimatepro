@@ -199,6 +199,33 @@
     if (pts.length > 1) ed.doc.add({ t: "railing", pts: pts, h: h, base: base || undefined, lvl: cur(ed), layer: lay(ed, "A-RAIL") });
   });
   cmd("LEVEL", ["LV"], async function (ed) { if (ed.onPanel) ed.onPanel("bim"); });
+  /* ---------- dimension the building in one step ---------- */
+  cmd("DIMWALLS", ["AUTODIM", "DW"], async function (ed) {
+    ensureBim(ed); var lv = cur(ed), outs = B.wallOutlines(ed.doc, lv), layer = ed.doc.d.layers.DIM ? "DIM" : undefined, n = 0;
+    var ws = ed.doc.d.ents.filter(function (x) { return x.t === "wall" && x.lvl === lv && ed.doc.visible(x); }); if (!ws.length) { ed.say("No walls on this level to dimension."); return; }
+    var kind = await ed.getKw("Dimension what?", ["All", "Overall", "Openings", "Rooms"], "All"), g1 = Math.max(600, Math.round(8 * ((ed.doc.d.dim && ed.doc.d.dim.sc) || 100))), g2 = g1 * 1.9;
+    var add = function (a, b, off, nrm) { if (G.dist(a, b) < 20) return; var m = G.mid(a, b); ed.doc.add({ t: "dim", kind: "ali", a: a, b: b, p: [m[0] + nrm[0] * off, m[1] + nrm[1] * off], layer: layer }); n++; };
+    /* outside faces: overall length of every side of the building */
+    if (kind === "All" || kind === "Overall") outs.forEach(function (o) { var P = o.pts; P.forEach(function (p, i) { var q = P[(i + 1) % P.length], u = G.norm(G.sub(q, p)); add(p, q, g2, [u[1], -u[0]]); }); });
+    /* openings: wall end – jamb – jamb – … – wall end, on the outside of exterior walls (inside faces of partitions are left alone) */
+    if (kind === "All" || kind === "Openings") {
+      var cx = 0, cy = 0; ws.forEach(function (w) { cx += w.a[0] + w.b[0]; cy += w.a[1] + w.b[1]; }); cx /= 2 * ws.length; cy /= 2 * ws.length;
+      ws.forEach(function (w) {
+        var ops = ed.doc.d.ents.filter(function (x) { return x.host === w.id && (x.t === "door" || x.t === "window" || x.t === "opening"); }); if (!ops.length) return;
+        var c = B.wallLine(w), mid = G.mid(c.a, c.b), out = G.dot([mid[0] - cx, mid[1] - cy], c.n) >= 0 ? 1 : -1, nrm = [c.n[0] * out, c.n[1] * out], face = function (s) { return G.add(G.add(c.a, G.mul(c.u, s)), G.mul(nrm, w.th / 2)); };
+        var cuts = [0]; ops.sort(function (p, q) { return p.at - q.at; }).forEach(function (o) { cuts.push(Math.max(0, o.at - o.w / 2), Math.min(c.L, o.at + o.w / 2)); }); cuts.push(c.L);
+        for (var i = 0; i < cuts.length - 1; i++) add(face(cuts[i]), face(cuts[i + 1]), g1, nrm);
+      });
+    }
+    /* rooms: clear width and depth, written inside each room */
+    if (kind === "All" || kind === "Rooms") ed.doc.d.ents.forEach(function (r) {
+      if (r.t !== "room" || r.lvl !== lv || !r.pts || r.pts.length < 3) return; var bb = B.polyBox(r.pts), cxr = (bb[0] + bb[2]) / 2, cyr = (bb[1] + bb[3]) / 2;
+      var hit = function (o, dvec) { var best = null; r.pts.forEach(function (p, i) { var q = r.pts[(i + 1) % r.pts.length], x = G.intersect({ k: "L", a: o, b: G.add(o, G.mul(dvec, 1e7)) }, { k: "L", a: p, b: q })[0]; if (x && (!best || G.dist(o, x) < G.dist(o, best))) best = x; }); return best; };
+      var c0 = [cxr, cyr]; if (!G.inPoly(c0, r.pts)) return; var L1 = hit(c0, [-1, 0]), R1 = hit(c0, [1, 0]), D1 = hit(c0, [0, -1]), U1 = hit(c0, [0, 1]);
+      if (L1 && R1) add(L1, R1, (bb[3] - bb[1]) * 0.22, [0, -1]); if (D1 && U1) add(D1, U1, (bb[2] - bb[0]) * 0.22, [-1, 0]);
+    });
+    ed.say(n ? n + " dimension(s) added. Undo removes them all together." : "Nothing to dimension — close the walls or add rooms / openings first.");
+  });
   /* ---------- copy the whole floor to another level (typical floors) ---------- */
   cmd("FLOORCOPY", ["COPYFLOOR", "CF"], async function (ed) {
     var b = ensureBim(ed), from = B.level(ed.doc.d, cur(ed)), KEEP = { wall: 1, door: 1, window: 1, opening: 1, column: 1, beam: 1, slab: 1, room: 1, railing: 1, stair: 1, asset: 1 };
