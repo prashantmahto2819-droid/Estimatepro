@@ -16,9 +16,14 @@
   U.waBanner = function () {
     if (!S.me || !S.me.isOwner) return ""; if (W.rel === null) setTimeout(checkRelease, 1500);
     if (W.rel !== "new") return "";
-    var notes = W.draft != null ? W.draft : (window.EP_NOTES || "");
+    /* pictures of this update (window.EP_PICS in js/version.js, files in /updates): shown here, and their links are added
+       to the message so users can open them. Sending them as real WhatsApp picture messages needs the server function to support media. */
+    var pics = (window.EP_PICS || []).filter(function (p) { return p && p[0]; }), base = location.origin + "/";
+    var picTxt = pics.length ? "\n\n📷 Pictures:\n" + pics.map(function (p) { return (p[1] ? p[1] + " — " : "") + base + p[0]; }).join("\n") : "";
+    var notes = W.draft != null ? W.draft : (window.EP_NOTES || "") + picTxt;
     return "<div class='panel' style='border-left:4px solid #25d366;display:flex;flex-direction:column;gap:8px;margin-bottom:12px'><strong>🆕 New version " + esc(window.EP_VER) + " is live — send “What's new” to users on WhatsApp?</strong>" +
       "<textarea class='in' id='wa-notes' rows='5' aria-label='Release notes'>" + esc(notes) + "</textarea>" +
+      (pics.length ? "<div class='row' style='gap:8px;flex-wrap:wrap'>" + pics.map(function (p) { return "<a href='" + esc(p[0]) + "' target='_blank' rel='noopener' title='" + esc(p[1] || "") + "'><img src='" + esc(p[0]) + "' alt='" + esc(p[1] || "Update picture") + "' loading='lazy' style='height:86px;border-radius:6px;border:1px solid var(--line)'></a>"; }).join("") + "</div><span class='muted' style='font-size:12px'>These pictures go as links at the end of the message. Remove a line from the text if you don't want that picture.</span>" : "") +
       "<span class='muted' style='font-size:12px'>Goes once to every user who has a mobile number and has not turned updates off, a few messages per minute. Edit the text if you like.</span>" +
       "<div class='row' style='gap:8px;flex-wrap:wrap'><button type='button' class='btn pri sm' id='wa-rel-send'" + (W.busy ? " disabled" : "") + ">" + (W.busy ? "Queuing…" : "Send on WhatsApp") + "</button><button type='button' class='btn ghost sm' id='wa-rel-skip'>Don't send for this version</button></div></div>";
   };

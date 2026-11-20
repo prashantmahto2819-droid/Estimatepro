@@ -66,7 +66,7 @@
       "<button type='button' class='btn " + (op ? "pri" : "sec") + " sm' data-repopen='" + it.id + "'>" + (op ? "Close" : "Change SOR item (keep measurement)") + "</button>" +
       "<button type='button' class='btn " + (sh ? "pri" : "sec") + " sm' data-shopen='" + it.id + "'>" + (sh ? "Close" : "Use this measurement in other items") + "</button>" +
       (users.length ? "<span class='muted' style='font-size:12px'>This measurement is also used in: " + users.map(function (x) { return esc((d.parts.length > 1 ? (d.parts.filter(function (p) { return p.id === x.part; })[0] || {}).name + " " : "") + "item " + EP.slOf(d, x) + " (" + EP.itemInfo(x).code + ")"); }).join(", ") + "</span>" : "") +
-      (EP.itemQk(it) !== 1 ? "<span class='badge info'>Measured in " + esc(it.qu) + ", converted × " + esc(it.qk) + " to " + esc(EP.itemInfo(it).unit) + "</span>" : "") + "</div>";
+      (EP.itemQk(it) !== 1 ? "<span class='badge info'>Measured in " + esc(it.qu) + ", converted × " + esc(String(+(+EP.itemQk(it)).toPrecision(6))) + " to " + esc(EP.itemInfo(it).unit) + "</span>" : "") + "</div>";
     if (op) {
       var nb = NEWER[it.b], sug = U.repCands(it, null, 6), q = S.rep.q[it.id] || "";
       h += "<div class='panel' style='padding:10px;display:flex;flex-direction:column;gap:8px'><strong>Replace " + esc((EP.BOOKS[it.b] || {}).short + " " + it.c) + " by another SOR item — measurement rows, part and remark stay as they are</strong>" +

@@ -121,10 +121,31 @@
   ];
   /* tabbed icon ribbon: Home (most used) + one tab per command group */
   CAD.HOME = [["LINE", "Line"], ["PLINE", "Polyline"], ["RECTANG", "Rectangle"], ["CIRCLE", "Circle"], ["HATCH", "Hatch"], ["MOVE", "Move"], ["COPY", "Copy"], ["OFFSET", "Offset"], ["TRIM", "Trim"], ["ERASE", "Erase"], ["DIMLINEAR", "Dimension"], ["TEXT", "Text"], ["WALL", "Wall"], ["DOOR", "Door"], ["WINDOW", "Window"], ["SLAB", "Slab"], ["COLUMN", "Column"], ["DIST", "Distance"], ["AREA", "Area"]];
+  /* sections inside each tab (label under the group, like an office ribbon). Commands listed here that a tab does not
+     have yet are added with the label from RLABEL; buttons of a tab that are in no section fall into "More". */
+  CAD.RSEC = {
+    "Draw": [["Lines", ["LINE", "PLINE", "XLINE", "RAY"]], ["Shapes", ["RECTANG", "CIRCLE", "ARC", "POLYGON", "ELLIPSE", "SPLINE", "POINT"]], ["Fill", ["HATCH", "BOUNDARY"]]],
+    "Modify": [["Move and copy", ["MOVE", "COPY", "ROTATE", "SCALE", "MIRROR", "ARRAY", "STRETCH"]], ["Edit shape", ["OFFSET", "TRIM", "EXTEND", "FILLET", "CHAMFER", "BREAK", "JOIN", "EXPLODE"]], ["Properties", ["MATCHPROP", "GRIPLINK", "ERASE"]], ["Clipboard", ["COPYCLIP", "CUTCLIP", "PASTECLIP"]]],
+    "Annotate": [["Text", ["TEXT", "MTEXT", "LEADER"]], ["Dimensions", ["DIMLINEAR", "DIMALIGNED", "DIMCONTINUE", "DIMBASELINE", "DIMANGULAR", "DIMRADIUS", "DIMDIAMETER", "DIMORDINATE"]], ["Building", ["DIMWALLS"]], ["Style", ["DIMSTYLE"]]],
+    "Building (BIM)": [["Structure", ["WALL", "COLUMN", "BEAM", "SLAB", "FOOTING"]], ["Openings", ["DOOR", "WINDOW", "OPENING"]], ["Roof, stairs and edges", ["ROOF", "STAIR", "RAILING", "PARAPET"]], ["Rooms and floors", ["ROOM", "LEVEL", "FLOORCOPY"]], ["Steel", ["REBAR", "BBS"]], ["Results", ["DIMWALLS", "BIM3D", "QUANTITIES"]]],
+    "Site & services": [["Place", ["ASSET", "LANDAREA"]]],
+    "Block": [["Blocks", ["BLOCK", "INSERT"]], ["Groups and order", ["GROUP", "UNGROUP", "DRAWORDER"]]],
+    "Measure": [["Enquiry", ["DIST", "AREA", "ID", "LIST"]], ["Mark points", ["DIVIDE", "MEASURE"]], ["To estimate", ["TAKEOFF", "QUANTITIES"]]],
+    "View": [["Navigate", ["ZOOM", "PAN", "REGEN"]], ["Show / hide", ["ISOLATE", "UNISOLATE", "LAYOFF", "LAYON"]], ["Setup", ["LAYER", "PROPERTIES", "UNITS"]]]
+  };
+  CAD.RLABEL = { RAY: "Ray", GRIPLINK: "Linked corners", COPYCLIP: "Copy", CUTCLIP: "Cut", PASTECLIP: "Paste", DIMSTYLE: "Dim style", LEVEL: "Levels", BIM3D: "3D view", QUANTITIES: "Σ Quantities", ID: "Point ID", LAYOFF: "Layer off", LAYON: "All layers on", LAYER: "Layers", PROPERTIES: "Properties", UNITS: "Units", DIMWALLS: "Auto dimension" };
+  function ribbonTab(t) {
+    var btn = function (b) { return "<button type='button' class='cad-rb' data-cc='" + b[0] + "' title='" + U.esc(b[1]) + " (" + b[0] + ")'>" + (CAD.icon ? CAD.icon(b[0], b[1]) : "") + "<span>" + U.esc(b[1]) + "</span></button>"; };
+    var secs = CAD.RSEC[t[0]]; if (!secs) return t[1].map(btn).join("");
+    var lab = {}, used = {}; t[1].forEach(function (b) { lab[b[0]] = b[1]; });
+    var out = secs.map(function (sc) { var bs = sc[1].filter(function (c) { return (lab[c] || CAD.RLABEL[c]); }).map(function (c) { used[c] = 1; return [c, lab[c] || CAD.RLABEL[c]]; }); return bs.length ? [sc[0], bs] : null; }).filter(Boolean);
+    var rest = t[1].filter(function (b) { return !used[b[0]]; }); if (rest.length) out.push(["More", rest]);
+    return out.map(function (sc) { return "<div class='cad-sub'><div class='cad-subrow'>" + sc[1].map(btn).join("") + "</div><div class='cad-gt'>" + U.esc(sc[0]) + "</div></div>"; }).join("");
+  }
   function ribbonHtml() {
     var ORD = ["Draw", "Modify", "Annotate", "Building (BIM)", "Roads & earthwork", "Site & services", "Block", "Measure", "View"], tabs = [["Home", CAD.HOME]].concat(RIBBON.slice().sort(function (x, y) { var i = ORD.indexOf(x[0]), j = ORD.indexOf(y[0]); return (i < 0 ? 99 : i) - (j < 0 ? 99 : j); })), cur = C.rtab || (function () { try { return localStorage.getItem("ep_cad_rtab"); } catch (e) { return null; } })() || "Home"; if (!tabs.some(function (t) { return t[0] === cur; })) cur = "Home"; C.rtab = cur;
     return "<div class='cad-rtabs' role='tablist' aria-label='Ribbon'>" + tabs.map(function (t) { return "<button type='button' role='tab' data-rtab='" + U.esc(t[0]) + "' aria-selected='" + (t[0] === cur) + "'>" + U.esc(t[0]) + "</button>"; }).join("") + "</div>" +
-      "<div class='cad-ribbon' role='toolbar' aria-label='CAD commands'>" + tabs.map(function (t) { return "<div class='cad-grp" + (t[0] === cur ? " on" : "") + "' data-rgrp='" + U.esc(t[0]) + "'>" + t[1].map(function (b) { return "<button type='button' class='cad-rb' data-cc='" + b[0] + "' title='" + U.esc(b[1]) + " (" + b[0] + ")'>" + (CAD.icon ? CAD.icon(b[0], b[1]) : "") + "<span>" + U.esc(b[1]) + "</span></button>"; }).join("") + "</div>"; }).join("") + "</div>";
+      "<div class='cad-ribbon' role='toolbar' aria-label='CAD commands'>" + tabs.map(function (t) { return "<div class='cad-grp" + (t[0] === cur ? " on" : "") + "' data-rgrp='" + U.esc(t[0]) + "'>" + ribbonTab(t) + "</div>"; }).join("") + "</div>";
   }
   CAD.ACTIONS.fullscr = function (ed, C2) {
     var on = !document.body.classList.contains("cadmax"); document.body.classList.toggle("cadmax", on);

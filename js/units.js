@@ -33,7 +33,10 @@
   add("100m2", "A", 1e8, "100 square metres", "100 m²", ["100 sqm", "100 sq.m", "100sqm"]);
   add("ft2", "A", FT * FT, "square foot", "ft²", ["sqft", "sq.ft", "sq ft", "sft", "ft²", "square feet"]);
   add("in2", "A", IN * IN, "square inch", "in²", ["sqin", "sq in", "in²"]);
-  add("yd2", "A", YD * YD, "square yard", "yd²", ["sqyd", "sq yd", "yd²"]);
+  add("yd2", "A", YD * YD, "square yard", "yd²", ["sqyd", "sq yd", "yd²", "sq.yd", "gaj", "sq gaj"]);
+  add("100ft2", "A", 100 * FT * FT, "100 square feet", "100 ft²", ["100 sqft", "100 sq.ft", "100sqft"]);
+  add("decimal", "A", 40.468564224e6, "decimal (1/100 acre)", "decimal", ["decimal", "dismil", "cent"]);
+  add("guntha", "A", 101.17141056e6, "guntha (1/40 acre)", "guntha", ["guntha", "gunta"]);
   add("acre", "A", 4046.8564224e6, "acre", "acre", ["acres"]);
   add("ha", "A", 1e10, "hectare", "ha", ["hectare", "hectares"]);
   add("km2", "A", 1e12, "square kilometre", "km²", ["sqkm", "km²"]);
@@ -45,6 +48,7 @@
   add("10m3", "V", 1e10, "10 cubic metres", "10 m³", ["10 cum", "10cum"]);
   add("ft3", "V", FT * FT * FT, "cubic foot", "ft³", ["cft", "cu.ft", "cu ft", "ft³", "cubic feet"]);
   add("100ft3", "V", 100 * FT * FT * FT, "100 cubic feet", "100 ft³", ["100 cft", "100cft"]);
+  add("brass", "V", 100 * FT * FT * FT, "brass (100 cubic feet)", "brass", ["brass"]);
   add("yd3", "V", YD * YD * YD, "cubic yard", "yd³", ["cuyd", "cu yd", "yd³"]);
   // mass (base kg)
   add("mg", "M", 1e-6, "milligram", "mg", ["milligram"]);
@@ -58,6 +62,7 @@
   add("deg", "ANG", Math.PI / 180, "degree", "°", ["degree", "degrees", "°"]);
   // count
   add("nos", "N", 1, "number", "nos", ["no", "no.", "nos.", "number", "each", "pcs", "piece", "pieces", "set", "job", "point", "unit", "bag", "bags"]);
+  add("dozen", "N", 12, "dozen", "dozen", ["dozen", "doz"]);
   add("100nos", "N", 100, "100 numbers", "100 nos", ["100 nos", "100 no"]);
   add("1000nos", "N", 1000, "1000 numbers", "1000 nos", ["1000 nos", "1000 no"]);
 

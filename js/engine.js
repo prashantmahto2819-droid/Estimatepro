@@ -13,14 +13,30 @@
   EP.enc = function (c) { return String(c).replace(/[^A-Za-z0-9_.\-]/g, function (ch) { return "~" + ch.charCodeAt(0).toString(16); }); };
   EP.uid = function () { return Math.random().toString(36).slice(2, 9) + Date.now().toString(36).slice(-3); };
 
-  /* Safe arithmetic: numbers, + - * / x × ( ) and spaces. "15x45" → 675. Returns null when blank or invalid. */
+  /* Safe arithmetic: numbers, + - * / x × ^ ( ), pi, sqrt( ) and spaces. "15x45" → 675. Returns null when blank or invalid.
+     A number may carry a length unit and is then read in metres (the unit of the measurement sheet):
+     450mm → 0.45 · 30cm → 0.3 · 12ft or 12' → 3.6576 · 9in or 9" → 0.2286 · 10'6" / 10'-6" / 10ft 6in → 3.2004 · 3.5m → 3.5 */
   EP.ev = function (s) {
     if (s == null) return null; if (typeof s === "number") return isFinite(s) ? s : null;
-    s = String(s).trim().replace(/,/g, "").replace(/[x×X]/g, "*"); if (!s) return null;
+    s = String(s).trim().replace(/,/g, "").replace(/[’′]/g, "'").replace(/[”″]/g, '"').replace(/π/g, "pi").replace(/[x×X]/g, "*"); if (!s) return null;
     var i = 0;
     function ws() { while (s[i] === " ") i++; }
-    function num() { ws(); var m = /^\d*\.?\d+(e[+-]?\d+)?/i.exec(s.slice(i)); if (!m) throw 0; i += m[0].length; return parseFloat(m[0]); }
-    function fac() { ws(); if (s[i] === "-") { i++; return -fac(); } if (s[i] === "+") { i++; return fac(); } if (s[i] === "(") { i++; var v = expr(); ws(); if (s[i] !== ")") throw 0; i++; return v; } return num(); }
+    function unit(v) {
+      var r = s.slice(i), m;
+      if ((m = /^\s*(mm|cm)(?![a-z])/i.exec(r))) { i += m[0].length; return v * (m[1].toLowerCase() === "mm" ? 0.001 : 0.01); }
+      if ((m = /^\s*('|ft\b|feet\b|foot\b)/i.exec(r))) { i += m[0].length; v *= 0.3048; var q = /^\s*-?\s*(\d*\.?\d+)\s*("|in\b|inch\b|inches\b)/i.exec(s.slice(i)); if (q) { i += q[0].length; v += parseFloat(q[1]) * 0.0254; } return v; }
+      if ((m = /^\s*("|in\b|inch\b|inches\b)/i.exec(r))) { i += m[0].length; return v * 0.0254; }
+      if ((m = /^\s*m(?![a-z])/i.exec(r))) { i += m[0].length; return v; }
+      return v;
+    }
+    function num() { ws(); var m = /^\d*\.?\d+(e[+-]?\d+)?/i.exec(s.slice(i)); if (!m) throw 0; i += m[0].length; return unit(parseFloat(m[0])); }
+    function atom() {
+      ws(); if (s[i] === "(") { i++; var v = expr(); ws(); if (s[i] !== ")") throw 0; i++; return v; }
+      var w = /^(pi|sqrt)(?![a-z])/i.exec(s.slice(i));
+      if (w) { i += w[0].length; if (w[1].toLowerCase() === "pi") return Math.PI; ws(); if (s[i] !== "(") throw 0; i++; var a = expr(); ws(); if (s[i] !== ")" || a < 0) throw 0; i++; return Math.sqrt(a); }
+      return num();
+    }
+    function fac() { ws(); if (s[i] === "-") { i++; return -fac(); } if (s[i] === "+") { i++; return fac(); } var v = atom(); ws(); if (s[i] === "^") { i++; v = Math.pow(v, fac()); } return v; }
     function term() { var v = fac(); for (;;) { ws(); if (s[i] === "*") { i++; v *= fac(); } else if (s[i] === "/") { i++; var d = fac(); if (!d) throw 0; v /= d; } else return v; } }
     function expr() { var v = term(); for (;;) { ws(); if (s[i] === "+") { i++; v += term(); } else if (s[i] === "-") { i++; v -= term(); } else return v; } }
     try { var v = expr(); ws(); return i === s.length && isFinite(v) ? v : null; } catch (e) { return null; }

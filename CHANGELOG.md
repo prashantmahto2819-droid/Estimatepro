@@ -3,6 +3,14 @@
 This file is for the people maintaining the app. It is not published with the site (see `.assetsignore`).
 The text users see is `EP_NOTES` in `js/version.js`.
 
+## 2026.11.20-k
+- CAD ribbon: `CAD.RSEC` (sections per tab) and `CAD.RLABEL` in `js/ui-cad.js`; `ribbonTab()` renders `.cad-sub` groups. Commands not on the ribbon before now have buttons and icons.
+- `EP.ev`: length units on numbers (mm, cm, m, ft / ', in / ", feet-inches) → metres; `pi`, `sqrt()`, `^`. Used by every measurement and analysis field, print and Excel export.
+- Measurement sheet: `SHAPES` rows (`data-mshape`), row copy (`data-mdup`), quick conversion chips (`data-qcvp`), headers without "(m)" when a conversion is on.
+- Units: brass, 100 sqft, decimal / cent, guntha, dozen, gaj.
+- Tutorials: selectors were stale (`data-cmd`); rewritten against real controls, `tab` opens a ribbon tab; 7 tours.
+- Update pictures: `window.EP_PICS` + `/updates/*.jpg`; the owner's WhatsApp banner shows them and adds their links to the text. Real media messages need a change in the `wa-outbox` server function (not in this repo).
+
 ## 2026.11.20-j
 - Library items can be measured instead of counted: `def.q = { dim: "A" | "L" | "M", kg, h }` (set in `assets4.js` by key). `M` = elevation area × typical kg/m² — approximate, said so in the formula.
 - `B.MAP` entries for grills, gates, railings, shutters, stone jali and eight older fire / toilet / sign items. Temple items and items with no schedule item are `null` on purpose (use the Non-SOR items).
