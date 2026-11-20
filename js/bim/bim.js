@@ -204,8 +204,33 @@
      from the eave, height = run × tan(slope)), or null when the outline is not of this kind. Cached per element. */
   var hipCache = new WeakMap();
   B.hipOrtho = function (e) {
-    if (hipCache.has(e)) return hipCache.get(e); var res = hipOrthoCalc(e); hipCache.set(e, res); return res;
+    if (hipCache.has(e)) return hipCache.get(e); var res = hipOrthoCalc(e); if (!res && e.kind === "hip") res = hipConvex(e); hipCache.set(e, res); return res;
   };
+  /* Hip roof on a convex outline with slanting sides (trapezium, parallelogram, triangle, pentagon…): one plane per side.
+     On a convex outline the roof is the lower envelope of the side planes, so the plane of side i covers the part of the
+     outline that is nearer to side i than to any other side — found by clipping the outline with the bisector of each pair.
+     Rectangles are left to the ordinary ridge roof; outlines with inside corners and slanting sides are not handled (null). */
+  function hipConvex(e) {
+    var P = (e.pts || []).map(function (p) { return [p[0], p[1]]; }); if (P.length > 1 && G.dist(P[0], P[P.length - 1]) < 1) P.pop(); if (P.length < 3 || P.length > 24) return null;
+    if (G.plineArea(P) < 0) P.reverse();
+    P = P.filter(function (p, i) { var a = P[(i + P.length - 1) % P.length], b = P[(i + 1) % P.length]; return Math.abs(G.cross(G.sub(p, a), G.sub(b, p))) > 2 * (G.dist(a, p) + G.dist(p, b)) / 2; });
+    var n = P.length; if (n < 3) return null; var right = 0;
+    for (var i = 0; i < n; i++) { var a = P[(i + n - 1) % n], b = P[i], c = P[(i + 1) % n], cr = G.cross(G.sub(b, a), G.sub(c, b)); if (cr <= 0) return null; if (Math.abs(G.dot(G.norm(G.sub(b, a)), G.norm(G.sub(c, b)))) < 0.01) right++; }
+    if (n === 4 && right === 4) return null;
+    var E = P.map(function (a, k) { var b = P[(k + 1) % n], u = G.norm(G.sub(b, a)); return { a: a, b: b, n: [-u[1], u[0]] }; }), D = function (k, p) { return (p[0] - E[k].a[0]) * E[k].n[0] + (p[1] - E[k].a[1]) * E[k].n[1]; };
+    var polys = [], creases = [], top = 0;
+    for (var k = 0; k < n; k++) {
+      var poly = P.slice();
+      for (var j = 0; j < n && poly.length > 2; j++) { if (j === k) continue; var f = function (p) { return D(j, p) - D(k, p); }, out = [];
+        for (var m = 0; m < poly.length; m++) { var p0 = poly[m], p1 = poly[(m + 1) % poly.length], f0 = f(p0), f1 = f(p1); if (f0 >= -1e-6) out.push(p0); if ((f0 > 1e-6 && f1 < -1e-6) || (f0 < -1e-6 && f1 > 1e-6)) { var t = f0 / (f0 - f1); out.push([p0[0] + (p1[0] - p0[0]) * t, p0[1] + (p1[1] - p0[1]) * t]); } }
+        poly = out; }
+      if (poly.length < 3 || Math.abs(G.plineArea(poly)) < 100) continue;
+      var pg = poly.map(function (p) { var r = Math.max(0, D(k, p)); if (r > top) top = r; return [p[0], p[1], r]; }); polys.push(pg);
+      for (var q = 0; q < pg.length; q++) { var A0 = pg[q], B0 = pg[(q + 1) % pg.length]; if (A0[2] > 1 || B0[2] > 1) creases.push({ a: [A0[0], A0[1]], b: [B0[0], B0[1]], r0: A0[2], r1: B0[2] }); }
+    }
+    if (polys.length < 3) return null;
+    return { polys: polys, creases: creases.map(function (x) { return [x.a, x.b, x.r0, x.r1]; }), top: top, outline: P, gables: [], eaves: E.map(function (x) { return [x.a, x.b]; }) };
+  }
   function hipOrthoCalc(e) {
     var P0 = e.pts, R = P0 && P0.length > 4 ? roofRidge(e) : null; if (!R) return null;
     var th = R.th || 0, c = Math.cos(th), s = Math.sin(th), toL = function (p) { return [p[0] * c + p[1] * s, -p[0] * s + p[1] * c]; }, toW = function (p) { return [p[0] * c - p[1] * s, p[0] * s + p[1] * c]; };

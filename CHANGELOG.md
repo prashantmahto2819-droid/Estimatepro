@@ -3,6 +3,13 @@
 This file is for the people maintaining the app. It is not published with the site (see `.assetsignore`).
 The text users see is `EP_NOTES` in `js/version.js`.
 
+## 2026.11.20-s
+- `hipConvex(e)` in `js/bim/bim.js`: hip roof on convex outlines with slanting sides (exact: faces tile the outline, rise = distance to the nearest side). Used by `B.hipOrtho` when the orthogonal builder returns null. Still not handled: slanting outlines with inside corners, and gable roofs on slanting outlines.
+
+## Waiting for the owner
+- Supabase project of the app to be connected: admin switches (module on / off), WhatsApp picture messages, shared cut-out library for all users.
+- The 30 quick rates that differ from their analysis (tipper, tanker…): owner will say.
+
 ## 2026.11.20-r
 - Moving vehicles: `B.meshes` marks a non-cut-out asset with `walk > 0` as `mv: { d, dir }`; `setScene` keeps such groups out of the merged buffer (`this.movers`, own VAOs) and `_drawMovers()` draws them in the main and shadow passes with `uOff`. Not pickable / measurable while separate; no edge lines.
 - `ui-assets.js`: own pictures also stored in IndexedDB `ep_pics` ("My pictures on this device"), multi-file add.
