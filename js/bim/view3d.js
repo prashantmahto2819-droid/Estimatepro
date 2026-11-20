@@ -228,21 +228,58 @@ precision highp float;
 in vec2 vUV;
 uniform vec3 uZen,uHor2,uSunD;
 uniform vec3 uSunCol2;
+uniform vec3 uCR,uCU,uCF;     /* camera right*tan*asp, up*tan, forward (world, Z up) */
+uniform int uKind;            /* 0 clear 1 clouds 2 overcast 3 dusk 4 studio 5 picture */
+uniform float uRot,uDrift,uLinS;
+uniform vec4 uPicA;           /* repeats round, vertical span (rad), bottom angle, full panorama? */
+uniform sampler2D uPic;
 out vec4 fragColor;
+float hsh(vec2 p){ return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453); }
+float nz(vec2 p){ vec2 i=floor(p),f=fract(p); f=f*f*(3.0-2.0*f);
+  return mix(mix(hsh(i),hsh(i+vec2(1,0)),f.x),mix(hsh(i+vec2(0,1)),hsh(i+vec2(1,1)),f.x),f.y); }
+float fbm(vec2 p){ float a=0.5,s=0.0; for(int i=0;i<5;i++){ s+=a*nz(p); p=p*2.03+vec2(17.3,9.1); a*=0.5; } return s; }
 void main(){
-  vec3 rd=normalize(vec3(vUV,1.5));
-  float h=rd.y*0.5+0.5;
-  vec3 sky=mix(uHor2,uZen,smoothstep(0.0,0.55,h));
-  /* atmospheric scattering near horizon */
-  float horizonGlow=exp(-abs(rd.y)*6.0);
+  vec3 rd=normalize(uCF+uCR*vUV.x+uCU*vUV.y);
+  float h=rd.z*0.5+0.5;
+  vec3 sky=mix(uHor2,uZen,smoothstep(0.5,0.85,h));
+  float horizonGlow=exp(-abs(rd.z)*6.0);
   sky+=uHor2*horizonGlow*0.25;
-  /* sun glow — outer warm corona + bright disc */
   float sd=max(dot(rd,uSunD),0.0);
-  sky+=uSunCol2*pow(sd,16.0)*0.15;  /* wide corona */
-  sky+=uSunCol2*pow(sd,64.0)*0.5;   /* medium glow */
-  sky+=uSunCol2*pow(sd,512.0)*1.8;  /* bright disc */
-  /* subtle gradient at the very top for depth */
-  sky=mix(sky,uZen*0.7,smoothstep(0.85,1.0,h));
+  float sunK=(uKind==2||uKind==4)?0.0:1.0;
+  sky+=uSunCol2*pow(sd,16.0)*0.15*sunK;
+  sky+=uSunCol2*pow(sd,64.0)*0.5*sunK;
+  sky=mix(sky,uZen*0.7,smoothstep(0.93,1.0,h));
+  vec3 disc=uSunCol2*pow(sd,512.0)*1.8*sunK;
+  if(uKind==1||uKind==2||uKind==3){
+    float up=max(rd.z,0.0);
+    vec2 q=rd.xy/(up+0.12)*1.35+vec2(uDrift,uDrift*0.4);
+    float f=fbm(q), f2=fbm(q*2.7+vec2(4.0,1.0));
+    float lo=uKind==2?0.18:uKind==3?0.50:0.47, hi=uKind==2?0.55:0.72;
+    float cv=smoothstep(lo,hi,f*0.75+f2*0.25)*smoothstep(0.0,0.10,rd.z);
+    float lum=max(max(uSunCol2.r,uSunCol2.g),uSunCol2.b);
+    vec3 lit=mix(uHor2*1.15+vec3(0.10),vec3(1.0),0.55)*(0.45+0.55*min(lum,1.0));
+    if(uKind==3) lit=mix(lit,vec3(1.0,0.62,0.38),0.55);
+    vec3 shade=mix(uZen,vec3(0.55,0.57,0.62),0.75)*(0.35+0.5*min(lum,1.0));
+    vec3 cc=mix(lit,shade,smoothstep(0.55,0.95,f2*0.6+f*0.5));
+    cc+=uSunCol2*pow(sd,8.0)*0.18*sunK;
+    disc*=(1.0-cv);
+    sky=mix(sky,cc,cv*(uKind==2?0.96:0.9));
+  }
+  sky+=disc;
+  if(uKind==5){
+    float az=atan(rd.x,rd.y)/6.2831853+uRot;
+    vec2 uv; float k=1.0;
+    if(uPicA.w>0.5){ uv=vec2(fract(az),asin(clamp(rd.z,-1.0,1.0))/3.14159265+0.5); }
+    else{
+      float t=az*uPicA.x, m=mod(floor(t),2.0); float fx=fract(t); if(m>0.5) fx=1.0-fx;
+      float el=asin(clamp(rd.z,-1.0,1.0)); float v=(el-uPicA.z)/uPicA.y;
+      uv=vec2(fx,clamp(v,0.002,0.998)); k=1.0-smoothstep(0.90,1.0,v);
+    }
+    vec3 pc=textureLod(uPic,uv,0.0).rgb;
+    float lum=clamp(max(max(uSunCol2.r,uSunCol2.g),uSunCol2.b)+0.25,0.12,1.0);
+    vec3 topc=textureLod(uPic,vec2(uv.x,0.995),4.0).rgb;
+    sky=mix(topc,pc,k)*lum; if(uLinS>0.5) sky=pow(sky,vec3(2.2));
+  }
   fragColor=vec4(sky,1);
 }`;
 
@@ -805,6 +842,10 @@ P.prototype.light=function(){
   ];
   if(this.night) return{sunCol:[0,0,0],sky:[0.07,0.08,0.14],gnd:[0.03,0.03,0.05],zen:[0.015,0.02,0.07],hor:[0.05,0.06,0.12]};
   if(dayFrac<0.01) return{sunCol:[0,0,0],sky:[0.03,0.03,0.06],gnd:[0.02,0.02,0.03],zen:[0.02,0.02,0.06],hor:[0.04,0.04,0.06]};
+  const sk=this.skyKind|0;
+  if(sk===2){ const g=0.25+0.55*dayFrac; return{sunCol:[sunCol[0]*0.22,sunCol[1]*0.22,sunCol[2]*0.22],sky:[0.62*g+0.05,0.65*g+0.05,0.70*g+0.05],gnd:[0.30*g,0.29*g,0.27*g],zen:[0.42*g,0.45*g,0.50*g],hor:[0.72*g,0.74*g,0.77*g]}; }
+  if(sk===3){ return{sunCol:[1.15*dayFrac,0.62*dayFrac,0.34*dayFrac],sky:[0.42*dayFrac+0.08,0.36*dayFrac+0.07,0.50*dayFrac+0.10],gnd:[0.26*dayFrac+0.04,0.18*dayFrac+0.03,0.14*dayFrac+0.03],zen:[0.10,0.14,0.36],hor:[0.98,0.52,0.26]}; }
+  if(sk===4){ return{sunCol:[sunCol[0]*0.8,sunCol[1]*0.8,sunCol[2]*0.8],sky:[0.72,0.74,0.76],gnd:[0.34,0.34,0.34],zen:[0.80,0.82,0.85],hor:[0.93,0.94,0.95]}; }
   const sky=[0.48*dayFrac+0.06,0.58*dayFrac+0.06,0.78*dayFrac+0.06];
   const gnd=[0.28*dayFrac+0.04,0.26*dayFrac+0.04,0.20*dayFrac+0.03];
   const zen=[0.24,0.38,0.70];
@@ -973,6 +1014,7 @@ P.prototype.render=function(pick){
     gl.uniform3fv(u.uHor2,lt.hor||[0.75,0.78,0.82]);
     gl.uniform3fv(u.uSunD,sd);
     gl.uniform3fv(u.uSunCol2,lt.sunCol);
+    this._skyU(m);
     gl.bindVertexArray(this.emptyVAO);
     gl.drawArrays(gl.TRIANGLES,0,3);
     gl.depthMask(true);
@@ -1394,6 +1436,38 @@ P.prototype._drawMovers=function(prog,full){
     gl.uniform3f(prog._off,m.mv.dir[0]*d,m.mv.dir[1]*d,0); gl.bindVertexArray(full?m.vF:m.vS); gl.drawArrays(gl.TRIANGLES,0,m.n);
   }
   gl.uniform3f(prog._off,0,0,0); gl.bindVertexArray(null);
+};
+
+/* ---------- sky: world-space view rays, presets and an own background picture ---------- */
+P.SKIES=[['clear','Clear sky'],['clouds','Clouds'],['overcast','Overcast (soft light)'],['dusk','Evening glow'],['studio','Studio (plain light)'],['pic','My own picture']];
+P.prototype.setSky=function(o){ o=o||{}; const i=P.SKIES.findIndex(function(x){return x[0]===o.kind;}); this.skyKind=i<0?0:i; this.skyRot=(+o.rot||0)/360; this.skySrc=o.src||null; this.skyPano=!!o.pano; this.skyHz=o.hz==null?0.3:+o.hz; if(this.skyKind===5&&!this.skySrc) this.skyKind=0; this.dirty=true; };
+P.prototype._skyTex=function(src){
+  const gl=this.gl; if(this._sky&&this._sky.src===src) return this._sky; if(this._sky&&this._sky.tex) gl.deleteTexture(this._sky.tex);
+  const t=this._sky={src:src,tex:gl.createTexture(),ready:false,asp:2}; gl.activeTexture(gl.TEXTURE7); gl.bindTexture(gl.TEXTURE_2D,t.tex);
+  gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,1,1,0,gl.RGBA,gl.UNSIGNED_BYTE,new Uint8Array([150,180,220,255])); gl.activeTexture(gl.TEXTURE0);
+  if(!src){ t.ready=true; return t; }
+  const img=new Image(), self=this;
+  img.onload=function(){ if(self.dead||self._sky!==t) return; try{
+    const mx=Math.min(4096,gl.getParameter(gl.MAX_TEXTURE_SIZE)), k=Math.min(1,mx/Math.max(img.naturalWidth,img.naturalHeight)), cw=Math.max(2,Math.round(img.naturalWidth*k)), ch=Math.max(2,Math.round(img.naturalHeight*k));
+    const cv=document.createElement('canvas'); cv.width=cw; cv.height=ch; cv.getContext('2d').drawImage(img,0,0,cw,ch); t.asp=cw/ch;
+    gl.activeTexture(gl.TEXTURE7); gl.bindTexture(gl.TEXTURE_2D,t.tex); gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL,true);
+    gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,gl.RGBA,gl.UNSIGNED_BYTE,cv); gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL,false); gl.generateMipmap(gl.TEXTURE_2D);
+    gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.LINEAR_MIPMAP_LINEAR); gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.REPEAT); gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE);
+    gl.activeTexture(gl.TEXTURE0); t.ready=true; self.dirty=true; }catch(e){ t.err=String(e); } };
+  img.src=src; return t;
+};
+P.prototype._skyU=function(m){
+  const gl=this.gl, kp=this.kp; if(!kp._sk){ kp._sk={}; 'uCR uCU uCF uKind uRot uDrift uPicA uPic uLinS'.split(' ').forEach(function(n){ kp._sk[n]=gl.getUniformLocation(kp,n); }); }
+  const L=kp._sk, e=m.eye, asp=this.cv.width/this.cv.height||1;
+  let f, fov=this.fov; if(this.walk&&this.we){ f=this.walkDir(); fov=this.walkFov||1.15; } else f=nrm(sub(this.t,e));
+  let r=cross(f,[0,0,1]); if(Math.hypot(r[0],r[1],r[2])<1e-5) r=[Math.cos(this.yaw||0),Math.sin(this.yaw||0),0]; r=nrm(r); const up=nrm(cross(r,f)), tn=Math.tan(fov/2);
+  gl.uniform3f(L.uCR,r[0]*tn*asp,r[1]*tn*asp,r[2]*tn*asp); gl.uniform3f(L.uCU,up[0]*tn,up[1]*tn,up[2]*tn); gl.uniform3f(L.uCF,f[0],f[1],f[2]);
+  let kind=this.night?0:(this.skyKind|0), t=null;
+  if(kind===5){ t=this._skyTex(this.skySrc); if(!t.ready) kind=0; }
+  gl.uniform1i(L.uKind,kind); gl.uniform1f(L.uLinS,this.linear?1:0); gl.uniform1f(L.uRot,this.skyRot||0); gl.uniform1f(L.uDrift,this.play?((performance.now()/1000)*0.012)%1000:0);
+  if(t){ const pano=this.skyPano||t.asp>=1.9; let n=2; while(n<8 && (6.2831853/n)/t.asp>1.25) n+=2; const span=(6.2831853/n)/t.asp;
+    gl.uniform4f(L.uPicA,n,span,-span*this.skyHz,pano?1:0); gl.activeTexture(gl.TEXTURE7); gl.bindTexture(gl.TEXTURE_2D,t.tex); gl.uniform1i(L.uPic,7); gl.activeTexture(gl.TEXTURE0); }
 };
 
 /* ---------- own material pictures: repeating textures ---------- */

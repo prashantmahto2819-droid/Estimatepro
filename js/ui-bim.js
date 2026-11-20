@@ -278,7 +278,8 @@
       console.log("build3d: done, canvas=" + C.v3.cv.width + "x" + C.v3.cv.height);
     } catch (er) { console.error("build3d error:", er); }
   }
-  function applySun(ed, C) { if (!C.v3 || !C.v3.ok) return; var s = B.sunNow(ed.doc.d, C.sunLive); C.v3.sunAz = s.az; C.v3.sunEl = s.el; C.v3.dirty = true; return s; }
+  function applySky(ed, C) { if (!C.v3 || !C.v3.ok || !C.v3.setSky) return; C.v3.setSky(Object.assign({}, bim(ed).sky || {}, C.skyLive || {})); }
+  function applySun(ed, C) { if (!C.v3 || !C.v3.ok) return; applySky(ed, C); var s = B.sunNow(ed.doc.d, C.sunLive); C.v3.sunAz = s.az; C.v3.sunEl = s.el; C.v3.dirty = true; return s; }
   function hhmm(t) { var h = Math.floor(t), m = Math.round((t - h) * 60); if (m === 60) { h++; m = 0; } return (h < 10 ? "0" : "") + h + ":" + (m < 10 ? "0" : "") + m; }
   function sunText(ed, C) { var s = B.sunNow(ed.doc.d, C.sunLive); return s.el < 0 ? "Sun below the horizon (night)" : "Sun: " + Math.round(s.trueAz != null ? s.trueAz : s.az) + "° from north, " + Math.round(s.el) + "° high"; }
   function popHtml(ed, C) {
@@ -295,7 +296,9 @@
       return "<h4>Sun and sky</h4><label>Sun from<select class='in small' data-v3sm='1'><option value='time'" + (s.mode !== "manual" ? " selected" : "") + ">Date and time (real sun)</option><option value='manual'" + (s.mode === "manual" ? " selected" : "") + ">Set by hand</option></select></label>" +
         (s.mode !== "manual" ? "<label>Date<input type='date' class='in small' data-v3date='1' value='" + esc(s.date || today) + "'></label><div class='row'><button type='button' class='btn ghost sm' data-v3dq='" + today.slice(0, 4) + "-06-21'>21 June</button><button type='button' class='btn ghost sm' data-v3dq='" + today.slice(0, 4) + "-03-21'>21 March</button><button type='button' class='btn ghost sm' data-v3dq='" + today.slice(0, 4) + "-12-21'>21 December</button><button type='button' class='btn ghost sm' data-v3dq='" + today + "'>Today</button></div><label>Time <b class='v3-tt'>" + hhmm(s.t) + "</b><input type='range' min='5' max='19.5' step='0.25' value='" + s.t + "' data-v3time='1' aria-label='Time of day'></label>"
           : "<label>Direction °<input type='range' min='0' max='360' value='" + s.az + "' data-v3az='1' aria-label='Sun direction'></label><label>Height °<input type='range' min='2' max='90' value='" + s.el + "' data-v3el='1' aria-label='Sun height'></label>") +
-        "<div class='muted small v3-st'>" + esc(sunText(ed, C)) + "</div><div class='row'>" + tb("sky", "Sky") + tb("fog", "Haze") + tb("shadows", "Shadows") + "</div><p class='muted small' style='margin:0'>Place and north are in the Building tab.</p>";
+        "<div class='muted small v3-st'>" + esc(sunText(ed, C)) + "</div><div class='row'>" + tb("sky", "Sky") + tb("fog", "Haze") + tb("shadows", "Shadows") + "</div>" + (function () { var k = bim(ed).sky || {}, SK = (B.View3D && B.View3D.SKIES) || [["clear", "Clear sky"]];
+          return "<label>Sky and background<select class='in small' data-v3sky='1'>" + SK.map(function (x) { return "<option value='" + x[0] + "'" + ((k.kind || "clear") === x[0] ? " selected" : "") + ">" + x[1] + "</option>"; }).join("") + "</select></label>" +
+            (k.kind === "pic" ? "<div class='row' style='gap:6px'><button type='button' class='btn sec sm' data-v3skyadd='1'>" + (k.src ? "Change picture" : "Choose picture") + "</button><input type='file' accept='image/*' data-v3skyfile='1' hidden></div>" + (k.src ? "<label>Turn the picture °<input type='range' min='0' max='360' value='" + (+k.rot || 0) + "' data-v3skyrot='1' aria-label='Turn the background'></label><label>Horizon height in the picture<input type='range' min='0' max='80' value='" + Math.round((k.hz == null ? 0.3 : +k.hz) * 100) + "' data-v3skyhz='1' aria-label='Horizon height'></label><p class='muted small' style='margin:0'>A site photo, a street view or a 360° panorama (2:1). An ordinary photo is mirrored round the model.</p>" : "<p class='muted small' style='margin:0'>Choose a photo of the site, the sky or a 360° panorama.</p>") : ""); })() + "<p class='muted small' style='margin:0'>Place and north are in the Building tab.</p>";
     }
     if (C.v3pop === "scenes") {
       var L = b.scenes || [];
@@ -376,6 +379,9 @@
       if (ds.bimchk) { setBim(ed, function (x) { var path = ds.bimchk.split("."); x[path[0]][path[1]] = t.checked; }); return; }
       if (ds.v3cut) { C.v3cutPct = +t.value; applyCut(C); return; }
       if (ds.v3style && C.v3) { C.v3.style = +t.value; C.v3.dirty = true; return; }
+      if (ds.v3sky) { setBim(ed, function (x) { x.sky = Object.assign({}, x.sky || {}, { kind: t.value }); }, "Sky"); applySky(ed, C); showPop(ed, C); return; }
+      if (ds.v3skyrot || ds.v3skyhz) { var sl = C.skyLive || {}; C.skyLive = null; setBim(ed, function (x) { x.sky = Object.assign({}, x.sky || {}, sl); }, "Sky"); applySky(ed, C); return; }
+      if (ds.v3skyfile && t.files && t.files[0]) { var fr = new FileReader(); fr.onload = function () { var im = new Image(); im.onload = function () { var kk = Math.min(1, 2048 / im.naturalWidth), cw = Math.max(2, Math.round(im.naturalWidth * kk)), ch = Math.max(2, Math.round(im.naturalHeight * kk)), cv = document.createElement("canvas"); cv.width = cw; cv.height = ch; cv.getContext("2d").drawImage(im, 0, 0, cw, ch); var src = cv.toDataURL("image/jpeg", 0.8); setBim(ed, function (x) { x.sky = Object.assign({}, x.sky || {}, { kind: "pic", src: src, pano: cw / ch >= 1.9 }); }, "Background picture"); applySky(ed, C); showPop(ed, C); }; im.onerror = function () { U.toast("This picture could not be read"); }; im.src = fr.result; }; fr.readAsDataURL(t.files[0]); return; }
       if (ds.v3sm) { commitSun(ed, C, { mode: t.value }); showPop(ed, C); return; }
       if (ds.v3date) { commitSun(ed, C, { date: t.value }); showPop(ed, C); return; }
       if (ds.v3time) { commitSun(ed, C, { t: +t.value }); return; }
@@ -388,10 +394,12 @@
     });
     r.addEventListener("input", function (ev) {
       var t = ev.target, ds = t.dataset || {}; if (ds.v3cut) { C.v3cutPct = +t.value; applyCut(C); return; }
+      if (ds.v3skyrot || ds.v3skyhz) { C.skyLive = Object.assign({}, C.skyLive || {}, ds.v3skyrot ? { rot: +t.value } : { hz: +t.value / 100 }); applySky(ed, C); return; }
       if (ds.v3time || ds.v3az || ds.v3el) { C.sunLive = Object.assign({}, C.sunLive || {}, ds.v3time ? { t: +t.value } : ds.v3az ? { az: +t.value } : { el: +t.value }); applySun(ed, C); var p = C.root.querySelector(".v3-pop"); if (p) { var tt = p.querySelector(".v3-tt"), s2 = p.querySelector(".v3-st"); if (tt && ds.v3time) tt.textContent = hhmm(+t.value); if (s2) s2.textContent = sunText(ed, C); } }
     });
     r.addEventListener("click", function (ev) {
       var t = ev.target.closest("button, [data-matpick], [data-bimlookopen]"); if (!t) return; var ds = t.dataset;   // material rows and swatches are not buttons
+      if (ds.v3skyadd) { var sf = C.root.querySelector("[data-v3skyfile]"); if (sf) { sf.value = ""; sf.click(); } return; }
       if (ds.bimcur) { setBim(ed, function (x) { x.cur = ds.bimcur; }, "Level"); CAD.ui.renderPanels(); return; }
       if (ds.bimadd) { setBim(ed, function (x) { var top = x.levels.slice().sort(function (a, c) { return c.elev - a.elev; })[0], id = "L" + Date.now().toString(36); x.levels.push({ id: id, name: "Level " + (x.levels.length), elev: top.elev + top.h, h: 3200 }); }, "Add level"); CAD.ui.renderPanels(); return; }
       if (ds.bimlvdel) { var keep = bim(ed).levels.filter(function (l) { return l.id !== ds.bimlvdel; }).sort(function (a, c) { return a.elev - c.elev; })[0]; ed.doc.begin("Delete level"); ed.doc.d.ents.filter(function (e) { return e.lvl === ds.bimlvdel; }).forEach(function (e) { ed.doc.mod(e.id, Object.assign(CAD.clone(e), { lvl: keep.id })); }); var bb = CAD.clone(bim(ed)); bb.levels = bb.levels.filter(function (l) { return l.id !== ds.bimlvdel; }); if (bb.cur === ds.bimlvdel) bb.cur = keep.id; ed.doc.set("bim", bb); ed.doc.commit(); CAD.ui.renderPanels(); return; }

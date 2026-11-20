@@ -1,6 +1,6 @@
 # Estimate Pro — pending work (kept with the code; not published)
 
-Last updated at version 2026.11.20-w.
+Last updated at version 2026.11.20-x.
 
 ## A. Waiting for the owner
 1. Connect the app's Supabase project (ref starts `eaygozhjsmohfcuiazfm`) to the build session. Then: admin dashboard switches (module on / off), WhatsApp update messages with real pictures, shared cut-out / model library for all users.
@@ -20,7 +20,7 @@ Last updated at version 2026.11.20-w.
    - Poly Pizza — https://poly.pizza — small GLB models; mostly CC-BY (credit needed), some CC0.
    - Sketchfab — https://sketchfab.com/search?features=downloadable&type=models — biggest choice (sanitary ware, sofas, cars); set the licence filter to CC0 or CC BY; avoid NC (non-commercial) ones; download as glTF / GLB.
    - People / tree PNG cut-outs — https://www.gendo.ai/people-png , Viz-People free packs.
-   A credits list (author + licence for every CC-BY file) must be kept; the app needs a Credits page before such files are shipped to users.
+   A credits list (author + licence for every CC-BY file) must be kept. (-x: `credits.html` exists and each drawing has File ▾ → Credits for models and pictures. Files shipped with the app must be added to the table in `credits.html`.)
 3. Decisions: the 30 quick rates that differ from their analysis (tipper, tanker…); whether 1:30 / 1:40 / 1:60 scales may be used on Design Studio sheets.
 4. Commercial plans (owner will describe).
 
@@ -28,7 +28,7 @@ Last updated at version 2026.11.20-w.
 1. (done in -u for one device: My 3D models.) (-v: texture colours baked per vertex.) Still open: true per-pixel textures, Draco files, a shared library for all users (needs the server), thumbnails, plan symbol from the model outline.
 2. (done in -t: fittings light the scene, Night view.) Still open: lights do not cast shadows and pass through walls; emissive glow on the fitting itself.
 3. (done in -w: up to 5 own material pictures per drawing.) Still open: rotate / offset the picture on a surface, more than 5, a device library of materials.
-4. Sky and background picture; ground materials by area.
+4. (done in -x: sky presets and an own background picture.) Still open: the picture does not light the model (no image-based lighting), sky is not saved per scene, ground materials by area.
 5. Reflections on glass and water; softer shadows.
 6. Vehicles that turn at the end of the path, wheels that turn; people with a walking cycle.
 7. Camera path drawn on the plan for the video; MP4 export where the browser allows.
@@ -37,10 +37,10 @@ Last updated at version 2026.11.20-w.
 10. Slanting outlines with inside corners (hip), gable roofs on slanting outlines, curved roofs, domes as roof elements.
 
 ## C. CAD Studio — to build
-1. Layouts / sheets with title block and several scaled views; print sets.
+1. (done in -x: SHEET puts plan + elevations + sections in one frame at one scale and plots with the title block.) Still open: several sheets per drawing, views at different scales on one sheet, print sets, sheet in portrait.
 2. Real dimensions, ellipse and spline in DXF export; DWG is not possible in the browser.
 3. Curved walls, sloping slabs / ramps, split levels.
-4. Section and elevation drawings generated from the model.
+4. (done in -x: ELEVATION, SECTION, VIEWSUPDATE.) Still open: fill (poché) of cut parts, automatic dimensions and material notes on elevations, door / window swing marks, outlines for library items that have no edges, views update on their own.
 5. Door / window schedule and room finish schedule as tables on the sheet.
 6. Hatch patterns library, text styles, blocks library shared between drawings.
 7. Plumbing and electrical runs (pipes, conduits) with lengths in Σ Quantities.

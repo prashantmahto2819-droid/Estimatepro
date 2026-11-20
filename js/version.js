@@ -1,5 +1,5 @@
 /* App version + "what's new" — the super admin is offered to send this on WhatsApp after each upload. Change both with every release. */
-window.EP_VER = "2026.11.20-w";
-window.EP_NOTES = "• Your own material pictures: add a photo of your tile, marble, granite, wallpaper or wood (Library → ＋ Add your own material picture), give its real width, then use it from 🪣 Paint → My pictures on any wall, floor or roof — it repeats at the right size";
+window.EP_VER = "2026.11.20-x";
+window.EP_NOTES = "• Sky and background in 3D: ☀ Sun → Sky and background — clear, clouds, overcast, evening glow, studio, or your own site photo / 360° panorama behind the model\n• Elevations and sections drawn from the model: Building (BIM) tab → Elevation, Section (click two points on the plan), Update views after changes\n• Sheet layout: one click puts the plan, elevations and sections on an A4–A0 sheet at one scale; print it from File ▾ → Plot PDF sheet → Sheet layout\n• Credits: File ▾ → Credits for models and pictures keeps the author and licence of every model and picture you add, and copies the credits text";
 /* pictures of this update: [file in /updates, caption]. Shown to the owner with the WhatsApp "what's new" message. */
-window.EP_PICS = [["updates/w-material.jpg", "Your own tile and wallpaper pictures in 3D"]];
+window.EP_PICS = [["updates/x-sky.jpg", "Sky and background: clouds and evening glow"], ["updates/x-sheet.jpg", "Plan, elevations and section on one sheet, made from the model"], ["updates/x-credits.jpg", "Credits for models and pictures"]];

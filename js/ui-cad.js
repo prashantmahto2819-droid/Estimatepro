@@ -127,13 +127,13 @@
     "Draw": [["Lines", ["LINE", "PLINE", "XLINE", "RAY"]], ["Shapes", ["RECTANG", "CIRCLE", "ARC", "POLYGON", "ELLIPSE", "SPLINE", "POINT"]], ["Fill", ["HATCH", "BOUNDARY"]]],
     "Modify": [["Move and copy", ["MOVE", "COPY", "ROTATE", "SCALE", "MIRROR", "ARRAY", "STRETCH"]], ["Edit shape", ["OFFSET", "TRIM", "EXTEND", "FILLET", "CHAMFER", "BREAK", "JOIN", "EXPLODE"]], ["Properties", ["MATCHPROP", "GRIPLINK", "ERASE"]], ["Clipboard", ["COPYCLIP", "CUTCLIP", "PASTECLIP"]]],
     "Annotate": [["Text", ["TEXT", "MTEXT", "LEADER"]], ["Dimensions", ["DIMLINEAR", "DIMALIGNED", "DIMCONTINUE", "DIMBASELINE", "DIMANGULAR", "DIMRADIUS", "DIMDIAMETER", "DIMORDINATE"]], ["Building", ["DIMWALLS"]], ["Style", ["DIMSTYLE"]]],
-    "Building (BIM)": [["Structure", ["WALL", "COLUMN", "BEAM", "SLAB", "FOOTING"]], ["Openings", ["DOOR", "WINDOW", "OPENING"]], ["Roof, stairs and edges", ["ROOF", "STAIR", "RAILING", "PARAPET"]], ["Rooms and floors", ["ROOM", "LEVEL", "FLOORCOPY"]], ["Wall finishes", ["WALLFINISH"]], ["Steel", ["REBAR", "BBS"]], ["Results", ["DIMWALLS", "BIM3D", "QUANTITIES"]]],
+    "Building (BIM)": [["Structure", ["WALL", "COLUMN", "BEAM", "SLAB", "FOOTING"]], ["Openings", ["DOOR", "WINDOW", "OPENING"]], ["Roof, stairs and edges", ["ROOF", "STAIR", "RAILING", "PARAPET"]], ["Rooms and floors", ["ROOM", "LEVEL", "FLOORCOPY"]], ["Wall finishes", ["WALLFINISH"]], ["Steel", ["REBAR", "BBS"]], ["Drawings from the model", ["ELEVATION", "SECTION", "SHEET", "VIEWSUPDATE"]], ["Results", ["DIMWALLS", "BIM3D", "QUANTITIES"]]],
     "Site & services": [["Place", ["ASSET", "LANDAREA"]]],
     "Block": [["Blocks", ["BLOCK", "INSERT"]], ["Groups and order", ["GROUP", "UNGROUP", "DRAWORDER"]]],
     "Measure": [["Enquiry", ["DIST", "AREA", "ID", "LIST"]], ["Mark points", ["DIVIDE", "MEASURE"]], ["To estimate", ["TAKEOFF", "QUANTITIES"]]],
     "View": [["Navigate", ["ZOOM", "PAN", "REGEN"]], ["Show / hide", ["ISOLATE", "UNISOLATE", "LAYOFF", "LAYON"]], ["Setup", ["LAYER", "PROPERTIES", "UNITS"]]]
   };
-  CAD.RLABEL = { RAY: "Ray", GRIPLINK: "Linked corners", COPYCLIP: "Copy", CUTCLIP: "Cut", PASTECLIP: "Paste", DIMSTYLE: "Dim style", LEVEL: "Levels", BIM3D: "3D view", QUANTITIES: "Σ Quantities", ID: "Point ID", LAYOFF: "Layer off", LAYON: "All layers on", LAYER: "Layers", PROPERTIES: "Properties", UNITS: "Units", DIMWALLS: "Auto dimension" };
+  CAD.RLABEL = { RAY: "Ray", GRIPLINK: "Linked corners", COPYCLIP: "Copy", CUTCLIP: "Cut", PASTECLIP: "Paste", DIMSTYLE: "Dim style", LEVEL: "Levels", BIM3D: "3D view", QUANTITIES: "Σ Quantities", ID: "Point ID", LAYOFF: "Layer off", LAYON: "All layers on", LAYER: "Layers", PROPERTIES: "Properties", UNITS: "Units", DIMWALLS: "Auto dimension", ELEVATION: "Elevation", SECTION: "Section", SHEET: "Sheet layout", VIEWSUPDATE: "Update views" };
   function ribbonTab(t) {
     var btn = function (b) { return "<button type='button' class='cad-rb' data-cc='" + b[0] + "' title='" + U.esc(b[1]) + " (" + b[0] + ")'>" + (CAD.icon ? CAD.icon(b[0], b[1]) : "") + "<span>" + U.esc(b[1]) + "</span></button>"; };
     var secs = CAD.RSEC[t[0]]; if (!secs) return t[1].map(btn).join("");
@@ -524,7 +524,7 @@
       "<label class='cad-f'><span>Paper</span><select class='in small' id='pl-p'>" + Object.keys(CAD.PAPER).map(function (k) { return "<option" + (k === (d.sheet.size || "A3") ? " selected" : "") + ">" + k + "</option>"; }).join("") + "</select></label>" +
       "<label class='cad-f'><span>Orientation</span><select class='in small' id='pl-o'><option value='l'>Landscape</option><option value='p'>Portrait</option></select></label>" +
       "<label class='cad-f'><span>Scale 1 :</span><select class='in small' id='pl-s'><option value=''>Fit to paper</option>" + CAD.STD_SCALES.map(function (s) { return "<option value='" + s + "'" + (s === d.sheet.scale ? " selected" : "") + ">1 : " + s + "</option>"; }).join("") + "</select></label>" +
-      "<label class='cad-f'><span>What to plot</span><select class='in small' id='pl-a'><option value='ext'>Everything (extents)</option><option value='view'>Current screen view</option>" + (sel ? "<option value='sel'>Selected objects (" + sel + ")</option>" : "") + "</select></label>" +
+      "<label class='cad-f'><span>What to plot</span><select class='in small' id='pl-a'><option value='ext'>Everything (extents)</option><option value='view'>Current screen view</option>" + (sel ? "<option value='sel'>Selected objects (" + sel + ")</option>" : "") + (d.layouts && d.layouts[0] ? "<option value='sheet' selected>Sheet layout (" + esc(d.layouts[0].paper) + ", 1 : " + d.layouts[0].scale + ")</option>" : "") + "</select></label>" +
       "<label class='cad-f'><span>Colours</span><select class='in small' id='pl-m'><option value='1'>Black & white</option><option value=''>Colour</option></select></label>" +
       "<label class='cad-f'><span>Title</span><input class='in small' id='pl-t' value='" + esc(d.sheet.title || d.name) + "'></label><label class='cad-f'><span>Drawing No.</span><input class='in small' id='pl-n' value='" + esc(d.sheet.number || "D-01") + "'></label>" +
       "<label class='cad-f'><span>Organisation</span><input class='in small' id='pl-org' value='" + esc(d.sheet.org || hd.org || "") + "'></label><label class='cad-f'><span>Project / work</span><input class='in small' id='pl-pr' value='" + esc(d.sheet.project || hd.work || "") + "'></label>" +
@@ -534,10 +534,11 @@
         if (!b.dataset.plot) return; var v = function (id) { return dlg.querySelector(id).value; }, ar = v("#pl-a"), area = null;
         if (ar === "view") { var a = ed.s2w(0, ed.H), c = ed.s2w(ed.W, 0); area = [a[0], a[1], c[0], c[1]]; }
         else if (ar === "sel") { area = [Infinity, Infinity, -Infinity, -Infinity]; ed.sel.forEach(function (id) { var e = ed.doc.get(id); if (e) { var x = ed.doc.bbox(e); G.ext(area, [x[0], x[1]]); G.ext(area, [x[2], x[3]]); } }); }
+        var lay = ar === "sheet" && d.layouts && d.layouts[0]; if (lay) { area = lay.rect.slice(); dlg.querySelector("#pl-p").value = lay.paper; dlg.querySelector("#pl-s").value = String(lay.scale); dlg.querySelector("#pl-o").value = "l"; }
         var sheet = Object.assign({}, d.sheet, { size: v("#pl-p"), scale: +v("#pl-s") || null, title: v("#pl-t"), number: v("#pl-n"), org: v("#pl-org"), project: v("#pl-pr"), by: v("#pl-by") });
         ed.doc.begin("Sheet settings"); ed.doc.set("sheet", sheet); ed.doc.commit();
         var imgs = {}; Object.keys(ed.images).forEach(function (id) { var im = ed.images[id]; if (im.complete && im.naturalWidth) try { imgs[id] = CAD.jpegOf(im); } catch (e) {} });
-        var r = CAD.plotPdf(ed.doc, { paper: sheet.size, land: v("#pl-o") === "l", scale: sheet.scale, area: area, mono: !!v("#pl-m"), title: sheet.title, number: sheet.number, org: sheet.org, project: sheet.project, drawnBy: sheet.by, units: unitLabel(d.units.disp), images: imgs, dimText: function (e, val) { return ed.dimText(e, val); } });
+        var r = CAD.plotPdf(ed.doc, { paper: sheet.size, land: v("#pl-o") === "l", scale: lay ? lay.scale : sheet.scale, area: area, mono: !!v("#pl-m"), title: sheet.title, number: sheet.number, org: sheet.org, project: sheet.project, drawnBy: sheet.by, units: unitLabel(d.units.disp), images: imgs, dimText: function (e, val) { return ed.dimText(e, val); } });
         closeDialog(); dl(new Blob([r.bytes], { type: "application/pdf" }), fname(sheet.title) + "_" + sheet.number + ".pdf"); U.toast("PDF at 1:" + r.scale + " on " + sheet.size);
       });
   }

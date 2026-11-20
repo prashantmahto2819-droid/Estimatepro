@@ -3,6 +3,11 @@
 This file is for the people maintaining the app. It is not published with the site (see `.assetsignore`).
 The text users see is `EP_NOTES` in `js/version.js`.
 
+## 2026.11.20-x
+- Sky: `KFS` now shoots world-space view rays (camera basis uniforms `uCR uCU uCF`, set in `_skyU`), so the horizon follows the camera. `P.SKIES` presets (clear, clouds, overcast, dusk, studio, pic), `setSky({kind, rot, src, hz, pano})`; clouds are procedural fbm (drift while ▶ Play); `light()` changes sun / ambient for overcast, dusk and studio. Own picture: `_skyTex` on unit 7, 2:1 pictures are a full panorama, others are mirrored round (`uPicA`). Stored in `bim.sky`; UI in the ☀ Sun popup (`applySky`, `data-v3sky*`). Not image-based lighting; not saved per scene.
+- `js/bim/views2d.js` (new): `B.viewLines(doc, {dir, cut})` — hidden-line view from `B.meshes` with a software depth buffer (about 1700 px on the long side), group edges + silhouette edges (front/back face pairs), section = clip at the plane and thick cut lines. `B.viewBlock` adds ground line, level marks, title. Commands ELEVATION (EL), SECTION (SEC, stored in `bim.sections`, mark ents carry `sec: id` on layer A-SECT-MARK), VIEWSUPDATE (VU), SHEET (LAYOUT): views are blocks `EL-<side>` / `SEC-<id>`; SHEET flows them under / beside the plan, picks the smallest standard scale that fits the paper, writes `d.layouts[0] = {paper, scale, land, rect}`. Plot dialog has "Sheet layout". Decoration and cut-out assets are left out of views. No poché fill, no automatic dimensions.
+- Credits: `js/ui-credits.js` (File ▾ → Credits for models and pictures; `bim.credits`, `B.creditItems`, `B.creditsText`, `B.creditGaps`; remembered in localStorage `ep_credits`), static `credits.html` linked from the footers.
+
 ## 2026.11.20-w
 - Own material pictures: `bim.texs` (max 5), `B.addTex`, `B.regTex` → looks `tex_<id>` with pattern 20 + slot and `B.TEXSLOTS`; shader samplers `uTx0…4` on texture units 2…6 (`_matTex`, REPEAT, mipmaps); world-space mapping scaled by the picture's real width. Not in PDF / DXF output; plan fill uses the picture's average colour.
 
