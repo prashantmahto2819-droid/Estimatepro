@@ -173,6 +173,50 @@
     return { only: function (e) { return !TYPES[e.t] || e.t === "wall" || e.t === "column"; },
       segs: function (e) { if (e.t === "wall") { var P = B.wallPoly(doc, e); return G.polySegs([P.sL, P.eL, P.eR, P.sR], true); } if (e.t === "column") return e.shape === "circle" ? [{ k: "A", c: e.p, r: e.w / 2, s: 0, e: G.TAU, full: true }] : G.polySegs(rectAt(e.p, e.w, e.d, e.rot), true); return null; } };
   };
+  /* Outer outline(s) of the walls of a level — the outside faces of the building, one closed loop (counter-clockwise) per group of joined walls.
+     The centre lines are split where walls meet or cross, the outside of that network is walked, and each edge is pushed out by half its wall thickness.
+     Returns [{ pts, area }] largest first; walls that do not close a loop give nothing. */
+  B.wallOutlines = function (doc, lvl) {
+    var W = walls(doc, lvl).filter(function (w) { return doc.visible ? doc.visible(w) : true; }).map(function (w) { var c = wallLine(w); return { a: c.a, b: c.b, th: w.th, L: c.L }; }).filter(function (w) { return w.L > 1; });
+    if (W.length < 3) return [];
+    /* nodes: ends that touch (within half a wall), an end that stops on another wall (T), and crossings */
+    var nodes = [], nid = function (p, tol) { for (var i = 0; i < nodes.length; i++) if (G.dist(nodes[i], p) <= tol) return i; nodes.push([p[0], p[1]]); return nodes.length - 1; };
+    W.forEach(function (w) { w.cuts = []; });
+    W.forEach(function (w, i) {
+      ["a", "b"].forEach(function (k) {
+        var p = w[k], best = null;
+        W.forEach(function (o, j) { if (j === i) return; var u = G.norm(G.sub(o.b, o.a)), s = G.dot(G.sub(p, o.a), u), q = G.add(o.a, G.mul(u, s)), dd = G.dist(p, q), reach = o.th / 2 + w.th / 2 + 5; if (s > reach && s < o.L - reach && dd <= o.th / 2 + 5 && (!best || dd < best.dd)) best = { dd: dd, q: q, o: o, s: s }; });
+        if (best) { w[k] = best.q; best.o.cuts.push(best.s); }   // T junction: the end sits on the other wall's centre line
+      });
+    });
+    for (var i = 0; i < W.length; i++) for (var j = i + 1; j < W.length; j++) {   // X crossings
+      var a = W[i], b = W[j], x = G.intersect({ k: "L", a: a.a, b: a.b }, { k: "L", a: b.a, b: b.b })[0]; if (!x) continue;
+      var sa = G.dist(a.a, x), sb = G.dist(b.a, x); if (sa > 5 && sa < G.dist(a.a, a.b) - 5) a.cuts.push(sa); if (sb > 5 && sb < G.dist(b.a, b.b) - 5) b.cuts.push(sb);
+    }
+    var adj = {}, link = function (p, q, th) { if (p === q) return; (adj[p] = adj[p] || {})[q] = Math.max(th, (adj[p] || {})[q] || 0); (adj[q] = adj[q] || {})[p] = adj[p][q]; };
+    W.forEach(function (w) {
+      var L = G.dist(w.a, w.b); if (L < 1) return; var u = G.norm(G.sub(w.b, w.a)), tol = Math.max(5, w.th * 0.6), ss = [0].concat(w.cuts.filter(function (s) { return s > 1 && s < L - 1; }).sort(function (x, y) { return x - y; })).concat([L]), prev = null;
+      ss.forEach(function (s, k) { var n = nid(G.add(w.a, G.mul(u, s)), k === 0 || k === ss.length - 1 ? tol : 5); if (prev != null) link(prev, n, w.th); prev = n; });
+    });
+    /* walk the outside of every group of joined walls: start at its lowest node, always take the right-most turn */
+    var seen = {}, out = [], ang = function (p, q) { return Math.atan2(nodes[q][1] - nodes[p][1], nodes[q][0] - nodes[p][0]); };
+    Object.keys(adj).map(Number).sort(function (p, q) { return nodes[p][1] - nodes[q][1] || nodes[p][0] - nodes[q][0]; }).forEach(function (start) {
+      if (seen[start]) return;
+      var comp = [start], st = [start]; seen[start] = 1; while (st.length) { var c = st.pop(); Object.keys(adj[c]).forEach(function (n) { n = +n; if (!seen[n]) { seen[n] = 1; comp.push(n); st.push(n); } }); }
+      if (comp.length < 3) return;
+      var next = function (from, at, back) { var bestN = null, bestA = 9; Object.keys(adj[at]).forEach(function (n) { n = +n; var t = ang(at, n) - back; while (t <= 1e-9) t += G.TAU; while (t > G.TAU + 1e-9) t -= G.TAU; if (t < bestA) { bestA = t; bestN = n; } }); return bestN; };
+      var path = [start], n1 = next(null, start, Math.PI + 1e-6), prevN = start, curN = n1, guard = 0; if (n1 == null) return;
+      while (guard++ < 4 * comp.length + 8) { path.push(curN); var nx = next(prevN, curN, ang(curN, prevN)); if (nx == null) break; if (curN === start && nx === n1) break; prevN = curN; curN = nx; }
+      path.pop();   // the walk ends back on the start node
+      for (var ch = true; ch && path.length > 2;) { ch = false; for (var k = 0; k < path.length; k++) { var n = path.length; if (path[(k + n - 1) % n] === path[(k + 1) % n]) { if (k + 1 < n) path.splice(k, 2); else { path.splice(k, 1); path.splice(0, 1); } ch = true; break; } } }   // dead-end walls: out and back
+      if (path.length < 3) return;
+      /* push each edge out by half its wall (outside is on the right when walking counter-clockwise) */
+      var n = path.length, E = path.map(function (p, k) { var q = path[(k + 1) % n], u = G.norm(G.sub(nodes[q], nodes[p])), d = adj[p][q] / 2; return { p: G.add(nodes[p], [u[1] * d, -u[0] * d]), u: u, d: d }; }), pts = [];
+      for (var k2 = 0; k2 < n; k2++) { var e0 = E[(k2 + n - 1) % n], e1 = E[k2], cr = G.cross(e0.u, e1.u); if (Math.abs(cr) < 1e-6) { if (G.dot(e0.u, e1.u) > 0 && Math.abs(e0.d - e1.d) < 1e-6) continue; pts.push(e1.p); continue; } var x2 = lineX(e0.p, e0.u, e1.p, e1.u); if (x2) pts.push(x2); }
+      var A = G.plineArea(pts); if (pts.length >= 3 && A > 1e4) out.push({ pts: pts, area: A });
+    });
+    return out.sort(function (p, q) { return q.area - p.area; });
+  };
   /* segments for picking / snapping (all plan lines) */
   B.segs = function (e) { var doc = B.ctx.doc; if (!doc) return []; var p = B.plan(doc, e); return p.segs.concat(p.dashed); };
 

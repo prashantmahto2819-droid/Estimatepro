@@ -723,7 +723,9 @@ P.prototype.frame=function(view){
   const c=this.bboxC, R=this.bboxR;
   if(!c) return;
   this.t=[c[0],c[1],c[2]];
-  this.dist=R*2.5;
+  /* far enough that the whole model fits the narrower side of the view (a split pane is often taller than wide) */
+  const asp=(this.W||1)/(this.H||1), hv=Math.tan(this.fov/2), half=Math.atan(Math.min(hv,hv*asp));
+  this.dist=Math.max(R*2.5,R/Math.sin(half)*1.05);
   if(view==='top'){this.yaw=0;this.pitch=Math.PI/2-0.001;}
   else if(view==='front'){this.yaw=0;this.pitch=0;}
   else if(view==='back'){this.yaw=Math.PI;this.pitch=0;}

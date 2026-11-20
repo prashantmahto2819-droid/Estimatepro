@@ -61,7 +61,8 @@
 
   /* ---------- outline helpers: pick points, a closed polyline, or click inside an area ---------- */
   async function outline(ed, what, first) {
-    var p = first != null ? first : await ed.getPoint("First corner of the " + what + " outline", { kw: ["Inside", "Select"] });
+    var p = first != null ? first : await ed.getPoint("First corner of the " + what + " outline", { kw: ["Walls", "Inside", "Select"] });
+    if (p === "Walls") { var wo = B.wallOutlines(ed.doc, cur(ed)); if (!wo.length) throw new Error("The walls of this level do not make a closed outline — draw the corners instead"); if (wo.length > 1) ed.say((wo.length) + " separate buildings found — the largest is used."); return wo[0].pts; }
     if (p === "Select") { var pk = await ed.getEnt("Select a closed polyline / rectangle", { filter: function (e) { return !!CAD.loopOf(e); } }); return G.loopPts(CAD.loopOf(pk.e)); }
     if (p === "Inside") { var q = await ed.getPoint("Click inside the area"); var bd = CAD.boundaryAt(ed.doc, q, ed.isolated, B.roomOpts(ed.doc)); if (!bd) throw new Error("No closed boundary found there"); return G.loopPts(bd.outer); }
     var pts = [p];
@@ -72,7 +73,7 @@
   cmd("SLAB", ["SLB"], async function (ed) {
     var b = ensureBim(ed), kind = ed.slK || "Ceiling", th = ed.slTh || b.slabTh, p;
     while (true) {
-      p = await ed.getPoint("First corner of the " + kind.toLowerCase() + " slab (" + Math.round(th) + " mm) — or Inside / Select", { kw: ["Type", "Thickness", "Inside", "Select"] });
+      p = await ed.getPoint("First corner of the " + kind.toLowerCase() + " slab (" + Math.round(th) + " mm) — or Walls (whole building) / Inside / Select", { kw: ["Walls", "Type", "Thickness", "Inside", "Select"] });
       if (p === "Type") { var k2 = await ed.getKw("Slab type", ["Ceiling", "Floor", "Chajja", "Landing"], kind); if (k2 === "Chajja" && kind !== "Chajja") th = 75; else if (kind === "Chajja" && k2 !== "Chajja") th = b.slabTh; kind = ed.slK = k2; continue; }
       if (p === "Thickness") { th = ed.slTh = await ed.getDist("Slab thickness", { def: th }); continue; }
       break;
@@ -111,7 +112,7 @@
   cmd("ROOF", ["RF"], async function (ed) {
     ensureBim(ed); var kind = ed.rfK || "Gable", mat = ed.rfM || "gi", slope = ed.rfS || 18, over = ed.rfO || 0, p;
     while (true) {
-      p = await ed.getPoint("First corner of the roof outline — " + kind + ", " + (kind === "Flat" ? "RCC" : mat + ", " + slope + "°") + ", overhang " + over + " mm", { kw: ["Type", "Covering", "Slope", "Overhang", "Inside", "Select"] });
+      p = await ed.getPoint("Roof — " + kind + ", " + (kind === "Flat" ? "RCC" : mat + ", " + slope + "°") + ", overhang " + over + " mm. Choose Walls to cover the whole building in one step, or click the first corner", { kw: ["Walls", "Type", "Covering", "Slope", "Overhang", "Inside", "Select"] });
       if (p === "Type") { kind = ed.rfK = await ed.getKw("Roof type", ["Flat", "Shed", "Gable", "Hip"], kind); if (kind === "Flat") mat = "rcc"; else if (mat === "rcc") mat = "gi"; continue; }
       if (p === "Covering") { mat = ed.rfM = (await ed.getKw("Covering", ["gi", "tile", "puf", "rcc"], mat)).toLowerCase(); continue; }
       if (p === "Slope") { slope = ed.rfS = await ed.getAngle("Slope (degrees)", { def: slope }); continue; }
@@ -232,7 +233,7 @@
     ed.doc.add({ t: "land", kind: kind, pts: pts, lvl: cur(ed), layer: lay(ed, "L-LAND") }); ed.say(B.LAND[kind][0] + ": " + (B.area(pts) / 1e6).toFixed(2) + " m²");
   });
   /* ---------- REBAR: add default reinforcement (bars, BBS) to columns, beams, footings and slabs ---------- */
-  cmd("REBAR", ["RF", "BARS"], async function (ed) {
+  cmd("REBAR", ["RB", "BARS"], async function (ed) {   // RF is the roof
     var ids = ed.sel.size ? Array.from(ed.sel) : null;
     if (!ids) { var k = await ed.getKw("Add reinforcement to", ["All", "Select"], "All"); if (k === "Select") ids = await ed.getSel("Select columns, beams, footings or slabs"); }
     var list = ed.doc.d.ents.filter(function (e) { return B.RF_TYPES[e.t] && (!ids || ids.indexOf(e.id) >= 0); }), add = 0, had = 0;

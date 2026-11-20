@@ -191,7 +191,7 @@
   function fmtQ(r) { return r.dim === "V" ? (r.v / 1e9).toFixed(3) + " m³" : r.dim === "A" ? (r.v / 1e6).toFixed(3) + " m²" : r.dim === "L" ? (r.v / 1000).toFixed(3) + " m" : r.dim === "M" ? r.v.toFixed(1) + " kg" : r.v + " nos"; }
 
   /* ----- 3D ----- */
-  function v3host(C) { var body = C.root.querySelector(".cad-body"), h = body.querySelector(".cad-3d"); if (!h) { h = document.createElement("div"); h.className = "cad-3d"; h.innerHTML = "<div class='v3-host'><canvas class='v3-cv'></canvas></div><div class='v3-bar'>" + [["iso", "Iso"], ["top", "Top"], ["front", "Front"], ["right", "Right"], ["back", "Back"], ["left", "Left"]].map(function (v) { return "<button type='button' data-v3view='" + v[0] + "'>" + v[1] + "</button>"; }).join("") + "<button type='button' data-v3t='shadows'>Shadows</button><button type='button' data-v3t='edges'>Edges</button><button type='button' data-v3t='ortho'>Parallel</button><label>Cut <input type='range' min='0' max='100' value='100' data-v3cut='1' aria-label='Section height'></label><select data-v3style='1' aria-label='Visual style'><option value='0'>Realistic</option><option value='1'>Colours</option><option value='2'>White model</option></select><button type='button' data-v3pop='sun' title='Sun position by date and time, sky'>☀ Sun</button><button type='button' data-v3pop='scenes' title='Saved views'>🎬 Scenes</button><button type='button' data-v3render='1' title='High-quality image'>📷 Render</button><button type='button' data-v3rebar='1' aria-pressed='false' title='Show reinforcement bars (concrete see-through)'>⛓ Rebar</button><select data-v3lv='1' aria-label='Levels'><option value='all'>All levels</option><option value='upto'>Up to current level</option></select><button type='button' data-v3png='1'>PNG</button></div><div class='v3-pop' hidden></div>"; body.insertBefore(h, body.querySelector(".cad-side")); } return h; }
+  function v3host(C) { var body = C.root.querySelector(".cad-body"), h = body.querySelector(".cad-3d"); if (!h) { h = document.createElement("div"); h.className = "cad-3d"; h.innerHTML = "<div class='v3-host'><canvas class='v3-cv'></canvas></div><div class='v3-bar'>" + [["iso", "Iso"], ["top", "Top"], ["front", "Front"], ["right", "Right"], ["back", "Back"], ["left", "Left"]].map(function (v) { return "<button type='button' data-v3view='" + v[0] + "'>" + v[1] + "</button>"; }).join("") + "<button type='button' data-v3t='shadows'>Shadows</button><button type='button' data-v3t='edges'>Edges</button><button type='button' data-v3t='ortho'>Parallel</button><label>Cut <input type='range' min='0' max='100' value='100' data-v3cut='1' aria-label='Section height'></label><select data-v3style='1' aria-label='Visual style'><option value='0'>Realistic</option><option value='1'>Colours</option><option value='2'>White model</option></select><button type='button' data-v3pop='paint' title='Pick a material, then click walls, floors, roofs… to paint them'>🪣 Paint</button><button type='button' data-v3pop='sun' title='Sun position by date and time, sky'>☀ Sun</button><button type='button' data-v3pop='scenes' title='Saved views'>🎬 Scenes</button><button type='button' data-v3render='1' title='High-quality image'>📷 Render</button><button type='button' data-v3rebar='1' aria-pressed='false' title='Show reinforcement bars (concrete see-through)'>⛓ Rebar</button><select data-v3lv='1' aria-label='Levels'><option value='all'>All levels</option><option value='upto'>Up to current level</option></select><button type='button' data-v3png='1'>PNG</button></div><div class='v3-pop' hidden></div>"; body.insertBefore(h, body.querySelector(".cad-side")); } return h; }
   function build3d(ed, C) {
     if (!C.v3 || !C.v3.ok) { console.warn("build3d: v3 not ready", C.v3 ? "ok=" + C.v3.ok : "null"); return; }
     var b = bim(ed), opts = { rebar: !!C.v3rebar }; if (C.v3lv === "upto") opts.upTo = B.level(ed.doc.d, b.cur).elev;
@@ -210,6 +210,13 @@
   function sunText(ed, C) { var s = B.sunNow(ed.doc.d, C.sunLive); return s.el < 0 ? "Sun below the horizon (night)" : "Sun: " + Math.round(s.trueAz != null ? s.trueAz : s.az) + "° from north, " + Math.round(s.el) + "° high"; }
   function popHtml(ed, C) {
     var d = ed.doc.d, b = bim(ed), v = C.v3;
+    if (C.v3pop === "paint") {
+      var pl = C.v3paint && B.LOOKS[C.v3paint];
+      return "<h4>🪣 Paint materials</h4><p class='muted small' style='margin:0'>" + (pl ? "<b>" + esc(pl.n) + "</b> — now click walls, floors, slabs, roofs, columns… in the 3D view. A wall is painted on the side you are looking at." : "1. Pick a material below. 2. Click the elements in the 3D view.") + "</p>" +
+        "<label class='small' style='display:flex;flex-direction:row;gap:6px;align-items:center'><input type='checkbox' style='width:auto;flex:none;margin:0' data-v3paintall='1'" + (C.v3paintAll ? " checked" : "") + "> Paint all elements of the same kind (e.g. all outer walls)</label>" +
+        "<div style='max-height:46vh;min-height:90px;overflow:auto;margin:0 -6px;flex:1 1 auto'>" + matLibHtml(C.v3paint || null) + "</div>" +
+        "<div class='row' style='gap:6px;justify-content:flex-end'><button type='button' class='btn ghost sm' data-v3paintclr='1' title='Click elements to give them back the building default material'>Eraser (back to default)</button><button type='button' class='btn sec sm' data-v3pop='paint'>Done</button></div><p class='muted small' style='margin:0'>Looks only — quantities and SOR items do not change. Ctrl+Z undoes a paint.</p>";
+    }
     if (C.v3pop === "sun") {
       var s = Object.assign({}, B.sunCfg(d), C.sunLive || {}), today = new Date().toISOString().slice(0, 10), tb = function (k, l) { return "<button type='button' class='btn ghost sm' data-v3t='" + k + "' aria-pressed='" + String(!!v[k]) + "'>" + l + "</button>"; };
       return "<h4>Sun and sky</h4><label>Sun from<select class='in small' data-v3sm='1'><option value='time'" + (s.mode !== "manual" ? " selected" : "") + ">Date and time (real sun)</option><option value='manual'" + (s.mode === "manual" ? " selected" : "") + ">Set by hand</option></select></label>" +
@@ -224,7 +231,31 @@
     }
     return "";
   }
-  function showPop(ed, C) { var h = C.root.querySelector(".v3-pop"); if (!h) return; if (!C.v3pop) { h.hidden = true; h.innerHTML = ""; return; } h.innerHTML = popHtml(ed, C); h.hidden = false; var bar = C.root.querySelector('.v3-bar'); if (bar) h.style.top = (bar.offsetHeight + 12) + 'px'; }
+  /* paint bucket: which look fields a click on this element sets. A wall is painted on the face towards the camera (outer / inner). */
+  function paintKeys(ed, C, e) {
+    if (e.t === "wall") {
+      if (!e.ext) return [["lookI", "colI"]];
+      var c = B.wallLine(e), mid = [(c.a[0] + c.b[0]) / 2, (c.a[1] + c.b[1]) / 2], all = ed.doc.d.ents.filter(function (x) { return x.t === "wall" && x.lvl === e.lvl; }), cx = 0, cy = 0;
+      all.forEach(function (o) { cx += o.a[0] + o.b[0]; cy += o.a[1] + o.b[1]; }); cx /= 2 * all.length; cy /= 2 * all.length;
+      var eye = C.v3.eye(), inSide = (cx - mid[0]) * c.n[0] + (cy - mid[1]) * c.n[1], camSide = (eye[0] * 1000 - mid[0]) * c.n[0] + (eye[1] * 1000 - mid[1]) * c.n[1];
+      return [inSide * camSide > 0 ? ["lookI", "colI"] : ["lookO", "colO"]];
+    }
+    if (e.t === "door") return [["lookF", "colF"]];
+    if (/^(slab|roof|column|beam|footing|stair|room|window|railing|land)$/.test(e.t)) return [["look", "col"]];
+    return null;
+  }
+  function paintPick(ed, C, id) {
+    var e = id && ed.doc.get(id); if (!e) return; var keys = paintKeys(ed, C, e); C.v3.sel = -1;
+    if (!keys) { U.toast("This element takes its look from its own settings — it cannot be painted here."); return; }
+    var k = keys[0], list = [e];
+    if (C.v3paintAll) list = ed.doc.d.ents.filter(function (x) { if (x.t !== e.t || !ed.doc.editable(x)) return false; if (e.t === "wall") { var kx = x.id === e.id ? keys : (x.ext === e.ext ? [[k[0], k[1]]] : null); return !!kx; } if (e.t === "slab" || e.t === "roof") return x.kind === e.kind; return true; });
+    ed.doc.begin(C.v3paintClr ? "Clear material" : "Paint material");
+    list.forEach(function (x) { var o = CAD.clone(x); if (C.v3paintClr) delete o[k[0]]; else o[k[0]] = C.v3paint; delete o[k[1]]; ed.doc.mod(x.id, o); });
+    ed.doc.commit(); if (ed.sel.size) { ed.sel.clear(); ed.emitSel(); } build3d(ed, C);
+    if (list.length > 1) U.toast((C.v3paintClr ? "Default material on " : "Painted ") + list.length + " elements");
+  }
+  function showPop(ed, C) { var h = C.root.querySelector(".v3-pop"); if (!h) return; if (!C.v3pop) { h.hidden = true; h.innerHTML = ""; return; } h.innerHTML = popHtml(ed, C); h.hidden = false; var bar = C.root.querySelector('.v3-bar'); if (bar) { h.style.top = (bar.offsetHeight + 12) + 'px'; h.style.maxHeight = 'calc(100% - ' + (bar.offsetHeight + 20) + 'px)'; h.style.overflowY = 'auto'; } }
+  function paintCursor(C) { var cv = C.v3 && C.v3.cv; if (cv) cv.style.cursor = C.v3pop === "paint" && (C.v3paint || C.v3paintClr) ? "crosshair" : ""; }
   function commitSun(ed, C, patch) { var lv = Object.assign({}, C.sunLive || {}, patch || {}); C.sunLive = null; setBim(ed, function (x) { x.sun = Object.assign({}, B.SUN0, x.sun || {}, lv); }, "Sun"); applySun(ed, C); }
   function renderDlg(ed, C) {
     var v = C.v3, sizes = [["1280x720", "1280 × 720 (HD)"], ["1920x1080", "1920 × 1080 (Full HD)"], ["2560x1440", "2560 × 1440"], ["3840x2160", "3840 × 2160 (4K)"], ["2480x1754", "A4 landscape 300 dpi (2480 × 1754)"], ["view", "Same as the 3D view"]], st = C.rnd || { size: "1920x1080", soft: true, edges: false }, img = null;
@@ -249,7 +280,7 @@
     C.v3mode = C.v3mode === "split" ? "full" : C.v3mode === "full" ? "off" : "split";
     var body = C.root.querySelector(".cad-body"); body.classList.toggle("v3split", C.v3mode === "split"); body.classList.toggle("v3full", C.v3mode === "full");
     if (C.v3mode !== "off") {
-      var h = v3host(C), fresh = false; if (!C.v3 || C.v3.dead) { fresh = true; C.v3 = new B.View3D(h.querySelector(".v3-host canvas")); if (!C.v3.ok) { console.warn("View3D init failed"); U.toast("The 3D view needs WebGL 2 — it is not available in this browser / device."); return; } C.v3.onPick = function (id) { if (!id) { ed.sel.clear(); ed.emitSel(); return; } var e = ed.doc.get(id); if (!e) return; var lv = e.lvl || (B.hostOf(ed.doc, e) || {}).lvl, bb = bim(ed); if (lv && lv !== bb.cur && !bb.showAll) { setBim(ed, function (x) { x.cur = lv; }, "Level"); } ed.sel = new Set([id]); ed.emitSel(); C.panel = "props"; CAD.ui.renderPanels(); }; }
+      var h = v3host(C), fresh = false; if (!C.v3 || C.v3.dead) { fresh = true; C.v3 = new B.View3D(h.querySelector(".v3-host canvas")); if (!C.v3.ok) { console.warn("View3D init failed"); U.toast("The 3D view needs WebGL 2 — it is not available in this browser / device."); return; } C.v3.onPick = function (id) { if (C.v3pop === "paint" && (C.v3paint || C.v3paintClr)) { paintPick(ed, C, id); return; } if (!id) { ed.sel.clear(); ed.emitSel(); return; } var e = ed.doc.get(id); if (!e) return; var lv = e.lvl || (B.hostOf(ed.doc, e) || {}).lvl, bb = bim(ed); if (lv && lv !== bb.cur && !bb.showAll) { setBim(ed, function (x) { x.cur = lv; }, "Level"); } ed.sel = new Set([id]); ed.emitSel(); C.panel = "props"; CAD.ui.renderPanels(); }; }
       setTimeout(function () { try { C.v3.resize(); build3d(ed, C); ed.resize(); if (fresh) C.v3.frame(); } catch (er) { console.error("3D init:", er); } }, 60);
     } else setTimeout(function () { ed.resize(); }, 30);
     var btn = C.root.querySelector("[data-cad=v3]"); if (btn) btn.textContent = { off: "🧊 3D", split: "🧊 3D: split", full: "🧊 3D: full" }[C.v3mode];
@@ -267,6 +298,7 @@
       if (ds.bimlv) { setBim(ed, function (x) { x.cur = t.value; }, "Level"); ed.sel.clear(); ed.emitSel(); ed.dirty = true; if (C.v3lv === "upto") build3d(ed, C); return; }
       if (ds.bimlvf) { var p = ds.bimlvf.split("|"), v = t.value.trim(); setBim(ed, function (x) { var l = x.levels.filter(function (q) { return q.id === p[0]; })[0]; if (!l) return; if (p[1] === "name") l.name = v || l.name; else { var mm = UN.parseLen(v, "m"); if (mm != null) l[p[1]] = mm; } }, "Level"); CAD.ui.renderPanels(); return; }
       if (ds.bimall) { setBim(ed, function (x) { x.showAll = t.checked; }); return; }
+      if (ds.v3paintall) { C.v3paintAll = t.checked; return; }
       if (ds.bimset) { var k = ds.bimset, val = t.value; setBim(ed, function (x) { var path = k.split("."), o = x; for (var i = 0; i < path.length - 1; i++) o = o[path[i]]; var last = path[path.length - 1]; o[last] = k === "wallMat" ? val : k === "ngl" ? (UN.parseLen(val, "m") != null ? UN.parseLen(val, "m") : o[last]) : (UN.evalNum(val) != null ? UN.evalNum(val) : o[last]); }); return; }
       if (ds.bimchk) { setBim(ed, function (x) { var path = ds.bimchk.split("."); x[path[0]][path[1]] = t.checked; }); return; }
       if (ds.v3cut) { C.v3cutPct = +t.value; applyCut(C); return; }
@@ -286,13 +318,13 @@
       if (ds.v3time || ds.v3az || ds.v3el) { C.sunLive = Object.assign({}, C.sunLive || {}, ds.v3time ? { t: +t.value } : ds.v3az ? { az: +t.value } : { el: +t.value }); applySun(ed, C); var p = C.root.querySelector(".v3-pop"); if (p) { var tt = p.querySelector(".v3-tt"), s2 = p.querySelector(".v3-st"); if (tt && ds.v3time) tt.textContent = hhmm(+t.value); if (s2) s2.textContent = sunText(ed, C); } }
     });
     r.addEventListener("click", function (ev) {
-      var t = ev.target.closest("button"); if (!t) return; var ds = t.dataset;
+      var t = ev.target.closest("button, [data-matpick], [data-bimlookopen]"); if (!t) return; var ds = t.dataset;   // material rows and swatches are not buttons
       if (ds.bimcur) { setBim(ed, function (x) { x.cur = ds.bimcur; }, "Level"); CAD.ui.renderPanels(); return; }
       if (ds.bimadd) { setBim(ed, function (x) { var top = x.levels.slice().sort(function (a, c) { return c.elev - a.elev; })[0], id = "L" + Date.now().toString(36); x.levels.push({ id: id, name: "Level " + (x.levels.length), elev: top.elev + top.h, h: 3200 }); }, "Add level"); CAD.ui.renderPanels(); return; }
       if (ds.bimlvdel) { var keep = bim(ed).levels.filter(function (l) { return l.id !== ds.bimlvdel; }).sort(function (a, c) { return a.elev - c.elev; })[0]; ed.doc.begin("Delete level"); ed.doc.d.ents.filter(function (e) { return e.lvl === ds.bimlvdel; }).forEach(function (e) { ed.doc.mod(e.id, Object.assign(CAD.clone(e), { lvl: keep.id })); }); var bb = CAD.clone(bim(ed)); bb.levels = bb.levels.filter(function (l) { return l.id !== ds.bimlvdel; }); if (bb.cur === ds.bimlvdel) bb.cur = keep.id; ed.doc.set("bim", bb); ed.doc.commit(); CAD.ui.renderPanels(); return; }
       if (ds.v3view && C.v3) { C.v3.frame(ds.v3view); return; }
       if (ds.v3t && C.v3) { if (ds.v3t === "ortho") C.v3.cam.ortho = !C.v3.cam.ortho; else C.v3[ds.v3t] = !C.v3[ds.v3t]; t.setAttribute("aria-pressed", String(ds.v3t === "ortho" ? C.v3.cam.ortho : C.v3[ds.v3t])); C.v3.dirty = true; return; }
-      if (ds.v3pop && C.v3) { C.v3pop = C.v3pop === ds.v3pop ? null : ds.v3pop; showPop(ed, C); return; }
+      if (ds.v3pop && C.v3) { C.v3pop = C.v3pop === ds.v3pop ? null : ds.v3pop; if (C.v3pop !== "paint") C.v3paintClr = false; showPop(ed, C); paintCursor(C); return; }
       if (ds.v3dq) { commitSun(ed, C, { date: ds.v3dq }); showPop(ed, C); return; }
       if (ds.v3render && C.v3) { renderDlg(ed, C); return; }
       if (ds.v3scsave && C.v3) { var nmI = C.root.querySelector("#v3-scname"), nm = (nmI && nmI.value.trim()) || "View " + ((bim(ed).scenes || []).length + 1); var scn = { id: "S" + Date.now().toString(36), name: nm.slice(0, 60), view: C.v3.getView(), cut: C.v3cutPct == null ? 100 : C.v3cutPct, lv: C.v3lv || "all", sun: Object.assign({}, B.sunCfg(ed.doc.d)) }; setBim(ed, function (x) { x.scenes = (x.scenes || []).concat([scn]); }, "Save scene"); U.toast("Scene saved: " + scn.name); showPop(ed, C); return; }
@@ -303,6 +335,8 @@
       if (ds.bimbbs) { bbsDlg(ed, C); return; }
       if (ds.bimlookreset) { setBim(ed, function (x) { x.looks = {}; }, "3D materials"); CAD.ui.renderPanels(); return; }
       if (ds.bimlookopen) { showMatLib(ed, C, ds.bimlookopen, t); return; }
+      if (ds.matpick && C.v3pop === "paint" && t.closest && t.closest(".v3-pop")) { C.v3paint = ds.matpick; C.v3paintClr = false; showPop(ed, C); paintCursor(C); return; }
+      if (ds.v3paintclr) { C.v3paintClr = !C.v3paintClr; if (C.v3paintClr) C.v3paint = null; showPop(ed, C); paintCursor(C); U.toast(C.v3paintClr ? "Eraser: click elements to give them the default material" : "Eraser off"); return; }
       if (ds.matpick) { applyMatPick(ed, C, ds.matpick); return; }
       if (ds.finadd || ds.findel) {
         var kEl = C.root.querySelector("[data-finkind]"), fEl = C.root.querySelector("[data-finface]"), kd = kEl ? kEl.value : "tile", fv = fEl ? fEl.value : "0";
