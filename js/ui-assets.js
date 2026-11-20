@@ -51,7 +51,8 @@
           var hh = (def.h || 60) * (e.sc || 1), zb = B.assetZ(ed.doc, e, def) - L.elev, auto = def.mount === "top" ? "on top of the slab above" : def.mount === "ceiling" ? "under the slab" : def.mount === "wall" ? "on the wall at " + Lm(def.mz || 1200) : "on the floor";
           var lab = { floor: "Bottom of the item above the floor", fceil: "Gap below the false ceiling (0 = touching)", ceiling: "Gap below the slab (0 = touching)", top: "Above the top of the slab" };
           var rm = e.ref === "fceil" ? B.roomAt(ed.doc, e.p, e.lvl, true) : null;
-          return sel("Height is measured from", "ref", e.ref || "", [["", "Automatic — " + auto]].concat(B.MOUNT_REFS)) +
+          return (def.deco ? "<p class='muted small'>🌳 Decoration — for the 3D view and drawings only. It is not counted in Σ Quantities or the estimate.</p>" : sel("Count in the estimate (Σ Quantities)", "noq", e.noq === true ? "true" : "", [["", "Yes"], ["true", "No — show only"]])) +
+            sel("Height is measured from", "ref", e.ref || "", [["", "Automatic — " + auto]].concat(B.MOUNT_REFS)) +
             (e.ref ? f(lab[e.ref] || "Distance", "dz", Lm(e.dz || 0), "len") + (e.ref === "fceil" ? ro("False ceiling here", Lm(B.fceilH(ed.doc, rm, e.lvl)) + " above floor" + (rm ? " (" + (rm.name || "room") + ")" : " — no room with a false ceiling here, standard height used")) : "")
               : f("Height above the level (blank = automatic)", "z", e.z == null ? "" : Lm(e.z), "len", { ph: Lm(zNow) })) +
             ro("Result: bottom / top above floor", Lm(Math.round(zb)) + " / " + Lm(Math.round(zb + hh)));

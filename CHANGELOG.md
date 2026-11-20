@@ -3,6 +3,11 @@
 This file is for the people maintaining the app. It is not published with the site (see `.assetsignore`).
 The text users see is `EP_NOTES` in `js/version.js`.
 
+## 2026.11.20-m
+- `js/bim/assets5.js` (new): category "Decoration (view only)", 45 items, `def.deco = true`. `B.EXT.asset.qty` returns no rows for `def.deco` or `e.noq === true` (property "Count in the estimate").
+- Viewer: `uHead` uniform — a light at the eye position while walking; ambient 0.70 in walk mode.
+- Pending (owner's decision): the 30 quick rates that differ from their analysis (tipper, tanker…). Pending (needs the app's Supabase project): admin switches, WhatsApp picture messages.
+
 ## 2026.11.20-l
 - 3D viewer: `setWalk(on, floorZ, pos)`, `walkMove(f, r, u)`, `walkDir()`; first-person matrices in `mats()`; keys W A S D Q E + arrows on the canvas; `spin` flag (turntable); `hitPoint(x, y)` ray-casts the kept vertex data (`opRaw`, `trRaw`) and snaps to triangle corners; `project(p)`; `onFrame`, `onMeasure` hooks.
 - UI: `v3mode()` in `js/ui-bim.js` — Walk, Measure (SVG overlay `.v3-ov`), move pad `.v3-pad`, message strip `.v3-msg`.

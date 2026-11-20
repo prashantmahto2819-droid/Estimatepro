@@ -45,7 +45,7 @@ in vec4 vC;
 in float vI;
 in vec3 vM;
 uniform vec3 uSun,uEye,uSunCol,uSky,uGnd,uHor;
-uniform float uSel,uCut,uShadow,uSMs,uStyle,uFog,uAmb;
+uniform float uSel,uCut,uShadow,uSMs,uStyle,uFog,uAmb,uHead;
 uniform int uK;
 uniform sampler2D uSM;
 uniform bool uLinear;
@@ -171,6 +171,8 @@ void main(){
   float sh=shadow();
   vec3 amb=mix(uGnd,uSky,N.z*0.5+0.5)*uAmb;
   vec3 lit=amb + uSunCol*diff*sh;
+  /* walk-through: a soft warm light carried by the viewer, so rooms the sun does not reach are still readable */
+  if(uHead>0.01){ vec3 toE=uEye-vP; float dE=length(toE); lit+=vec3(1.0,0.95,0.86)*uHead*(0.35+0.65*max(dot(N,toE/max(dE,1e-4)),0.0))/(1.0+dE*dE*0.012); }
 
   /* specular */
   if(gloss>0.01 && uStyle<0.5){
@@ -852,7 +854,7 @@ P.prototype.render=function(pick){
     D('lp valid='+gl.isProgram(this.lp)+' link='+gl.getProgramParameter(this.lp,gl.LINK_STATUS));
     D('sp valid='+gl.isProgram(this.sp)+' link='+gl.getProgramParameter(this.sp,gl.LINK_STATUS));
     /* check main program uniforms */
-    var mu=this.mp.u, mnames='uVP uL uSun uEye uSunCol uSky uGnd uHor uSel uCut uShadow uSMs uStyle uFog uAmb uK uSM'.split(' ');
+    var mu=this.mp.u, mnames='uVP uL uSun uEye uSunCol uSky uGnd uHor uSel uCut uShadow uSMs uStyle uFog uAmb uHead uK uSM'.split(' ');
     var mloc=[]; for(var i=0;i<mnames.length;i++) mloc.push(mnames[i]+'='+(mu[mnames[i]]!==null&&mu[mnames[i]]!==undefined?'OK':'NULL'));
     D('mp uniforms: '+mloc.join(' '));
     /* check sky program uniforms */
@@ -968,7 +970,7 @@ P.prototype.render=function(pick){
   gl.uniform1f(u.uSMs,this.smSize);
   gl.uniform1f(u.uStyle,this.style);
   gl.uniform1f(u.uFog,this.fog?1:0);
-  gl.uniform1f(u.uAmb,this.walk?0.85:0.50);   /* brighter fill light indoors while walking */
+  gl.uniform1f(u.uAmb,this.walk?0.70:0.50); gl.uniform1f(u.uHead,this.walk?0.9:0.0);   /* brighter fill light indoors while walking */
   gl.uniform1i(u.uK,this.kern);
   if(u.uLinear) gl.uniform1i(u.uLinear,this.linear?1:0);
 
