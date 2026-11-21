@@ -1,6 +1,6 @@
 # Estimate Pro — pending work (kept with the code; not published)
 
-Last updated at version 2026.11.21-q.
+Last updated at version 2026.11.21-z22.
 
 ## A. Waiting for the owner
 1. Server work: (-z21) module switches and a shared library of blocks and hatch patterns are built — the owner has to run `server/shared.sql` once in Supabase, then check that a switched-off module disappears for a normal user. Still open: shared 3D models / cut-outs / material pictures (large files — need Supabase Storage), WhatsApp update messages with real pictures attached (needs a sending gateway; links to the pictures are already added).
@@ -42,10 +42,10 @@ Last updated at version 2026.11.21-q.
 3. (done in -w: up to 5 own material pictures per drawing.) Still open: rotate / offset the picture on a surface, more than 5, a device library of materials.
 4. (done in -x: sky presets and an own background picture.) Still open: the picture does not light the model (no image-based lighting), (-r: sky saved per scene) ground materials by area.
 5. (-u: sky reflection on glass and polished surfaces.) (-z8: water surfaces with ripples.) (-z18: water mirrors what is on screen beside it.) (-z19: ✨ Reflections on glass and polished floors.) Still open: things outside the screen in the reflection, moving water, softer shadows.
-6. (-z10: vehicles turn round and come back.) (-z18: walkers bob with each step.) (-z20: wheels that turn, walkers sway.) Still open: vehicles following a drawn path, limbs that move (needs animated models).
+6. (-z10: vehicles turn round and come back.) (-z18: walkers bob with each step.) (-z20: wheels that turn, walkers sway.) (-z22: DRIVEPATH — a vehicle follows its own route.) Still open: vehicles that slow at corners / stop at gates, limbs that move (needs animated models).
 7. (-z2: CAMPATH + Tour walks the path; Record makes the video.) (-z3: speed, eye height, MP4 first.) Still open: look-at targets, stairs between levels, doors that open on the way.
-8. (done in -z17: cut faces hatched, cut-away parts throw no shadow.) Still open: choose the fill colour, a cut line on plan for the 3D section.
-9. (done in -t: ✥ Move drags placed objects along the floor, ⟲ ⟳ turn by 15°.) (-z5: ▲ ▼ raise / lower, ⧉ copy.) (-z11: doors / windows / openings slide along their wall.) (-z12: walls move square to themselves, joined walls stretch.) (-z13: rooms, slabs and roofs follow the wall.) Still open: snap to walls.
+8. (done in -z17: cut faces hatched, cut-away parts throw no shadow.) (-z22: colour of the cut faces.) Still open: a cut line on plan for the 3D section.
+9. (done in -t: ✥ Move drags placed objects along the floor, ⟲ ⟳ turn by 15°.) (-z5: ▲ ▼ raise / lower, ⧉ copy.) (-z11: doors / windows / openings slide along their wall.) (-z12: walls move square to themselves, joined walls stretch.) (-z13: rooms, slabs and roofs follow the wall.) (-z22: snaps to wall faces within 90 mm.) Still open: snap to walls at an angle, snap to other furniture.
 10. Slanting outlines with inside corners (hip), gable roofs on slanting outlines, (-y: DOME and VAULT roof elements.) (-z2: smooth shading.) (-z5: cone, drum wall.) (-z14: ring beam.) (-z15: pyramid on a many-sided base.)
 
 11. Materials: (done in -y: 386 looks — paint shade card, putty / primer / distemper, enamel, textures, tiles, granite, marble, wood, laminate, metal, glass, ACP; any material of a library item can be swapped in Properties.) Still open: picture-based (photo) materials built in for all users (needs the files above), bump / roughness maps, (-p: search box in Paint) (-r: favourites) (-z6: colour chips) brand shade codes.
@@ -63,7 +63,7 @@ Last updated at version 2026.11.21-q.
 4. (done in -x: ELEVATION, SECTION, VIEWSUPDATE.) (-n: cut parts are filled.) Still open: (-o: overall width and height on every view) (-q: level-to-level chain and door / window size tags) (-z9: finish notes and opening marks on elevations.) Still open: notes per wall where finishes differ, outlines for library items that have no edges, views update on their own.
 5. (done in -r: SCHEDULE — door / window and room finish tables.) (-z5: column, beam and wall schedules.)
 6. (-w: 37 hatch patterns.) (-z15: STONE, RUBBLE.) (-z13: HATCHLOAD reads .pat files) (-z10: bold / italic text) (-z14: Times / Courier fonts) (-z13: block library on the device.) Still open: block library shared between users (needs the server).
-7. (done in -r: PIPE — CPVC, rain-water pipes, conduits, cable trays with lengths and SOR rates.) (-z6: drain pipes and wiring in conduit as runs.) (-z7: trench excavation and refilling.) (-z14: fall and manholes.) Still open: manholes placed at bends and junctions on the plan, deeper manhole sizes by depth. (Fittings are inside the SOR pipe / conduit rates.)
+7. (done in -r: PIPE — CPVC, rain-water pipes, conduits, cable trays with lengths and SOR rates.) (-z6: drain pipes and wiring in conduit as runs.) (-z7: trench excavation and refilling.) (-z14: fall and manholes.) (-z22: manholes at ends, bends and junctions, shown on plan; 120 × 90 cm and extra depth by depth.) Still open: manholes deeper than 2.5 m (circular), drop connections, manhole covers in 3D. (Fittings are inside the SOR pipe / conduit rates.)
 8. (done in -r: north point and scale bar.) (-s: plot boundary from bearings, spot levels.) (-z5: SETBACK, AREASTATEMENT with coverage and FAR.) (-z6: CONTOURS; permitted coverage / FAR check.) (-z7: CUTFILL, height check.) (-z14: joined, rounded contours.)
 
 ## D. Other

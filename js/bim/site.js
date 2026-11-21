@@ -210,6 +210,22 @@
     var len = 0; for (var i = 1; i < pts.length; i++) len += G.dist(pts[i - 1], pts[i]);
     ed.say("Camera path saved (" + m(len) + " m, about " + Math.round(len / 1000 / (B.ensure(ed.doc.d).camSpeed || 1.4)) + " s). Open 3D and press Tour — the camera walks along it at eye height on the current level. Drag its corners to change the route; ● Record makes a video of it.");
   });
+  /* a path for one vehicle: a polyline on layer A-DRIVEPATH tied to it; ▶ Play in 3D drives it along the path */
+  cmd("DRIVEPATH", ["VEHICLEPATH", "DRIVEROUTE"], async function (ed) {
+    var isVeh = function (e) { var df = e && e.t === "asset" && B.ASSET_LIB[e.kind]; return !!(df && !df.cut && df.deco); }, id = ed.sel.size === 1 ? Array.from(ed.sel)[0] : null, v = id != null && ed.doc.get(id);
+    if (!isVeh(v)) { var pk = await ed.getEnt("Click the car, bike or other moving object that should drive along a path", { filter: isVeh }); v = pk && pk.e; } if (!v) return;
+    var L = ed.doc.d.layers; if (!L["A-DRIVEPATH"]) { var Lc = CAD.clone(L); Lc["A-DRIVEPATH"] = { color: 3, lw: 0.25, lt: "DASHED", on: true, lock: false, frz: false, plot: false }; ed.doc.begin("Drive path"); ed.doc.set("layers", Lc); ed.doc.commit(); }
+    var old = ed.doc.d.ents.filter(function (e) { return e.layer === "A-DRIVEPATH" && e.drv === v.id; })[0], spd = (old && +old.spd) || 20, pts = [[v.p[0], v.p[1], 0]], closed = false;
+    while (true) { ed.preview = (function (P) { return function (w) { return [{ t: "pline", pts: P.concat([[w[0], w[1], 0]]), closed: false }]; }; })(pts.slice());
+      var p = await ed.getPoint(pts.length > 1 ? "Next point of the route (Enter to finish)" : "Drive path — the route starts at the vehicle; click the next point (speed " + spd + " km/h)", { opt: true, base: pts[pts.length - 1], kw: pts.length > 2 ? ["Undo", "Close", "Speed", "Remove"] : pts.length > 1 ? ["Undo", "Speed", "Remove"] : ["Speed", "Remove"] });
+      if (p === "Speed") { var sv = await ed.getNum("Speed in km/h (5 = walking pace, 20 = inside a campus, 40 = road)", { def: spd }); if (sv >= 1 && sv <= 150) spd = +sv; continue; }
+      if (p === "Remove") { ed.preview = null; if (old) { ed.doc.begin("Drive path"); ed.doc.del(old.id); ed.doc.commit(); ed.say("The path of this vehicle is removed."); } else ed.say("This vehicle has no path."); return; }
+      if (p === "Undo") { pts.pop(); continue; } if (p === "Close") { closed = true; break; } if (p == null) break; pts.push([p[0], p[1], 0]); }
+    ed.preview = null; if (pts.length < 2) return;
+    ed.doc.begin("Drive path"); if (old) ed.doc.del(old.id); ed.doc.add({ t: "pline", pts: pts, closed: closed, layer: "A-DRIVEPATH", drv: v.id, spd: spd }); ed.doc.commit();
+    var len = 0; for (var i = 1; i < pts.length; i++) len += G.dist(pts[i - 1], pts[i]); if (closed) len += G.dist(pts[pts.length - 1], pts[0]);
+    ed.say("Drive path saved (" + m(len) + " m at " + spd + " km/h). Open 3D and press ▶ Play — the vehicle follows the route, turning at the corners, and " + (closed ? "goes round and round." : "comes back the same way.") + " Drag the corners of the dashed line to change the route; run DRIVEPATH on the vehicle again to redraw or remove it.");
+  });
   cmd("SPOTLEVEL", ["SPOT", "LEVELMARK"], async function (ed) {
     siteLayers(ed); var N = scaleOf(ed.doc.d), v = ed.spotLvl == null ? 0 : ed.spotLvl, cnt = 0;
     while (true) { var p = await ed.getPoint("Click the point (Enter to finish)", { opt: true }); if (p == null) break;

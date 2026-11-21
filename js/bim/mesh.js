@@ -184,7 +184,7 @@
   }
   /* ---------- everything ---------- */
   B.meshes = function (doc, opts) {
-    opts = opts || {}; var d = doc.d, bs = B.ensure(d), out = [], byId = [], ids = {}, maxElev = opts.upTo;
+    opts = opts || {}; var d = doc.d, bs = B.ensure(d), out = [], byId = [], ids = {}, maxElev = opts.upTo, DRV = null;
     B.ctx.doc = doc; var H = { look: function (cat, id, col) { return B.lookFor(d, cat, id, col); }, prism: prism, box: box, boxAlong: boxAlong, noGround: false, cutouts: [], lights: [] }; var LK = function (cat, e) { return B.lookFor(d, cat, e && e.look, e && e.col); };
     d.ents.forEach(function (e) {
       if (!B.is(e) || (opts.only && !opts.only.has(e.id))) return; if (!opts.only && !doc.visible(e) && !opts.allLevels && !(e.lvl && opts.levels)) { var Lr = d.layers[e.layer]; if (Lr && (!Lr.on || Lr.frz)) return; }
@@ -210,7 +210,9 @@
       } catch (er) { console.warn("mesh", e.t, er); }
       var str = B.RF_TYPES && B.RF_TYPES[e.t];   // x-ray for the rebar view: structure faint, the rest almost invisible
       if (opts.rebar) for (var vi = 9; vi < M.v.length; vi += 14) M.v[vi] = Math.min(M.v[vi], str ? 0.18 : 0.06);
-      var mv = e.t === "asset" && +e.walk > 0 && !((B.ASSET_LIB[e.kind] || {}).cut) ? { d: +e.walk * (e.sc || 1) * K, dir: [Math.cos((e.rot || 0) * Math.PI / 180), Math.sin((e.rot || 0) * Math.PI / 180)] } : null;   /* a vehicle that drives along its direction when ▶ Play is on */
+      if (!DRV) { DRV = {}; d.ents.forEach(function (x) { if (x.t === "pline" && x.layer === "A-DRIVEPATH" && x.drv != null && x.pts && x.pts.length > 1) DRV[x.drv] = x; }); }
+      var dpl = e.t === "asset" ? DRV[e.id] : null, mv = e.t === "asset" && (+e.walk > 0 || dpl) && !((B.ASSET_LIB[e.kind] || {}).cut) ? { d: (+e.walk || 0) * (e.sc || 1) * K, rot: (e.rot || 0) * Math.PI / 180, dir: [Math.cos((e.rot || 0) * Math.PI / 180), Math.sin((e.rot || 0) * Math.PI / 180)] } : null;
+      if (mv && dpl) { var pp = dpl.pts.map(function (q) { return [q[0] * K, q[1] * K]; }); if (dpl.closed) pp.push(pp[0]); var cm = [0]; for (var pi = 1; pi < pp.length; pi++) cm.push(cm[pi - 1] + Math.hypot(pp[pi][0] - pp[pi - 1][0], pp[pi][1] - pp[pi - 1][1])); mv.path = pp; mv.cum = cm; mv.len = cm[cm.length - 1]; mv.loop = !!dpl.closed; mv.spd = Math.max(0.3, (+dpl.spd || 20) / 3.6); }   /* a path drawn for it with DRIVEPATH */   /* a vehicle that drives along its direction when ▶ Play is on */
       out.push({ id: e.id, idx: idx + 1, v: M.v, e: (opts.rebar && !str) || mv ? [] : M.e, mv: mv });
     });
     if (opts.rebar && B.rebarMesh) B.rebarMesh(doc, function (id) { return new Mesh(ids[id]); }, { filter: function (e) { return !!ids[e.id]; } }).forEach(function (M) { out.push({ id: byId[M.id - 1], idx: M.id, v: M.v, e: [] }); });

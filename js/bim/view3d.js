@@ -27,7 +27,8 @@ layout(location=2)in vec4 aC;
 layout(location=3)in float aI;
 layout(location=4)in vec3 aM;
 uniform mat4 uVP,uL;
-uniform vec3 uOff,uFlip;
+uniform vec3 uOff;
+uniform vec4 uFlip;   /* a moving vehicle: on, its centre on plan, the angle it has turned */
 uniform vec4 uWh;   /* a driving vehicle: wheel angle, its direction on plan, on */
 out vec3 vP,vN,vL;
 out vec4 vC;
@@ -36,7 +37,7 @@ out vec3 vM;
 void main(){
   vec3 p=aP, nn=aN;
   if(uWh.w>0.5 && aM.x>17.5 && aM.x<18.5){ float c=cos(uWh.x), s=sin(uWh.x); vec2 q=aM.yz, r=vec2(q.x*c-q.y*s,q.x*s+q.y*c); p.xy+=uWh.yz*(r.x-q.x); p.z+=r.y-q.y; float nd=dot(nn.xy,uWh.yz); vec2 nr=vec2(nd*c-nn.z*s,nd*s+nn.z*c); nn.xy+=uWh.yz*(nr.x-nd); nn.z=nr.y; }   /* wheels turn about their axle */
-  if(uFlip.x>0.5){ p.xy=2.0*uFlip.yz-p.xy; nn.xy=-nn.xy; }   /* a vehicle on its way back: turned half round about its own centre */
+  if(uFlip.x>0.5){ float fc=cos(uFlip.w), fs=sin(uFlip.w); vec2 fq=p.xy-uFlip.yz; p.xy=uFlip.yz+vec2(fq.x*fc-fq.y*fs,fq.x*fs+fq.y*fc); nn.xy=vec2(nn.x*fc-nn.y*fs,nn.x*fs+nn.y*fc); }   /* a vehicle on its way back: turned half round about its own centre */
   p+=uOff;
   vP=p; vN=nn; vC=aC; vI=aI; vM=aM;
   vL=(uL*vec4(p,1.0)).xyz;
@@ -52,6 +53,7 @@ in float vI;
 in vec3 vM;
 uniform vec3 uSun,uEye,uSunCol,uSky,uGnd,uHor;
 uniform float uSel,uCut,uShadow,uSMs,uStyle,uFog,uAmb,uHead,uXr,uSecFill;
+uniform vec3 uSecCol;
 uniform vec4 uBox;
 uniform vec4 uPL[32];   /* light fittings: xyz + strength */
 uniform vec3 uPLc[32];  /* colour of each fitting's light */
@@ -253,7 +255,7 @@ void main(){
   }
 
   /* section fill: where the cut opens a solid, its inside faces are seen — show them as hatched cut material */
-  if(!gl_FrontFacing && uSecFill>0.5 && alpha>0.9 && pi!=10 && pi!=17){ float hh=step(0.55,fract((vP.x+vP.y+vP.z)*7.0)); col=mix(vec3(0.20,0.19,0.19),vec3(0.46,0.42,0.40),hh)*(uStyle>1.5?1.6:1.0); }
+  if(!gl_FrontFacing && uSecFill>0.5 && alpha>0.9 && pi!=10 && pi!=17){ float hh=step(0.55,fract((vP.x+vP.y+vP.z)*7.0)); col=mix(uSecCol*0.44,uSecCol,hh)*(uStyle>1.5?1.6:1.0); }
 
   /* selection highlight */
   if(uSel>0.5 && abs(vI-uSel)<0.5) col=mix(col,vec3(0.2,0.6,1.0),0.35);
@@ -354,9 +356,10 @@ const SVS=`#version 300 es
 precision highp float;
 layout(location=0)in vec3 aP;
 uniform mat4 uVP;
-uniform vec3 uOff,uFlip;
+uniform vec3 uOff;
+uniform vec4 uFlip;
 out vec3 vW;
-void main(){vec3 p=aP; if(uFlip.x>0.5) p.xy=2.0*uFlip.yz-p.xy; vW=p+uOff; gl_Position=uVP*vec4(vW,1.0);}`;
+void main(){vec3 p=aP; if(uFlip.x>0.5){ float fc=cos(uFlip.w), fs=sin(uFlip.w); vec2 fq=p.xy-uFlip.yz; p.xy=uFlip.yz+vec2(fq.x*fc-fq.y*fs,fq.x*fs+fq.y*fc); } vW=p+uOff; gl_Position=uVP*vec4(vW,1.0);}`;
 const SFS=`#version 300 es
 precision highp float;
 in vec3 vW;
@@ -1129,7 +1132,7 @@ P.prototype.render=function(pick){
   gl.uniform3fv(u.uHor,lt.hor||[0.75,0.78,0.82]);
   gl.uniform1f(u.uSel,this.sel);
   gl.uniform1f(u.uCut,this.cut);
-  if(this._sfLoc===undefined) this._sfLoc=gl.getUniformLocation(this.mp,'uSecFill'); gl.uniform1f(this._sfLoc,(this.cut<1e7||this.box)&&this.secFill!==false&&!this.xray?1:0);
+  if(this._sfLoc===undefined) this._sfLoc=gl.getUniformLocation(this.mp,'uSecFill'); gl.uniform1f(this._sfLoc,(this.cut<1e7||this.box)&&this.secFill!==false&&!this.xray?1:0); if(this._secCLoc===undefined) this._secCLoc=gl.getUniformLocation(this.mp,"uSecCol"); gl.uniform3fv(this._secCLoc,this.secCol||[0.46,0.42,0.40]);
   gl.uniform4f(u.uBox,-1e9,1e9,-1e9,1e9); gl.uniform1f(u.uXr,1.0);   /* the ground is never cut or made see-through */
   gl.uniform1f(u.uShadow,this.shadows?1:0);
   gl.uniform1f(u.uSMs,this.smSize);
@@ -1559,13 +1562,25 @@ P.prototype.bind=function(){
 P.prototype._drawMovers=function(prog,full){
   const gl=this.gl; gl.useProgram(prog); prog._off=prog._off||gl.getUniformLocation(prog,'uOff'); if(prog._flip===undefined) prog._flip=gl.getUniformLocation(prog,'uFlip');
   for(const m of this.movers){
-    let d=0, back=false; if(this.play&&m.mv.d>0.5){ const T=m.mv.d/5.5, ph=(((this._playT||0)+m.seed)%(2*T)); back=ph>T; d=back?(2*T-ph)*5.5:ph*5.5; }   /* about 20 km/h to the end of its run, turns round and comes back */
     if(!m.piv){ let x0=Infinity,x1=-Infinity,y0=Infinity,y1=-Infinity; const V=m.raw; if(V){ for(let i=0;i<V.length;i+=ST){ if(V[i]<x0)x0=V[i]; if(V[i]>x1)x1=V[i]; if(V[i+1]<y0)y0=V[i+1]; if(V[i+1]>y1)y1=V[i+1]; } m.piv=[(x0+x1)/2,(y0+y1)/2]; } else m.piv=[0,0]; }
-    if(prog._flip) gl.uniform3f(prog._flip,back&&m.raw?1:0,m.piv[0],m.piv[1]);
-    if(prog._wh===undefined) prog._wh=gl.getUniformLocation(prog,'uWh'); if(prog._wh){ const T2=m.mv.d/5.5, ph2=this.play&&m.mv.d>0.5?(((this._playT||0)+m.seed)%(2*T2)):0; gl.uniform4f(prog._wh,-(ph2*5.5)/0.33,m.mv.dir[0],m.mv.dir[1],this.play&&m.mv.d>0.5?1:0); }
-    gl.uniform3f(prog._off,m.mv.dir[0]*d,m.mv.dir[1]*d,0); gl.bindVertexArray(full?m.vF:m.vS); gl.drawArrays(gl.TRIANGLES,0,m.n);
+    if(prog._wh===undefined) prog._wh=gl.getUniformLocation(prog,'uWh');
+    const PT=m.mv.path, go=this.play&&(PT?m.mv.len>0.5:m.mv.d>0.5), t=(this._playT||0)+(PT?0:m.seed);
+    if(PT&&go){   /* drives along the path drawn for it: there and back, or round and round on a closed path */
+      const v=m.mv.spd||5.5, Lp=m.mv.len, cum=m.mv.cum; let s=(t*v)%(m.mv.loop?Lp:2*Lp), back=false; if(s>Lp){ back=true; s=2*Lp-s; }
+      const at=function(q){ if(m.mv.loop) q=((q%Lp)+Lp)%Lp; else q=Math.max(0,Math.min(Lp,q)); let k=1; while(k<cum.length-1&&cum[k]<q) k++; const f=(q-cum[k-1])/((cum[k]-cum[k-1])||1); return [PT[k-1][0]+(PT[k][0]-PT[k-1][0])*f,PT[k-1][1]+(PT[k][1]-PT[k-1][1])*f]; };
+      const c=at(s), a=at(s-1.2), b=at(s+1.2); let hd=Math.hypot(b[0]-a[0],b[1]-a[1])>0.01?Math.atan2(b[1]-a[1],b[0]-a[0]):m.mv.rot; if(back) hd+=Math.PI;
+      if(prog._flip) gl.uniform4f(prog._flip,1,m.piv[0],m.piv[1],hd-m.mv.rot);
+      if(prog._wh) gl.uniform4f(prog._wh,-(t*v)/0.33,m.mv.dir[0],m.mv.dir[1],1);
+      gl.uniform3f(prog._off,c[0]-m.piv[0],c[1]-m.piv[1],0);
+    } else {
+      let d=0, back=false; if(go){ const T=m.mv.d/5.5, ph=(t%(2*T)); back=ph>T; d=back?(2*T-ph)*5.5:ph*5.5; }   /* about 20 km/h to the end of its run, turns round and comes back */
+      if(prog._flip) gl.uniform4f(prog._flip,back&&m.raw?1:0,m.piv[0],m.piv[1],Math.PI);
+      if(prog._wh){ const T2=m.mv.d/5.5, ph2=go?(t%(2*T2)):0; gl.uniform4f(prog._wh,-(ph2*5.5)/0.33,m.mv.dir[0],m.mv.dir[1],go?1:0); }
+      gl.uniform3f(prog._off,m.mv.dir[0]*d,m.mv.dir[1]*d,0);
+    }
+    gl.bindVertexArray(full?m.vF:m.vS); gl.drawArrays(gl.TRIANGLES,0,m.n);
   }
-  if(prog._flip) gl.uniform3f(prog._flip,0,0,0); if(prog._wh) gl.uniform4f(prog._wh,0,1,0,0);
+  if(prog._flip) gl.uniform4f(prog._flip,0,0,0,0); if(prog._wh) gl.uniform4f(prog._wh,0,1,0,0);
   gl.uniform3f(prog._off,0,0,0); gl.bindVertexArray(null);
 };
 
