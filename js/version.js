@@ -1,5 +1,5 @@
 /* App version + "what's new" — the super admin is offered to send this on WhatsApp after each upload. Change both with every release. */
-window.EP_VER = "2026.11.21-e";
-window.EP_NOTES = "• Furniture built to your size (Library → Furniture, items marked “any size”): type the width / depth / height in Properties and it is rebuilt — a longer sofa gets more seats, a wider bed more pillows, a longer dining table more chairs\n• Beds (plain, upholstered, storage, four-poster, low, bunk), sofas (with arms, armless, Chesterfield, L-shape), dining sets and tables (wood, marble, glass, granite tops), office desk, reception counter with LED, bench, wall shelves, mirrors, curtains and blinds, rugs\n• Wardrobes and units can show their inside: Properties → Show → Inside — shelves, hanging rail with clothes, drawers";
+window.EP_VER = "2026.11.21-f";
+window.EP_NOTES = "• Arched doors, windows and openings: select one → Properties → Head (top) shape — round arch or flat arch. The height is to the top of the arch; doors and windows get a glazed fan-light with an arched frame";
 /* pictures of this update: [file in /updates, caption]. Shown to the owner with the WhatsApp "what's new" message. */
-window.EP_PICS = [["updates/e2-furniture.jpg", "Beds, sofas and dining sets built to size; a wardrobe showing its inside"]];
+window.EP_PICS = [["updates/f2-archdoor.jpg", "Arched door with fan-light, arched opening and arched window"]];

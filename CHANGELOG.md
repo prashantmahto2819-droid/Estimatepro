@@ -3,6 +3,9 @@
 This file is for the people maintaining the app. It is not published with the site (see `.assetsignore`).
 The text users see is `EP_NOTES` in `js/version.js`.
 
+## 2026.11.21-f
+- Arched heads: `door / window / opening .head` = "arch" (rise = w / 2) or "seg" (rise = 0.2 w). In `hosted()` (`mesh.js`) the height `h` is to the crown; frame, leaf and panes stop at the springing; the corners are filled with the wall's own face looks through the full thickness; doors / windows get an arched frame band, glass fan and radial bars. Wall quantity still deducts the full w × h rectangle.
+
 ## 2026.11.21-e
 - `js/bim/assets9.js` (new): size-driven furniture. `pm(id, name, cat, w, d, h, key, vars, build, o)` — `build(w, d, h, e)` returns `{parts, sym}` for the item's own `W`, `D`, `HH`; `def.param = true` (no stretch: `fac` returns null), `def.vars` + entity `var` = design. 14 items (`*_p`).
 - Units: entity `open: true` draws the inside of shutter rows instead of the shutters (`unitMesh`).
