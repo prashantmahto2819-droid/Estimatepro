@@ -3,6 +3,12 @@
 This file is for the people maintaining the app. It is not published with the site (see `.assetsignore`).
 The text users see is `EP_NOTES` in `js/version.js`.
 
+## 2026.11.21-z15
+- **Fix** `dxf.js`: building elements were never written to DXF (`ent()` had no case for them) — now their plan (`B.plan` segs and dashed) goes out as LINE / ARC / CIRCLE, DASHED linetype added to the table.
+- `dxf.js` `opts.realDims` (menu "Export DXF with real dimensions (trial)"): anonymous blocks `*Dn` + DIMENSION entities for linear / aligned dimensions. Reads back in our own importer; not yet checked in AutoCAD.
+- `site.js`: type `steps` (STEPS; `B.stepsInfo`; qty brick / pcc_floor / rcc_slab), ramp `cross` (cross fall).
+- `roofs2.js`: dome `shape: "pyr"` with `sides`. `hatch.js`: STONE, RUBBLE.
+
 ## 2026.11.21-z14
 - `runs.js`: drain `slope` (1 in N → average trench depth) and `mh` (spacing in m → `manhole` rows, CPWD 19.7.1.1); Properties show the depths at both ends.
 - `site.js` CONTOURS: pieces chained end to end per level, two passes of corner cutting, written as polylines.

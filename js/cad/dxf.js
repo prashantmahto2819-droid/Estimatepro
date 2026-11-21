@@ -231,7 +231,7 @@
     w(9, "$LIMMIN"); w(10, n(ext[0])); w(20, n(ext[1])); w(9, "$LIMMAX"); w(10, n(ext[2])); w(20, n(ext[3])); w(9, "$LUNITS"); w(70, 2); w(9, "$DIMSCALE"); w(40, n(dimSt.sc || 1)); w(0, "ENDSEC");
     // tables
     w(0, "SECTION"); w(2, "TABLES");
-    var lts = { CONTINUOUS: [] }; Object.keys(d.layers).forEach(function (k) { var lt = d.layers[k].lt || "CONTINUOUS"; lts[lt] = CAD.LTYPES[lt] || []; }); d.ents.forEach(function (e) { if (e.lt) lts[e.lt] = CAD.LTYPES[e.lt] || []; });
+    var lts = { CONTINUOUS: [] }; Object.keys(d.layers).forEach(function (k) { var lt = d.layers[k].lt || "CONTINUOUS"; lts[lt] = CAD.LTYPES[lt] || []; }); d.ents.forEach(function (e) { if (e.lt) lts[e.lt] = CAD.LTYPES[e.lt] || []; }); if (EP.bim && EP.bim.TYPES && d.ents.some(function (e) { return EP.bim.TYPES[e.t]; })) lts.DASHED = CAD.LTYPES.DASHED || [6, 3];
     w(0, "TABLE"); w(2, "LTYPE"); w(70, Object.keys(lts).length);
     Object.keys(lts).forEach(function (k) { var pat = lts[k], tot = pat.reduce(function (a, b) { return a + b; }, 0); w(0, "LTYPE"); w(2, k); w(70, 0); w(3, k === "CONTINUOUS" ? "Solid line" : k); w(72, 65); w(73, pat.length); w(40, n(tot)); pat.forEach(function (x, i) { w(49, n(i % 2 ? -x : x)); }); });
     w(0, "ENDTAB");
@@ -242,9 +242,15 @@
     // blocks
     w(0, "SECTION"); w(2, "BLOCKS");
     Object.keys(d.blocks || {}).forEach(function (bn) { var B = d.blocks[bn], nm = bn.replace(/^\*/, "A$"); w(0, "BLOCK"); w(8, "0"); w(2, nm); w(70, 0); w(10, n(B.base[0])); w(20, n(B.base[1])); w(30, 0); w(3, nm); B.ents.forEach(function (e) { ent(e); }); w(0, "ENDBLK"); w(8, "0"); });
+    /* real dimensions (optional): each linear / aligned dimension gets its own anonymous block *Dn and a DIMENSION entity that points to it */
+    var rd = {}, rdN = 0; if (opts.realDims) d.ents.forEach(function (e) { if (e.t !== "dim" || (e.kind !== "lin" && e.kind !== "ali")) return; if (opts.visibleOnly && doc.visible && !doc.visible(e)) return; var g = G.dimGeom(Object.assign({ st: dimSt, sc: dimSt.sc }, e)); if (!g || !g.lines || g.lines.length < 3) return; var nm = "*D" + (++rdN); rd[e.id] = { name: nm, g: g };
+      w(0, "BLOCK"); w(8, "0"); w(2, nm); w(70, 1); w(10, 0); w(20, 0); w(30, 0); w(3, nm); ent(e); w(0, "ENDBLK"); w(8, "0"); });
     w(0, "ENDSEC");
     w(0, "SECTION"); w(2, "ENTITIES");
-    d.ents.forEach(function (e) { if (opts.visibleOnly && doc.visible && !doc.visible(e)) return; ent(e); });
+    d.ents.forEach(function (e) { if (opts.visibleOnly && doc.visible && !doc.visible(e)) return;
+      var R = rd[e.id]; if (R) { var g = R.g, dl2 = g.lines[2], ang = Math.atan2(dl2[1][1] - dl2[0][1], dl2[1][0] - dl2[0][0]) * 180 / Math.PI, txt = e.txt || (CAD.dimText ? CAD.dimText(doc, e, g.val) : String(Math.round(g.val)));
+        w(0, "DIMENSION"); common(e); w(2, R.name); w(10, n(dl2[1][0])); w(20, n(dl2[1][1])); w(30, 0); w(11, n(g.tp[0])); w(21, n(g.tp[1])); w(31, 0); w(70, (e.kind === "ali" ? 1 : 0) + 32); w(1, String(txt)); w(13, n(e.a[0])); w(23, n(e.a[1])); w(33, 0); w(14, n(e.b[0])); w(24, n(e.b[1])); w(34, 0); if (e.kind !== "ali") w(50, n(((ang % 180) + 180) % 180)); return; }
+      ent(e); });
     w(0, "ENDSEC"); w(0, "EOF");
     function poly(pts, closed, e) { w(0, "POLYLINE"); common(e); w(66, 1); w(10, 0); w(20, 0); w(30, 0); w(70, closed ? 1 : 0); if (e.w) { w(40, n(e.w)); w(41, n(e.w)); } pts.forEach(function (p) { w(0, "VERTEX"); w(8, (e.layer || "0")); w(10, n(p[0])); w(20, n(p[1])); w(30, 0); if (p[2]) w(42, n(p[2])); }); w(0, "SEQEND"); w(8, e.layer || "0"); }
     function text(p, s, h, rot, al, e) {
@@ -279,7 +285,11 @@
           text(g.tp, e.txt || CAD.dimText ? (e.txt || CAD.dimText(doc, e, g.val)) : String(Math.round(g.val)), (dimSt.th || 2.5) * (dimSt.sc || 1), g.tr * 180 / Math.PI, "cb", e);
           break;
         case "image": poly(G.rectPts(e).map(function (p) { return [p[0], p[1], 0]; }), true, e); break;
-        default: break;
+        default:   /* building elements (walls, doors, slabs, stairs, library items…): their plan as lines and arcs */
+          if (EP.bim && EP.bim.TYPES && EP.bim.TYPES[e.t] && EP.bim.plan && doc.d) { var pl = null; try { pl = EP.bim.plan(doc, e); } catch (er) {} if (!pl) break;
+            var seg = function (sg, lt) { var e2 = lt ? Object.assign({}, e, { lt: lt }) : e; if (sg.k === "L") { w(0, "LINE"); common(e2); w(10, n(sg.a[0])); w(20, n(sg.a[1])); w(30, 0); w(11, n(sg.b[0])); w(21, n(sg.b[1])); w(31, 0); } else if (sg.full) { w(0, "CIRCLE"); common(e2); w(10, n(sg.c[0])); w(20, n(sg.c[1])); w(30, 0); w(40, n(sg.r)); } else { var a1 = sg.s * 180 / Math.PI, a2 = sg.e * 180 / Math.PI; w(0, "ARC"); common(e2); w(10, n(sg.c[0])); w(20, n(sg.c[1])); w(30, 0); w(40, n(sg.r)); w(50, n(((a1 % 360) + 360) % 360)); w(51, n(((a2 % 360) + 360) % 360)); } };
+            (pl.segs || []).forEach(function (sg) { seg(sg); }); (pl.dashed || []).forEach(function (sg) { seg(sg, "DASHED"); }); }
+          break;
       }
     }
     function arrow(p, dir, len, e) { var b = G.add(p, G.mul(dir, len)), nn = G.mul(G.perp(dir), len / 6), q1 = G.add(b, nn), q2 = G.sub(b, nn); w(0, "SOLID"); common(e); w(10, n(p[0])); w(20, n(p[1])); w(30, 0); w(11, n(q1[0])); w(21, n(q1[1])); w(31, 0); w(12, n(q2[0])); w(22, n(q2[1])); w(32, 0); w(13, n(q2[0])); w(23, n(q2[1])); w(33, 0); }

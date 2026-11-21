@@ -38,6 +38,8 @@
     INSUL: { d: "Insulation", f: [[0, 0, 0, 0, 9.525], [0, 0, 3.175, 0, 9.525, 3.175, -3.175], [0, 0, 6.35, 0, 9.525, 3.175, -3.175]] },
     GRASS: { d: "Grass / lawn", f: [[90, 0, 0, 17.9605, 17.9605, 4.7625, -31.1585], [45, 0, 0, 0, 25.4, 4.7625, -20.6375], [135, 0, 0, 0, 25.4, 4.7625, -20.6375]] },
     WATER: { d: "Water (broken horizontal lines)", f: [[0, 0, 0, 0, 6, 10, -3, 4, -3], [0, 5, 3, 0, 6, 6, -14]] },
+    STONE: { d: "Coursed stone masonry (elevation) — courses with broken joints", f: [[0, 0, 0, 0, 10], [90, 0, 0, 10, 17, 10, -10], [90, 6, 0, 10, 23, 10, -30]] },
+    RUBBLE: { d: "Random rubble / stone pitching (irregular joints)", f: [[12, 0, 0, 7, 13, 9, -5], [78, 3, 2, 9, 11, 7, -6], [-35, 5, 1, 8, 12, 6, -8], [58, 1, 6, 11, 14, 5, -9]] },
     PCC: { d: "Plain concrete / lean concrete (sparse dots and dashes)", f: [[0, 0, 0, 5, 7, 0, -9], [60, 2, 3, 6, 8, 1.2, -12], [120, 6, 1, 7, 9, 1, -13]] }
   };
   /* hatch entity → world line segments [[x1,y1,x2,y2]…] and dot points (capped) */

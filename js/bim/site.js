@@ -19,7 +19,7 @@
     qty: function (doc, e) { var bs = B.ensure(doc.d), z = e.lvl ? B.below(doc.d, e.lvl) : "super", sl = slopeLen(e), w = e.w || 1500, th = e.th || 150, I = B.rampInfo(e), st = (bs.steel && bs.steel.slab) || 90;
       var nm = (I.ratio ? "RCC ramp 1 in " + (Math.round(I.ratio * 10) / 10) : "RCC slab") + ", " + Math.round(th) + " mm";
       return [{ k: "rcc_slab", dim: "V", v: sl * w * th, label: nm, f: m(sl) + " (on slope) × " + m(w) + " × " + m(th), z: z }, { k: "shut_slab", dim: "A", v: sl * w + 2 * sl * th, label: "Shuttering — ramp / sloping slab", f: m(sl) + " × " + m(w) + " + sides", z: z }, { k: "steel_slab", dim: "M", v: sl * w * th / 1e9 * st, label: "Reinforcement — ramp (thumb rule " + st + " kg/m³)", f: "", z: z }].concat(+e.kerb > 0 ? [{ k: "rcc_slab", dim: "V", v: 2 * sl * 150 * (+e.kerb), label: "RCC kerbs on both edges of the ramp, 150 × " + Math.round(+e.kerb) + " mm", f: "2 × " + m(sl) + " × 0.15 × " + m(+e.kerb), z: z }, { k: "shut_slab", dim: "A", v: 2 * sl * 2 * (+e.kerb), label: "Shuttering — ramp kerbs", f: "2 kerbs × 2 faces × " + m(sl) + " × " + m(+e.kerb), z: z }] : []).concat(+e.rail > 0 ? [{ k: "railing", dim: "L", v: 2 * sl, label: "Railing on both edges of the ramp, " + Math.round(+e.rail) + " mm high", f: "2 × " + m(sl) + " m run", z: z }] : []); },
-    mesh: function (M, doc, e, H) { var Lv = B.level(doc.d, e.lvl), z0 = (Lv ? Lv.elev : 0) + (e.z || 0), th = e.th || 150, r = ccwQ(corners(e), [z0, z0 + (e.rise || 0), z0 + (e.rise || 0), z0]), P = r[0], Z = r[1], col = H.look("slab", e.look, e.col);
+    mesh: function (M, doc, e, H) { var Lv = B.level(doc.d, e.lvl), z0 = (Lv ? Lv.elev : 0) + (e.z || 0), th = e.th || 150, cf = +e.cross || 0, r = ccwQ(corners(e), [z0, z0 + (e.rise || 0), z0 + (e.rise || 0) + cf, z0 + cf]), P = r[0], Z = r[1], col = H.look("slab", e.look, e.col);
       var T = P.map(function (p, i) { return [p[0] * K, p[1] * K, Z[i] * K]; }), Bt = P.map(function (p, i) { return [p[0] * K, p[1] * K, (Z[i] - th) * K]; });
       M.tri(T[0], T[1], T[2], col); M.tri(T[0], T[2], T[3], col); M.tri(Bt[0], Bt[2], Bt[1], col); M.tri(Bt[0], Bt[3], Bt[2], col);
       for (var i = 0; i < 4; i++) { var j = (i + 1) % 4; M.quad(Bt[i], Bt[j], T[j], T[i], col); M.edge(T[i], T[j]); M.edge(Bt[i], Bt[j]); M.edge(T[i], Bt[i]); }
@@ -34,6 +34,32 @@
           for (var i = 0; i < np; i++) { var f = i / (np - 1), pp = G.add(s0, G.mul(G.sub(s1, s0), f)), zz = z0 + rs * f + base; H.box(M, pp, 40, 40, ang, zz, zz + rh, rc); }
           bar(s0, z0 + base + rh, s1, z0 + rs + base + rh, 50); bar(s0, z0 + base + rh * 0.5, s1, z0 + rs + base + rh * 0.5, 30); }); } }
   };
+  /* ---------- steps: a solid flight from the lower floor up to a platform, verandah or raised room ----------
+     { t:"steps", a:[x,y] (middle of the first riser), dir (degrees, the way you walk up), w, rise, tread, lvl, z, look } */
+  B.TYPES.steps = 1;
+  B.stepsInfo = function (e) { var rise = Math.max(50, e.rise || 450), n = Math.max(1, Math.round(rise / 150)), r = rise / n, t = e.tread || 300; return { n: n, r: r, t: t, len: n * t, w: e.w || 1200, vol: (e.w || 1200) * t * r * n * (n + 1) / 2 }; };
+  function stepsFrame(e) { var a = (e.dir || 0) * Math.PI / 180, u = [Math.cos(a), Math.sin(a)]; return { u: u, n: [-u[1], u[0]] }; }
+  B.EXT.steps = {
+    plan: function (doc, e) { var I = B.stepsInfo(e), F = stepsFrame(e), hw = I.w / 2, segs = [], pt = function (s, y) { return [e.a[0] + F.u[0] * s + F.n[0] * y, e.a[1] + F.u[1] * s + F.n[1] * y]; };
+      for (var i = 0; i <= I.n; i++) segs.push({ k: "L", a: pt(i * I.t, -hw), b: pt(i * I.t, hw) }); segs.push({ k: "L", a: pt(0, -hw), b: pt(I.len, -hw) }); segs.push({ k: "L", a: pt(0, hw), b: pt(I.len, hw) });
+      var t0 = pt(I.t * 0.3, 0), t1 = pt(I.len - I.t * 0.3, 0), hd = Math.min(200, I.t * 0.6); segs.push({ k: "L", a: t0, b: t1 }); segs.push({ k: "L", a: t1, b: pt(I.len - I.t * 0.3 - hd, hd / 2.5) }); segs.push({ k: "L", a: t1, b: pt(I.len - I.t * 0.3 - hd, -hd / 2.5) });
+      return { segs: segs, fill: [], dashed: [] }; },
+    labels: function () { return []; },
+    xform: function (e, M) { var o = JSON.parse(JSON.stringify(e)), k = Math.sqrt(Math.abs(M[0] * M[3] - M[1] * M[2])) || 1, F = stepsFrame(e), q = G.mApply(M, [e.a[0] + F.u[0] * 1000, e.a[1] + F.u[1] * 1000]); o.a = G.mApply(M, e.a); o.dir = Math.atan2(q[1] - o.a[1], q[0] - o.a[0]) * 180 / Math.PI; o.w = (e.w || 1200) * k; return o; },
+    qty: function (doc, e) { var I = B.stepsInfo(e), z = e.lvl ? B.below(doc.d, e.lvl) : "super", mat = e.mat === "rcc" ? "rcc_slab" : e.mat === "pcc" ? "pcc_floor" : "brick";
+      return [{ k: mat, dim: "V", v: I.vol, label: (e.mat === "rcc" ? "RCC" : e.mat === "pcc" ? "Cement concrete" : "Brick") + " steps — " + I.n + " risers of " + Math.round(I.r) + " mm, " + m(I.w) + " m wide", f: m(I.w) + " × " + m(I.t) + " × " + m(I.r) + " × " + (I.n * (I.n + 1) / 2) + " (steps stacked 1 + 2 + … + " + I.n + ")", z: z }]; },
+    mesh: function (M, doc, e, H) { var I = B.stepsInfo(e), F = stepsFrame(e), Lv = B.level(doc.d, e.lvl), z0 = (Lv ? Lv.elev : 0) + (e.z || 0), col = H.look("slab", e.look, e.col), ang = (e.dir || 0);
+      for (var i = 0; i < I.n; i++) { var s0 = i * I.t, s1 = I.len, c = [e.a[0] + F.u[0] * (s0 + s1) / 2, e.a[1] + F.u[1] * (s0 + s1) / 2]; H.box(M, c, s1 - s0, I.w, ang, z0 + i * I.r, z0 + (i + 1) * I.r, col); } }
+  };
+  cmd("STEPS", ["ENTRYSTEPS", "FLIGHT"], async function (ed) {
+    var bs = B.ensure(ed.doc.d), w = ed.stW || 1200, rise = ed.stRise || 450, mat = ed.stMat || "Brick", a;
+    while (true) { a = await ed.getPoint("Steps — middle of the first (lowest) riser. " + mat + ", " + Math.round(w) + " mm wide, climbing " + Math.round(rise) + " mm", { kw: ["Width", "Rise", "Material"] });
+      if (a === "Width") { w = ed.stW = await ed.getDist("Width of the steps", { def: w }); continue; } if (a === "Rise") { rise = ed.stRise = await ed.getDist("Height to climb (a riser of about 150 mm is used)", { def: rise }); continue; }
+      if (a === "Material") { mat = ed.stMat = await ed.getKw("Steps made of", ["Brick", "PCC", "RCC"], mat); continue; } break; }
+    var mk = function (q) { return { t: "steps", a: [a[0], a[1]], dir: Math.atan2(q[1] - a[1], q[0] - a[0]) * 180 / Math.PI, w: w, rise: rise, tread: 300, mat: mat.toLowerCase(), z: 0, lvl: bs.cur }; };
+    ed.preview = function (q) { return G.dist(a, q) > 20 ? [mk(q)] : []; }; var b = await ed.getPoint("Which way do they climb? Click a point on the upper side", { base: a }); ed.preview = null; if (!b || G.dist(a, b) < 20) return;
+    var e = mk(b), I = B.stepsInfo(e); ed.doc.add(e); ed.say("Steps added: " + I.n + " risers of " + Math.round(I.r) + " mm with 300 mm treads, " + m(I.len) + " m long. For a raised room use the same rise as its floor. Width, rise, tread and material are in Properties.");
+  });
   cmd("RAMP", ["SLOPESLAB", "SLOPINGSLAB"], async function (ed) {
     var bs = B.ensure(ed.doc.d), w = ed.rampW || 1500, rise = ed.rampRise || 600, a;
     while (true) { a = await ed.getPoint("Ramp — low end, centre of the width", { kw: ["Width", "Rise"] });
