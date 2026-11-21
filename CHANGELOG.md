@@ -3,6 +3,11 @@
 This file is for the people maintaining the app. It is not published with the site (see `.assetsignore`).
 The text users see is `EP_NOTES` in `js/version.js`.
 
+## 2026.11.21-z29
+- `tools.js`: `cutWell(ed, e)` (shared by STAIR and STAIRWELL) cuts the hole and adds `railing` elements (`well` = stair id, h 1000) on the level whose elevation is the stair top: all sides of the opening except the arrival edge (dog-leg: the part of the start edge over the second flight; straight: the far end) and sides with a wall within 200 mm; re-running replaces them. New STAIRUP (aliases STAIRFLOORS, STAIRREPEAT): copies the stair to each higher level that has walls and no stair at that point, with `n` / `R` from that level's height, and cuts each opening.
+- `bim.js` `stairRails`: the first flight of a dog-leg ends at the landing; a flat rail joins the flights across the well. `ui-bim.js`: Landing length, Gap between the flights.
+- Harness: two floors — stair with 300 mm gap, railing of five points on L1, STAIRUP adds the L1 stair, both slabs cut, railing on L2.
+
 ## 2026.11.21-z28
 - `bim.js`: `B.stairRails(e)` (per flight and railed edge: plan ends, tread heights, slope length; `rail` = "in" well side / "out" / "both" / ""), `B.stairHead(doc, e)` (least clear height over treads under the solid part of the slab at the stair top; `low` = treads under 2100). Quantity row `railing` (L, on the slope).
 - `mesh.js`: sloping 44 mm handrail (double-sided quads) and 36 mm posts about every third tread, `railH` (900).

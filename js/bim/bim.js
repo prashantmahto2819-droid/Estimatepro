@@ -182,7 +182,9 @@
       /* flight 0 lies from 0 to w across, flight 1 from w + gap to 2w + gap: the well is at w (flight 0) and at 0 of flight 1's own width */
       var inner = fi === 0 ? e.w - 50 : 50, outer = fi === 0 ? 50 : e.w - 50; if (!dog) { inner = e.w - 50; outer = 50; }
       if (mode === "in" || mode === "both") offs.push(inner); if (mode === "out" || mode === "both") offs.push(outer);
-      offs.forEach(function (o) { var p0 = G.add(a.a, G.mul(a.n, o)), p1 = G.add(G.add(b.a, G.mul(b.u, e.T)), G.mul(b.n, o)); out.push({ p0: p0, z0: a.z1, p1: p1, z1: b.z1 + e.R, u: a.u, n: st.length, len: Math.hypot(G.dist(p0, p1), b.z1 + e.R - a.z1) }); }); });
+      var toLand = dog && fi === 0;   /* the last step of the first flight is the landing: the rail stops where the landing begins */
+      offs.forEach(function (o) { var p0 = G.add(a.a, G.mul(a.n, o)), p1 = toLand ? G.add(b.a, G.mul(b.n, o)) : G.add(G.add(b.a, G.mul(b.u, e.T)), G.mul(b.n, o)), zE = toLand ? b.z1 : b.z1 + e.R; out.push({ p0: p0, z0: a.z1, p1: p1, z1: zE, u: a.u, n: toLand ? st.length - 1 : st.length, len: Math.hypot(G.dist(p0, p1), zE - a.z1) }); }); });
+    if (dog && (mode === "in" || mode === "both")) { var f0 = S.flights[0], Lb = S.steps[f0 - 1], F1 = S.steps[f0]; if (Lb && F1) { var qa = G.add(Lb.a, G.mul(Lb.n, e.w - 50)), qb = G.add(F1.a, G.mul(F1.n, 50)); out.push({ p0: qa, z0: Lb.z1, p1: qb, z1: Lb.z1, u: Lb.n, n: 1, flat: true, len: G.dist(qa, qb) }); } }   /* across the well at the landing */
     return out; };
   /* least clear height over the treads under the solid part of the slab above (null = open above everywhere) */
   B.stairHead = function (doc, e) { var Lv = B.level(doc.d, e.lvl), base = Lv ? Lv.elev : 0, top = base + e.n * e.R, S = stairGeom(e), min = null, low = 0;

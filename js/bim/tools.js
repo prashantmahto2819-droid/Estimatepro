@@ -150,6 +150,18 @@
     ed.doc.add({ t: "roof", pts: pts, kind: kind.toLowerCase(), slope: slope, mat: mat, th: mat === "rcc" ? 125 : 50, lvl: here.id, off: here.h, over: over, dir: kind === "Shed" ? dir : null, layer: lay(ed, "A-ROOF") });
     ed.say(kind + " roof " + (B.area(pts) / 1e6).toFixed(2) + " m² (plan) on top of this floor");
   });
+  /* the stair opening in the slab(s) at the top of a stair, with a railing round it on the floor above (not on the arrival edge, not where a wall stands within 200 mm) */
+  function cutWell(ed, e) {
+    var d = ed.doc.d, L = B.level(d, e.lvl), O = B.stairOutline(e), top = L.elev + e.n * e.R, n = 0, mid = G.mid(O.pts[0], O.pts[2]);
+    d.ents.slice().forEach(function (s) { if (s.t !== "slab" || !s.pts) return; var Ls = B.level(d, s.lvl), zt = (Ls ? Ls.elev : 0) + (s.off || 0); if (Math.abs(zt - top) > 60 || !O.pts.every(function (q) { return G.inPoly(q, s.pts); }) || (s.holes || []).some(function (h) { return G.inPoly(mid, h); })) return; var o2 = CAD.clone(s); o2.holes = (s.holes || []).concat([ccw(O.pts.map(function (q) { return [q[0], q[1]]; }))]); ed.doc.mod(s.id, o2); n++; });
+    var up = B.ensure(d).levels.filter(function (x) { return Math.abs(x.elev - top) <= 60; })[0], nr = 0;
+    if (n && up) { d.ents.slice().forEach(function (x) { if (x.t === "railing" && x.well === e.id) ed.doc.del(x.id); });
+      var C = B.stairClear(ed.doc, e), dog = e.kind === "dogleg", P = O.pts, need = function (v) { return v == null || v > 200; }, at = function (a, b2, f) { return [a[0] + (b2[0] - a[0]) * f, a[1] + (b2[1] - a[1]) * f]; };
+      var edges = dog ? [[at(P[0], P[3], (e.w + (e.gap || 100)) / O.wd), P[0], need(C.back)], [P[0], P[1], need(C.near)], [P[1], P[2], need(C.front)], [P[2], P[3], need(C.far)]] : [[P[1], P[0], need(C.near)], [P[0], P[3], need(C.back)], [P[3], P[2], need(C.far)]];
+      var chain = null, flush = function () { if (chain && chain.length > 1) { ed.doc.add({ t: "railing", pts: chain, h: 1000, lvl: up.id, layer: lay(ed, "A-RAIL"), well: e.id }); nr++; } chain = null; };
+      edges.forEach(function (g) { if (!g[2]) { flush(); return; } if (!chain) chain = [g[0]]; chain.push(g[1]); }); flush(); }
+    return { n: n, rails: nr, O: O };
+  }
   cmd("STAIR", ["ST", "STAIRS"], async function (ed) {
     var b = ensureBim(ed), L = B.level(ed.doc.d, cur(ed)), kind = ed.stK || "Dogleg", w = ed.stW || 1000, T = ed.stT || 250, side = ed.stSide || "Left", gap = ed.stGap || 0, rail = ed.stRail || "Well", p, e = null;
     var n = Math.max(2, Math.round(L.h / 150)), R = L.h / n, mm = function (v) { return v == null ? "no wall" : Math.round(v) + " mm"; };
@@ -180,15 +192,25 @@
     ed.say(kind + " stair: " + n + " risers × " + R.toFixed(1) + " mm" + (R > 190 ? " — riser is high; check the requirement" : "") + ". It covers " + Math.round(O.len) + " × " + Math.round(O.wd) + " mm. Clear to the walls — behind the first step " + mm(C.back) + ", beyond the far end " + mm(C.front) + ", start side " + mm(C.near) + ", other side " + mm(C.far) + "." + (C.hit ? " ⚠ It runs into " + C.hit + " wall(s) — move it, change the Side, or use Corner." : ""));
     /* the floor above: offer to cut the stair opening */
     var top = L.elev + L.h, slabs = ed.doc.d.ents.filter(function (s) { if (s.t !== "slab" || !s.pts) return false; var Ls = B.level(ed.doc.d, s.lvl), zt = (Ls ? Ls.elev : 0) + (s.off || 0); if (Math.abs(zt - top) > 60) return false; return O.pts.every(function (q2) { return G.inPoly(q2, s.pts); }) && !(s.holes || []).some(function (h) { return G.inPoly(G.mid(O.pts[0], O.pts[2]), h); }); });
-    if (slabs.length) { var yn = await ed.getKw("Cut the stair opening (" + Math.round(O.len) + " × " + Math.round(O.wd) + " mm) in the floor slab above?", ["Yes", "No"], "Yes"); if (yn === "Yes") { ed.doc.begin("Stair opening"); slabs.forEach(function (s) { var o2 = CAD.clone(s); o2.holes = (s.holes || []).concat([ccw(O.pts.map(function (q3) { return [q3[0], q3[1]]; }))]); ed.doc.mod(s.id, o2); }); ed.doc.commit(); ed.say("Opening cut in the slab above; its concrete, shuttering and steel are reduced by that area. Put a railing round it with Railing."); } }
+    if (slabs.length) { var yn = await ed.getKw("Cut the stair opening (" + Math.round(O.len) + " × " + Math.round(O.wd) + " mm) in the floor slab above?", ["Yes", "No"], "Yes"); if (yn === "Yes") { ed.doc.begin("Stair opening"); var cw = cutWell(ed, e); ed.doc.commit(); ed.say("Opening cut in the slab above; its concrete, shuttering and steel are reduced by that area." + (cw.rails ? " A railing is placed round it on the floor above (not where you step off, not along walls)." : " Put a railing round it with Railing.")); } }
     var Hd = B.stairHead(ed.doc, e); if (Hd.low) ed.say("⚠ Headroom: " + Hd.low + " tread(s) have less than 2100 mm under the slab above (least " + Math.round(Hd.min) + " mm). Cut the opening with Stair opening.");
     if (slabs.length) return;
     ed.say("No floor slab found above this stair yet — draw the slab, then run STAIRWELL to cut the opening.");
   });
   cmd("STAIRWELL", ["STAIROPENING", "STAIRCUT"], async function (ed) {
-    var pk = await ed.getEnt("Click the stair whose opening should be cut in the slab above", { filter: function (x) { return x.t === "stair"; } }); if (!pk || !pk.e) return; var e = pk.e, L = B.level(ed.doc.d, e.lvl), O = B.stairOutline(e), top = L.elev + e.n * e.R, n = 0;
-    ed.doc.begin("Stair opening"); ed.doc.d.ents.forEach(function (s) { if (s.t !== "slab" || !s.pts) return; var Ls = B.level(ed.doc.d, s.lvl), zt = (Ls ? Ls.elev : 0) + (s.off || 0); if (Math.abs(zt - top) > 60 || !O.pts.every(function (q) { return G.inPoly(q, s.pts); }) || (s.holes || []).some(function (h) { return G.inPoly(G.mid(O.pts[0], O.pts[2]), h); })) return; var o2 = CAD.clone(s); o2.holes = (s.holes || []).concat([ccw(O.pts.map(function (q) { return [q[0], q[1]]; }))]); ed.doc.mod(s.id, o2); n++; }); ed.doc.commit();
-    ed.say(n ? "Opening of " + Math.round(O.len) + " × " + Math.round(O.wd) + " mm cut in " + n + " slab(s) above the stair." : "No slab above this stair covers it fully (or the opening is already cut).");
+    var pk = await ed.getEnt("Click the stair whose opening should be cut in the slab above", { filter: function (x) { return x.t === "stair"; } }); if (!pk || !pk.e) return;
+    ed.doc.begin("Stair opening"); var cw = cutWell(ed, pk.e); ed.doc.commit();
+    ed.say(cw.n ? "Opening of " + Math.round(cw.O.len) + " × " + Math.round(cw.O.wd) + " mm cut in " + cw.n + " slab(s) above the stair" + (cw.rails ? ", with a railing round it on the floor above." : ".") : "No slab above this stair covers it fully (or the opening is already cut).");
+  });
+  /* the same stair on every floor above, each with its opening */
+  cmd("STAIRUP", ["STAIRFLOORS", "STAIRREPEAT"], async function (ed) {
+    var pk = await ed.getEnt("Click the stair to repeat on the floors above", { filter: function (x) { return x.t === "stair"; } }); if (!pk || !pk.e) return; var e = pk.e, d = ed.doc.d, lv = B.ensure(d).levels.slice().sort(function (a, b) { return a.elev - b.elev; }), i0 = lv.findIndex(function (x) { return x.id === e.lvl; });
+    var ups = lv.slice(i0 + 1).filter(function (x, k, arr) { return d.ents.some(function (w) { return w.t === "wall" && w.lvl === x.id; }) && !d.ents.some(function (s) { return s.t === "stair" && s.lvl === x.id && G.dist(s.p, e.p) < 50; }); });
+    if (!ups.length) { ed.say("No floor with walls above this stair needs it (the top floor is reached by the stair below it)."); return; }
+    var yn = await ed.getKw("Repeat this stair on " + ups.length + " floor(s) above (" + ups.map(function (x) { return x.name; }).join(", ") + ") and cut the openings?", ["Yes", "No"], "Yes"); if (yn !== "Yes") return;
+    ed.doc.begin("Stair on floors above"); var made = 0, cut = cutWell(ed, e).n;
+    ups.forEach(function (x) { var o = CAD.clone(e); delete o.id; o.lvl = x.id; o.n = Math.max(2, Math.round(x.h / 150)); o.R = x.h / o.n; var id = ed.doc.add(o), ne = ed.doc.get((id && id.id) || id); made++; if (ne) cut += cutWell(ed, ne).n; });
+    ed.doc.commit(); ed.say(made + " stair(s) added above, each with risers to suit its own floor height; " + cut + " opening(s) cut in the slabs. Check the top floor: the last stair leads to the level above it (terrace) only if a slab is there.");
   });
   cmd("ROOM", ["RM", "SPACE"], async function (ed) {
     ensureBim(ed);
