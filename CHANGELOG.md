@@ -3,6 +3,10 @@
 This file is for the people maintaining the app. It is not published with the site (see `.assetsignore`).
 The text users see is `EP_NOTES` in `js/version.js`.
 
+## 2026.11.21-z10
+- Text entity `st` ("b", "i", "bi"): canvas font, PDF fonts F3 (Helvetica-Oblique) and F4 (Helvetica-BoldOblique) — image objects now start at 9; TEXT / MTEXT option Style (`ed.txtSt`); Properties select.
+- Movers: `uFlip` in the main and shadow vertex shaders; `_drawMovers` runs out and back (pivot = centre of the vehicle's own vertices).
+
 ## 2026.11.21-z9
 - `views2d.js`: tags carry `sw` (opening rectangle, hinge side from `swing` and the wall direction in the view, two leaves) → V marks on A-ELEV-LVL; `notes` (building default looks of wall_ext / roof / win_frame / door) written under the scale line of elevations.
 - `templates.json` + `B.NSMAP`: DG set 125 kVA, transformer 250 kVA, main LT panel, garden fountain (budget figures).

@@ -273,7 +273,7 @@
     var px = (e.h || 2.5) * this.view.s, q = this.w2s(e.p), lines = String(e.s || "").split("\n");
     if (px < 1.2) { c.globalAlpha = 0.5; c.fillRect(q[0], q[1] - 1, Math.max(1, lines[0].length * px * 0.6), 1); c.globalAlpha = 1; return; }
     c.save(); c.translate(q[0], q[1]); c.rotate(-(e.rot || 0) * Math.PI / 180);
-    c.font = px.toFixed(2) + "px " + (e.font || "Arial, Helvetica, sans-serif"); c.fillStyle = color;
+    c.font = (/i/.test(e.st || "") ? "italic " : "") + (/b/.test(e.st || "") ? "bold " : "") + px.toFixed(2) + "px " + (e.font || "Arial, Helvetica, sans-serif"); c.fillStyle = color;
     var al = e.al || "l", hz = al[0], vt = al[1] || "";
     c.textAlign = hz === "c" ? "center" : hz === "r" ? "right" : "left"; c.textBaseline = "alphabetic";
     var lh = px * 1.5, n = lines.length, y0 = vt === "t" ? px : vt === "m" ? px / 2 - (n - 1) * lh / 2 : vt === "b" ? -(n - 1) * lh : (e.mt ? px - 0 : 0) - (e.mt ? 0 : 0);

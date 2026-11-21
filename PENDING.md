@@ -42,7 +42,7 @@ Last updated at version 2026.11.21-q.
 3. (done in -w: up to 5 own material pictures per drawing.) Still open: rotate / offset the picture on a surface, more than 5, a device library of materials.
 4. (done in -x: sky presets and an own background picture.) Still open: the picture does not light the model (no image-based lighting), (-r: sky saved per scene) ground materials by area.
 5. (-u: sky reflection on glass and polished surfaces.) (-z8: water surfaces with ripples.) Still open: reflections of the building itself, moving water, softer shadows.
-6. Vehicles that turn at the end of the path, wheels that turn; people with a walking cycle.
+6. (-z10: vehicles turn round and come back.) Still open: vehicles following a drawn path, wheels that turn; people with a walking cycle.
 7. (-z2: CAMPATH + Tour walks the path; Record makes the video.) (-z3: speed, eye height, MP4 first.) Still open: look-at targets, stairs between levels, doors that open on the way.
 8. Section box: hide the shadows of cut-away parts; section fill colour.
 9. (done in -t: ✥ Move drags placed objects along the floor, ⟲ ⟳ turn by 15°.) (-z5: ▲ ▼ raise / lower, ⧉ copy.) Still open: snap to walls, move walls and openings in 3D.
@@ -62,7 +62,7 @@ Last updated at version 2026.11.21-q.
 3. (curved walls done in -e; ramps / sloping slabs done in -s: RAMP.) (-z5: ramp kerbs.) Still open: split levels, slabs sloping two ways, ramp railings.
 4. (done in -x: ELEVATION, SECTION, VIEWSUPDATE.) (-n: cut parts are filled.) Still open: (-o: overall width and height on every view) (-q: level-to-level chain and door / window size tags) (-z9: finish notes and opening marks on elevations.) Still open: notes per wall where finishes differ, outlines for library items that have no edges, views update on their own.
 5. (done in -r: SCHEDULE — door / window and room finish tables.) (-z5: column, beam and wall schedules.)
-6. (-w: 37 hatch patterns.) Still open: stone / random rubble patterns, own .pat file import, text styles, blocks library shared between drawings.
+6. (-w: 37 hatch patterns.) Still open: stone / random rubble patterns, own .pat file import, (-z10: bold / italic text) named text styles with fonts, blocks library shared between drawings.
 7. (done in -r: PIPE — CPVC, rain-water pipes, conduits, cable trays with lengths and SOR rates.) (-z6: drain pipes and wiring in conduit as runs.) (-z7: trench excavation and refilling.) Still open: drain slopes / invert levels, manholes and chambers along the run. (Fittings are inside the SOR pipe / conduit rates.)
 8. (done in -r: north point and scale bar.) (-s: plot boundary from bearings, spot levels.) (-z5: SETBACK, AREASTATEMENT with coverage and FAR.) (-z6: CONTOURS; permitted coverage / FAR check.) (-z7: CUTFILL, height check.) Still open: smooth contours.
 

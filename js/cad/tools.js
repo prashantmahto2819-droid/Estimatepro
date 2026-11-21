@@ -135,17 +135,18 @@
   cmd("RAY", [], async function (ed) { var p = await ed.getPoint("Specify start point"); while (true) { ed.preview = function (w) { return G.dist(p, w) > 1e-9 ? [{ t: "ray", p: p, dir: G.norm(G.sub(w, p)) }] : []; }; var t = await ed.getPoint("Specify through point", { base: p , opt: true }); if (t == null) return; ed.doc.add({ t: "ray", p: p, dir: G.norm(G.sub(t, p)) }); } });
   var JUST = { L: "l", C: "c", R: "r", M: "cm", TL: "lt", TC: "ct", TR: "rt", ML: "lm", MC: "cm", MR: "rm", BL: "lb", BC: "cb", BR: "rb" };
   async function textCmd(ed, multi) {
-    var al = ed.txtAl || "l", p = await ed.getPoint("Specify start point of text", { kw: ["Justify"] });
+    var al = ed.txtAl || "l", st = ed.txtSt || "", p;
+    while (true) { p = await ed.getPoint("Specify start point of text" + (st ? " (" + ({ b: "bold", i: "italic", bi: "bold italic" })[st] + ")" : ""), { kw: ["Justify", "Style"] }); if (p !== "Style") break; var sk = await ed.getKw("Text style", ["Standard", "Bold", "Italic", "BoldItalic"], ({ "": "Standard", b: "Bold", i: "Italic", bi: "BoldItalic" })[st]); st = ed.txtSt = ({ Standard: "", Bold: "b", Italic: "i", BoldItalic: "bi" })[sk] || ""; }
     if (p === "Justify") { var j = await ed.getKw("Enter an option", ["L", "C", "R", "TL", "TC", "TR", "ML", "MC", "MR", "BL", "BC", "BR"], "L"); al = ed.txtAl = JUST[j] || "l"; p = await ed.getPoint("Specify point of text"); }
     var dsc = (ed.doc.d.dim && ed.doc.d.dim.sc) || 1, h = await ed.getDist("Specify height", { base: p, def: ed.txtH || 2.5 * dsc }); ed.txtH = h;
     var rot = await ed.getAngle("Specify rotation angle of text", { base: p, def: 0 }), lines = [], y = 0;
     while (true) {
-      ed.preview = function () { return lines.length || true ? [{ t: "text", p: p, s: lines.concat(["_"]).join("\n"), h: h, rot: rot, al: al }] : []; };
+      ed.preview = function () { return lines.length || true ? [{ t: "text", p: p, s: lines.concat(["_"]).join("\n"), h: h, rot: rot, al: al, st: st || undefined }] : []; };
       var s = await ed.getText(multi ? "Enter text line (empty line ends)" : "Enter text (empty line ends)");
       if (s == null || s === "") break;
-      if (multi) lines.push(s); else { var q = G.polar(p, h * 1.5 * lines.length, (rot - 90) * D2R); ed.doc.add({ t: "text", p: q, s: s, h: h, rot: rot, al: al }); lines.push(s); }
+      if (multi) lines.push(s); else { var q = G.polar(p, h * 1.5 * lines.length, (rot - 90) * D2R); ed.doc.add(st ? { t: "text", p: q, s: s, h: h, rot: rot, al: al, st: st } : { t: "text", p: q, s: s, h: h, rot: rot, al: al }); lines.push(s); }
     }
-    ed.preview = null; if (multi && lines.length) ed.doc.add({ t: "text", p: p, s: lines.join("\n"), h: h, rot: rot, al: al, mt: true });
+    ed.preview = null; if (multi && lines.length) ed.doc.add(st ? { t: "text", p: p, s: lines.join("\n"), h: h, rot: rot, al: al, mt: true, st: st } : { t: "text", p: p, s: lines.join("\n"), h: h, rot: rot, al: al, mt: true });
   }
   cmd("TEXT", ["T", "DT", "DTEXT"], function (ed) { return textCmd(ed, false); });
   cmd("MTEXT", ["MT"], function (ed) { return textCmd(ed, true); });

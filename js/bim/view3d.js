@@ -27,14 +27,16 @@ layout(location=2)in vec4 aC;
 layout(location=3)in float aI;
 layout(location=4)in vec3 aM;
 uniform mat4 uVP,uL;
-uniform vec3 uOff;
+uniform vec3 uOff,uFlip;
 out vec3 vP,vN,vL;
 out vec4 vC;
 out float vI;
 out vec3 vM;
 void main(){
-  vec3 p=aP+uOff;
-  vP=p; vN=aN; vC=aC; vI=aI; vM=aM;
+  vec3 p=aP, nn=aN;
+  if(uFlip.x>0.5){ p.xy=2.0*uFlip.yz-p.xy; nn.xy=-nn.xy; }   /* a vehicle on its way back: turned half round about its own centre */
+  p+=uOff;
+  vP=p; vN=nn; vC=aC; vI=aI; vM=aM;
   vL=(uL*vec4(p,1.0)).xyz;
   gl_Position=uVP*vec4(p,1.0);
 }`;
@@ -316,8 +318,8 @@ const SVS=`#version 300 es
 precision highp float;
 layout(location=0)in vec3 aP;
 uniform mat4 uVP;
-uniform vec3 uOff;
-void main(){gl_Position=uVP*vec4(aP+uOff,1.0);}`;
+uniform vec3 uOff,uFlip;
+void main(){vec3 p=aP; if(uFlip.x>0.5) p.xy=2.0*uFlip.yz-p.xy; gl_Position=uVP*vec4(p+uOff,1.0);}`;
 const SFS=`#version 300 es
 precision highp float;
 out vec4 fragColor;
@@ -727,7 +729,7 @@ P.prototype.setScene=function(sc,keepCam){
   /* store raw transparent data for back-to-front sorting */
   this.trRaw=trData.length>0?new Float32Array(trData):null;
   this.cuts=sc.cutouts||[]; this.lights=sc.lights||[];
-  for(const m of movers){ const buf=this.vbo(gl,m.v instanceof Float32Array?m.v:new Float32Array(m.v)); this.movers.push({buf:buf,vF:this.makeVAO(gl,buf,true),vS:this.makeVAO(gl,buf,false),n:m.v.length/ST|0,mv:m.mv,seed:(m.v[0]*1.7+m.v[1]*0.9)%5}); }
+  for(const m of movers){ const buf=this.vbo(gl,m.v instanceof Float32Array?m.v:new Float32Array(m.v)); this.movers.push({buf:buf,vF:this.makeVAO(gl,buf,true),vS:this.makeVAO(gl,buf,false),n:m.v.length/ST|0,raw:m.v,mv:m.mv,seed:(m.v[0]*1.7+m.v[1]*0.9)%5}); }
   this.opRaw=opData;   /* kept for ray casting (measure, walk start) */
 
   /* create VBOs */
@@ -1473,11 +1475,14 @@ P.prototype.bind=function(){
 
 /* ---------- moving vehicles: groups kept out of the merged buffer and drawn with an offset ---------- */
 P.prototype._drawMovers=function(prog,full){
-  const gl=this.gl; gl.useProgram(prog); prog._off=prog._off||gl.getUniformLocation(prog,'uOff');
+  const gl=this.gl; gl.useProgram(prog); prog._off=prog._off||gl.getUniformLocation(prog,'uOff'); if(prog._flip===undefined) prog._flip=gl.getUniformLocation(prog,'uFlip');
   for(const m of this.movers){
-    let d=0; if(this.play&&m.mv.d>0.5){ d=(((this._playT||0)+m.seed)*5.5)%m.mv.d; }   /* about 20 km/h, then starts again */
+    let d=0, back=false; if(this.play&&m.mv.d>0.5){ const T=m.mv.d/5.5, ph=(((this._playT||0)+m.seed)%(2*T)); back=ph>T; d=back?(2*T-ph)*5.5:ph*5.5; }   /* about 20 km/h to the end of its run, turns round and comes back */
+    if(!m.piv){ let x0=Infinity,x1=-Infinity,y0=Infinity,y1=-Infinity; const V=m.raw; if(V){ for(let i=0;i<V.length;i+=ST){ if(V[i]<x0)x0=V[i]; if(V[i]>x1)x1=V[i]; if(V[i+1]<y0)y0=V[i+1]; if(V[i+1]>y1)y1=V[i+1]; } m.piv=[(x0+x1)/2,(y0+y1)/2]; } else m.piv=[0,0]; }
+    if(prog._flip) gl.uniform3f(prog._flip,back&&m.raw?1:0,m.piv[0],m.piv[1]);
     gl.uniform3f(prog._off,m.mv.dir[0]*d,m.mv.dir[1]*d,0); gl.bindVertexArray(full?m.vF:m.vS); gl.drawArrays(gl.TRIANGLES,0,m.n);
   }
+  if(prog._flip) gl.uniform3f(prog._flip,0,0,0);
   gl.uniform3f(prog._off,0,0,0); gl.bindVertexArray(null);
 };
 

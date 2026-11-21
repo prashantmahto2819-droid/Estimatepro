@@ -53,10 +53,10 @@
     function text(p, str, h, rot, al, e) {
       var hp = h / N * mm2pt; if (hp < 1) return; var r = (rot || 0) * Math.PI / 180, cs = Math.cos(r), sn = Math.sin(r), lines = String(str).split("\n"), hz = (al || "l")[0], vt = (al || "")[1] || "";
       lines.forEach(function (l, li) {
-        var w = l.length * hp * 0.52, dx = hz === "c" ? -w / 2 : hz === "r" ? -w : 0, dy = vt === "t" ? -hp : vt === "m" ? -hp / 2 + (lines.length - 1) * hp * 0.75 : vt === "b" ? (lines.length - 1) * hp * 1.5 : 0;
+        var w = l.length * hp * (e && /b/.test(e.st || "") ? 0.56 : 0.52), dx = hz === "c" ? -w / 2 : hz === "r" ? -w : 0, dy = vt === "t" ? -hp : vt === "m" ? -hp / 2 + (lines.length - 1) * hp * 0.75 : vt === "b" ? (lines.length - 1) * hp * 1.5 : 0;
         if (e && e.mt && !vt) dy = -hp; dy -= li * hp * 1.5;
         var q = P(p), x = q[0] + dx * cs - dy * sn, y = q[1] + dx * sn + dy * cs;
-        s.push("BT /F1 " + n(hp) + " Tf " + [cs, sn, -sn, cs, x, y].map(n).join(" ") + " Tm (" + winAnsi(l) + ") Tj ET");
+        s.push("BT /" + (e && e.st ? ({ b: "F2", i: "F3", bi: "F4" })[e.st] || "F1" : "F1") + " " + n(hp) + " Tf " + [cs, sn, -sn, cs, x, y].map(n).join(" ") + " Tm (" + winAnsi(l) + ") Tj ET");
       });
     }
     flat.forEach(function (e) {
@@ -95,11 +95,13 @@
     var objs = [], enc = new TextEncoder();
     objs.push("<< /Type /Catalog /Pages 2 0 R >>");
     objs.push("<< /Type /Pages /Kids [3 0 R] /Count 1 >>");
-    var xo = imgs.map(function (_, i) { return "/Im" + i + " " + (7 + i) + " 0 R"; }).join(" ");
-    objs.push("<< /Type /Page /Parent 2 0 R /MediaBox [0 0 " + n(W * mm2pt) + " " + n(H * mm2pt) + "] /Contents 4 0 R /Resources << /Font << /F1 5 0 R /F2 6 0 R >>" + (xo ? " /XObject << " + xo + " >>" : "") + " >> >>");
+    var xo = imgs.map(function (_, i) { return "/Im" + i + " " + (9 + i) + " 0 R"; }).join(" ");
+    objs.push("<< /Type /Page /Parent 2 0 R /MediaBox [0 0 " + n(W * mm2pt) + " " + n(H * mm2pt) + "] /Contents 4 0 R /Resources << /Font << /F1 5 0 R /F2 6 0 R /F3 7 0 R /F4 8 0 R >>" + (xo ? " /XObject << " + xo + " >>" : "") + " >> >>");
     objs.push({ stream: enc.encode(content), dict: "" });
     objs.push("<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>");
     objs.push("<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold /Encoding /WinAnsiEncoding >>");
+    objs.push("<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Oblique /Encoding /WinAnsiEncoding >>");
+    objs.push("<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-BoldOblique /Encoding /WinAnsiEncoding >>");
     imgs.forEach(function (im) { objs.push({ stream: im.bytes, dict: "/Type /XObject /Subtype /Image /Width " + im.w + " /Height " + im.h + " /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode" }); });
     var parts = [enc.encode("%PDF-1.4\n%\xE2\xE3\xCF\xD3\n")], offs = [], len = parts[0].length;
     objs.forEach(function (o, i) {
@@ -116,9 +118,9 @@
   /* several sheets in one PDF: list = [opts of pdf()], one page each */
   function pdfPages(doc, list) {
     var mm2pt = 72 / 25.4, n = function (v) { return (Math.round(v * 100) / 100).toString(); }, enc = new TextEncoder(), pages = list.map(function (o) { return pdf(doc, Object.assign({}, o, { raw: true })); });
-    var objs = [null, null, "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>", "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold /Encoding /WinAnsiEncoding >>"], kids = [];
+    var objs = [null, null, "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>", "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold /Encoding /WinAnsiEncoding >>", "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Oblique /Encoding /WinAnsiEncoding >>", "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-BoldOblique /Encoding /WinAnsiEncoding >>"], kids = [];
     pages.forEach(function (pg) { var pi = objs.length + 1, ci = pi + 1, first = ci + 1, xo = pg.imgs.map(function (_, i) { return "/Im" + i + " " + (first + i) + " 0 R"; }).join(" "); kids.push(pi + " 0 R");
-      objs.push("<< /Type /Page /Parent 2 0 R /MediaBox [0 0 " + n(pg.W * mm2pt) + " " + n(pg.H * mm2pt) + "] /Contents " + ci + " 0 R /Resources << /Font << /F1 3 0 R /F2 4 0 R >>" + (xo ? " /XObject << " + xo + " >>" : "") + " >> >>");
+      objs.push("<< /Type /Page /Parent 2 0 R /MediaBox [0 0 " + n(pg.W * mm2pt) + " " + n(pg.H * mm2pt) + "] /Contents " + ci + " 0 R /Resources << /Font << /F1 3 0 R /F2 4 0 R /F3 5 0 R /F4 6 0 R >>" + (xo ? " /XObject << " + xo + " >>" : "") + " >> >>");
       objs.push({ stream: enc.encode(pg.content), dict: "" });
       pg.imgs.forEach(function (im) { objs.push({ stream: im.bytes, dict: "/Type /XObject /Subtype /Image /Width " + im.w + " /Height " + im.h + " /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode" }); }); });
     objs[0] = "<< /Type /Catalog /Pages 2 0 R >>"; objs[1] = "<< /Type /Pages /Kids [" + kids.join(" ") + "] /Count " + kids.length + " >>";
