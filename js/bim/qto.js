@@ -76,7 +76,7 @@
   };
   /* Non-SOR items with a ready rate analysis (templates.json) for model work that no SOR book covers:
      key → pattern on the template's description. Used only when no SOR item resolves. */
-  B.NSMAP = Object.assign({ led_strip: /^Aluminium LED profile/i, wardrobe: /modular kitchen \/ wardrobe/i, bookshelf: /modular kitchen \/ wardrobe/i, shoe_rack: /modular kitchen \/ wardrobe/i, kitchen_unit: /^Modular kitchen base unit/i, kitchen_wall_unit: /^Modular kitchen wall unit/i, tv_unit: /^TV unit with fluted panel/i, study_table: /^Study \/ office table/i, tap_fitting: /^Single-lever basin mixer/i }, B.NSMAP || {});
+  B.NSMAP = Object.assign({ led_strip: /^Aluminium LED profile/i, wardrobe: /modular kitchen \/ wardrobe/i, bookshelf: /modular kitchen \/ wardrobe/i, shoe_rack: /modular kitchen \/ wardrobe/i, kitchen_unit: /^Modular kitchen base unit/i, kitchen_wall_unit: /^Modular kitchen wall unit/i, tv_unit: /^TV unit with fluted panel/i, study_table: /^Study \/ office table/i, tap_fitting: /^Single-lever basin mixer/i, run_cornice: /^POP \/ gypsum cornice moulding/i, run_cornice_ext: /^GRC \/ cement cornice moulding/i, run_band: /^Cement plaster band/i, plaster_decor: /^Ready-made cement \/ GRC decorative piece/i, ceil_step: /^Stepped \/ tray false ceiling/i, chimney: /^Kitchen chimney/i }, B.NSMAP || {});
   B._ns = null; B._nsP = null;
   B.loadTpl = function () {
     if (B._ns) return Promise.resolve(B._ns); if (B._nsP) return B._nsP;

@@ -13,7 +13,7 @@
   /* profile: [[offset0, offset1, z0, z1, look | null (= the run's own material)]…], mm; z = default height of its underside above the floor */
   var RUNS = B.RUNS = {
     cornice: { n: "Cornice moulding 150 (inside, wall top)", fam: "p", z: 2850, look: Wp, key: "run_cornice", pr: [[0, 40, 0, 30], [0, 70, 30, 60], [0, 110, 60, 85], [0, 150, 85, 120], [0, 120, 120, 135], [0, 170, 135, 150]] },
-    cornice_ext: { n: "External cornice 300 (cement / GRC)", fam: "p", z: 2900, look: Gc, key: "run_cornice", pr: [[0, 60, 0, 50], [0, 110, 50, 100], [0, 180, 100, 160], [0, 250, 160, 230], [0, 220, 230, 255], [0, 320, 255, 300]] },
+    cornice_ext: { n: "External cornice 300 (cement / GRC)", fam: "p", z: 2900, look: Gc, key: "run_cornice_ext", pr: [[0, 60, 0, 50], [0, 110, 50, 100], [0, 180, 100, 160], [0, 250, 160, 230], [0, 220, 230, 255], [0, 320, 255, 300]] },
     band: { n: "Plaster band 150 × 40", fam: "p", z: 3000, look: Gc, key: "run_band", pr: [[0, 25, 0, 20], [0, 40, 20, 130], [0, 25, 130, 150]] },
     band_flat: { n: "Flat plaster band 230 × 20", fam: "p", z: 900, look: Gc, key: "run_band", pr: [[0, 20, 0, 230]] },
     groove_band: { n: "Band with groove 230", fam: "p", z: 900, look: Gc, key: "run_band", pr: [[0, 50, 0, 90], [0, 20, 90, 140], [0, 50, 140, 230]] },
@@ -186,7 +186,7 @@
     qty: function (doc, e) { var D = def(e), L = runLen(e), z = e.lvl ? B.below(doc.d, e.lvl) : "super", m = function (v) { return (v / 1000).toFixed(2); }, rows = [];
       if (e.noq === true) return rows;
       if (D.fam === "u") { var Hu = e.h || D.h, du = Math.max(150, e.dp || D.dp); if (D.dim === "L") rows.push({ k: D.key, dim: "L", v: L, label: D.n, f: m(L) + " m run", z: z }); else rows.push({ k: D.key, dim: "A", v: L * Hu, label: D.n, f: m(L) + " × " + m(Hu) + " (front)", z: z });
-        if (D.top && D.key === "kitchen_unit") { rows.push({ k: "kitchen_counter", dim: "A", v: L * (du + 25), label: "Counter top — " + D.n, f: m(L) + " × " + m(du + 25), z: z }); if (e.sink) rows.push({ k: "sink_opening", dim: "N", v: 1, label: "Opening in the counter for the sink", f: "1 no.", z: z }); }
+        if (D.top && D.key === "kitchen_unit") { rows.push({ k: "kitchen_counter", dim: "A", v: L * (du + 25), label: "Counter top — " + D.n, f: m(L) + " × " + m(du + 25), z: z }); if (e.sink) rows.push({ k: "sink_opening", dim: "N", v: 1, label: "Opening in the counter for the sink", f: "1 no.", z: z }); if (e.hob && e.chimney) rows.push({ k: "chimney", dim: "N", v: 1, label: "Kitchen chimney " + e.chimney + " mm", f: "1 no.", z: z }); }
         return rows; }
       if (D.fam === "p") { if (D.key !== "led_strip") rows.push({ k: D.key, dim: "L", v: L, label: D.n, f: m(L) + " m run", z: z }); }
       else { var Hh = e.h || D.h, Lv = B.level(doc.d, e.lvl), zr0 = (Lv ? Lv.elev : 0) + (e.z == null ? D.z : e.z), ded = 0; segsOf(path(e), e.closed).forEach(function (sg) { var ln = G.dist(sg[0], sg[1]); holesOn(doc, e, sg[0], sg[1]).forEach(function (h) { var w = Math.min(ln, h.d1) - Math.max(0, h.d0), hh = Math.min(zr0 + Hh, h.z1) - Math.max(zr0, h.z0); if (w > 0 && hh > 0) ded += w * hh; }); });
@@ -196,7 +196,7 @@
     mesh: mesh
   };
   B.runLen = runLen;
-  B.MAP = B.MAP || {}; ["run_cornice", "run_band", "led_strip"].forEach(function (k) { if (!(k in B.MAP)) B.MAP[k] = null; });
+  B.MAP = B.MAP || {}; ["run_cornice", "run_cornice_ext", "run_band", "led_strip", "ceil_step"].forEach(function (k) { if (!(k in B.MAP)) B.MAP[k] = null; });
 
   /* ---------- POP / gypsum ceiling designs inside a room (room.cdes) ---------- */
   B.CEIL_DES = [["", "Plain flat board"], ["tray", "Tray — border lowered, centre raised, cove light"], ["double", "Double-step tray with two light lines"], ["island", "Floating island in the centre with light round it"], ["border", "Border band only (centre open to the slab)"]];
@@ -220,7 +220,7 @@
     sp.forEach(function (p) { var zs = inPoly(p, C.In) && des !== "island" ? zf + (des === "double" && C.In2 && inPoly(p, C.In2) ? drop : des === "double" ? drop * 0.5 : des === "border" ? 0 : drop) : zf; if (des === "border" && inPoly(p, C.In)) return; H.box(M, p, 90, 90, 0, zs - 4, zs, wh); H.box(M, p, 56, 56, 0, zs - 6, zs - 4, led); });
     if (H.lights) { var bb = B.polyBox(C.P), n = Math.max(1, Math.min(4, Math.round(polyArea(C.P) / 9e6))); for (var i = 0; i < n; i++) H.lights.push([(bb[0] + (bb[2] - bb[0]) * (i + 0.5) / n) / 1000, (bb[1] + bb[3]) / 2000, (zf - 150) / 1000, 0.9, B.lightRGB ? B.lightRGB(B.LOOKS[e.cled] ? e.cled : "led_warm") : null]); }
   };
-  var qty0 = B.qty; B.qty = function (doc, e) { var r = qty0.apply(this, arguments); if (e && e.t === "room" && e.ceil && e.cdes && r && r.length) { var info = B.ceilInfo(e), z = r[0].z; if (info.led > 0) r = r.concat([{ k: "led_strip", dim: "L", v: info.led, label: "LED strip / profile light — ceiling of " + (e.name || "room"), f: (info.led / 1000).toFixed(2) + " m run", z: z }]); if (info.spots) r = r.concat([{ k: "light_point", dim: "N", v: info.spots, label: "Spot light in false ceiling — " + (e.name || "room"), f: info.spots + " no.", z: z }]); } return r; };
+  var qty0 = B.qty; B.qty = function (doc, e) { var r = qty0.apply(this, arguments); if (e && e.t === "room" && e.ceil && e.cdes && r && r.length) { var info = B.ceilInfo(e), z = r[0].z; if (info.led > 0) r = r.concat([{ k: "ceil_step", dim: "L", v: info.led, label: "Stepped ceiling — drop and pelmet, " + (e.name || "room"), f: (info.led / 1000).toFixed(2) + " m of step", z: z }]); if (info.led > 0) r = r.concat([{ k: "led_strip", dim: "L", v: info.led, label: "LED strip / profile light — ceiling of " + (e.name || "room"), f: (info.led / 1000).toFixed(2) + " m run", z: z }]); if (info.spots) r = r.concat([{ k: "light_point", dim: "N", v: info.spots, label: "Spot light in false ceiling — " + (e.name || "room"), f: info.spots + " no.", z: z }]); } return r; };
 
   var cmds = CAD.commands, AL = CAD.aliases;
   function cmd(name, al, fn) { cmds[name] = { fn: fn }; (al || []).forEach(function (a) { AL[a] = name; }); }

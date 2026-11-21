@@ -1,5 +1,5 @@
 /* App version + "what's new" — the super admin is offered to send this on WhatsApp after each upload. Change both with every release. */
-window.EP_VER = "2026.11.21-l";
-window.EP_NOTES = "• Σ Quantities now prices the interior work too: wardrobes, kitchen base and wall units, TV unit, study table, LED profile lights and taps get a Non-SOR item with its ready rate analysis, and go to the estimate with their measurements\n• Kitchen counter is taken on CPWD 2023 item 8.2.2.2 (granite platform) and the sink opening on 8.5\n• Rows that still have no item (cornices, plaster pieces, loose furniture) are shown as “No item suggested” — pick one in the same table";
+window.EP_VER = "2026.11.21-m";
+window.EP_NOTES = "• Six more Non-SOR items with rate analysis: POP cornice, stepped / tray ceiling (per metre of step), cement plaster band, GRC cornice, ready-made decorative piece, kitchen chimney — find them under Suggested items → Market, and they are picked automatically in Σ Quantities for cornices, bands, ceiling designs, plaster pieces and the chimney\n• These rates are indicative market figures — check them against your quotations in the analysis";
 /* pictures of this update: [file in /updates, caption]. Shown to the owner with the WhatsApp "what's new" message. */
-window.EP_PICS = [["updates/l2-qto.jpg", "Σ Quantities: interior work priced with Non-SOR items and their rate analysis"]];
+window.EP_PICS = [];

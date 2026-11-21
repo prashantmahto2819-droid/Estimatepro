@@ -3,6 +3,10 @@
 This file is for the people maintaining the app. It is not published with the site (see `.assetsignore`).
 The text users see is `EP_NOTES` in `js/version.js`.
 
+## 2026.11.21-m
+- `templates.json`: 6 new Non-SOR items with analysis (362 in all) — POP / gypsum cornice (m_mfc), stepped / tray ceiling extra per metre of step (m_mfc), cement plaster band, GRC cornice, ready-made decorative piece (m_mtp), kitchen chimney (m_mmk). `r` was computed with `EP.nsCalc` in the app. Market lines are indicative.
+- New quantity rows / keys: `run_cornice_ext` (external cornice run), `ceil_step` (length of ceiling step = cove length), `chimney` (kitchen). `B.NSMAP` covers `run_cornice`, `run_cornice_ext`, `run_band`, `plaster_decor`, `ceil_step`, `chimney`.
+
 ## 2026.11.21-l
 - Quantities → Non-SOR: `B.NSMAP` (key → pattern on a `templates.json` description), `B.loadTpl()`, `B.nsFor`, `B.nsRate`. `B.schedule` gives a row `ns` (template), `unit`, `qty` when no SOR item resolves and the template unit fits the measured dimension (sqm ↔ A, rm ↔ L, nos ↔ N). `B.sendToEstimate` writes such rows as a `b: "x"` item with the template's analysis (`x.ns`), re-using the item on a re-send. The Σ Quantities dialog loads the templates first and shows "Non-SOR item — ready rate analysis" with the analysed rate.
 - New keys: `kitchen_wall_unit`, `study_table`, `sink_opening`; `tv_unit` and `study_table` runs are measured by length; the TV back panel row was dropped (the template includes it). `B.MAP.kitchen_counter` → CPWD 2023 8.2.2.2, `sink_opening` → 8.5.
