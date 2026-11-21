@@ -29,7 +29,7 @@ Last updated at version 2026.11.21-q.
    What to send in the chat, in this order (10–20 files at a time, name each file by what it is, e.g. `wc-wall-hung.glb`, `tile-600x600-beige.jpg`):
    1) sanitary ware and taps (GLB), 2) furniture — beds, sofas, wardrobes, TV units, doors (GLB), 3) decorative and garden lights (GLB), 4) cars, people, trees (GLB or PNG), 5) material pictures (JPG) with the real width of the area shown, 6) sky / site background (JPG). With each batch say the site it came from and the licence shown there.
 3. Confirm the indicative Non-SOR rates: fencing — precast RCC post ₹1,275 each, strut ₹1,000 each (-r).
-3b. Confirm / replace with quotations: 33 loose furniture and appliance rates (-t).
+3b. Confirm / replace with quotations: 33 loose furniture and appliance rates (-t), 25 partition / grill / site-fitting rates (-v).
 3a. Decisions: the 30 quick rates that differ from their analysis (tipper, tanker…); whether 1:30 / 1:40 / 1:60 scales may be used on Design Studio sheets.
 4. Commercial plans (owner will describe).
 
@@ -65,5 +65,5 @@ Last updated at version 2026.11.21-q.
 
 ## D. Other
 1. Design Studio sheets: views are small and some labels overlap.
-2. (-t: 37 furniture / appliance / garden keys take Non-SOR items.) Still open: 52 keys — fountains, partitions, temple pieces, grills, boundary walls and gates, electrical equipment (DG set, transformer, UPS), curtains.
+2. (-t: 37 furniture / appliance / garden keys take Non-SOR items.) (-v: 25 more — partitions, grills, railing, curtains, site fittings.) Still open: fountains, temple pieces, boundary-wall bays and grand gates (composite works — need item-wise estimates), DG set, transformer, main panel (E&M SOR), rain-water pipes as library pieces, floor lamps, rugs.
 3. Deeper testing of screens that need a signed-in server session.

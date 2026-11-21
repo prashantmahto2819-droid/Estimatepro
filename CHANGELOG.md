@@ -3,6 +3,10 @@
 This file is for the people maintaining the app. It is not published with the site (see `.assetsignore`).
 The text users see is `EP_NOTES` in `js/version.js`.
 
+## 2026.11.21-v
+- `templates.json`: category `part` in group `fin` — 25 NS items (partitions, grills, railing, curtains, site fittings); indicative rates.
+- `qto.js`: 25 more `B.NSMAP` keys; partitions get `q = {dim:"A"}`, curtains `{dim:"L"}` (pelmet box → key `curtain_pelmet`), car / bike / gas cylinder become view only; `nsQty` accepts kg and cum.
+
 ## 2026.11.21-u
 - `assets.js` qty: key `sofa` is counted in seats (width, plus the return of an L, / 700 mm); the NS item is per seat (₹11,346 indicative).
 - `view3d.js` main shader: sky / horizon / ground reflection by Fresnel on glass (pattern 12) and on gloss > 0.25, Realistic style only.
