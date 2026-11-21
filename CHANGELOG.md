@@ -3,6 +3,11 @@
 This file is for the people maintaining the app. It is not published with the site (see `.assetsignore`).
 The text users see is `EP_NOTES` in `js/version.js`.
 
+## 2026.11.21-z12
+- Room `fl` (floor offset): mesh platform + finish at the offset; rows `backfill` and `brick` (115 mm edge wall) when raised.
+- `views2d.js`: DETAILVIEW — `prims` turns the entities in a window into plain lines / arcs (BIM through `B.plan`), lines clipped at the window, block `DET-<mark>` inserted at k = sheet scale / detail scale; marks on layer A-DETAIL. A snapshot, not live.
+- `ui-bim.js`: walls in Move mode — `applyMv` shifts the wall along its normal and the linked ends of walls that meet it (corners and T-junctions).
+
 ## 2026.11.21-z11
 - `ui-bim.js`: hosted elements in Move mode — `mvEnt` changes `at` by the drag projected on the wall direction (25 mm steps, kept inside the wall).
 - `site.js`: ramp `rail` (posts at about 1.2 m, top and mid rail following the slope; `railing` row 2 × slope length).

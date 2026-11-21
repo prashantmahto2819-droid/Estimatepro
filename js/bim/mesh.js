@@ -202,7 +202,7 @@
           case "roof": roof(M, doc, e, L.elev + (e.off || 0)); break;
           case "stair": var S = B.stairGeom(e); S.steps.forEach(function (st) { var a = st.a, u = st.u, n = st.n, q = [a, G.add(a, G.mul(u, st.T)), G.add(G.add(a, G.mul(u, st.T)), G.mul(n, st.last && S.flights.length > 1 && st.T !== e.T ? 2 * e.w + (e.gap || 100) : st.w)), G.add(a, G.mul(n, st.last && S.flights.length > 1 && st.T !== e.T ? 2 * e.w + (e.gap || 100) : st.w))]; prism(M, q, z0 + Math.max(0, st.z1 - e.R - (e.wt || 150) - 100), z0 + st.z1, LK("stair", e)); }); break;
           default: if (B.EXT && B.EXT[e.t] && B.EXT[e.t].mesh) B.EXT[e.t].mesh(M, doc, e, H); break;
-          case "room": prism(M, e.pts, L.elev - 2, L.elev + 3, B.look(e.look && B.LOOKS[e.look] ? e.look : B.FLOOR_LOOK[e.floor || ""] || "ips", e.col), null, 1, true);
+          case "room": var flz = +e.fl || 0; if (flz > 5) prism(M, e.pts, L.elev, L.elev + flz - 2, B.look("concrete"), null, 1, false); prism(M, e.pts, L.elev + flz - 2, L.elev + flz + 3, B.look(e.look && B.LOOKS[e.look] ? e.look : B.FLOOR_LOOK[e.floor || ""] || "ips", e.col), null, 1, true);
             if (e.ceil && B.fceilH) { var zf = L.elev + B.fceilH(doc, e); if (e.cdes && B.ceilDesign) B.ceilDesign(M, doc, e, zf, H); else prism(M, e.pts, zf, zf + 12, B.lookFor(d, "ceiling"), null, null, true); }   // false ceiling board (underside at the set height)
             break;
           case "railing": B.railMesh(M, e, z0, { d: d, box: box, boxAlong: boxAlong }); break;

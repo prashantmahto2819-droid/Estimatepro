@@ -456,6 +456,7 @@
       if (e.skirt) push("skirting", "A", perR * e.skirt, "Skirting " + e.skirt + " mm — " + (e.name || "room"), m(perR) + " × " + m(e.skirt));
       if (e.ceil) push("false_ceiling", "A", Aroom, "False ceiling — " + (e.name || "room"), "");
       if (lvlR.elev <= 0) push("pcc_floor", "V", Aroom * 75, "PCC under floor 75 mm — " + (e.name || "room"), "", "plinth");
+      if (+e.fl > 5) { push("backfill", "V", Aroom * (+e.fl), "Filling under the raised floor — " + (e.name || "room") + " (" + Math.round(+e.fl) + " mm)", (Aroom / 1e6).toFixed(3) + " m² × " + m(+e.fl)); push("brick", "V", perR * 115 * (+e.fl), "Brick edge wall of the raised floor — " + (e.name || "room"), m(perR) + " × 0.115 × " + m(+e.fl) + " (deduct the sides that are against full walls)"); }
       return rows;
     }
     if (e.t === "railing") { if (B.railQty) B.railQty(e, push); else push("railing", "L", G.segsLength(G.polySegs(e.pts, false)), "Railing / handrail", ""); return rows; }
