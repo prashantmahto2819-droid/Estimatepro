@@ -3,6 +3,12 @@
 This file is for the people maintaining the app. It is not published with the site (see `.assetsignore`).
 The text users see is `EP_NOTES` in `js/version.js`.
 
+## 2026.11.21-z28
+- `bim.js`: `B.stairRails(e)` (per flight and railed edge: plan ends, tread heights, slope length; `rail` = "in" well side / "out" / "both" / ""), `B.stairHead(doc, e)` (least clear height over treads under the solid part of the slab at the stair top; `low` = treads under 2100). Quantity row `railing` (L, on the slope).
+- `mesh.js`: sloping 44 mm handrail (double-sided quads) and 36 mm posts about every third tread, `railH` (900).
+- `tools.js` STAIR: option Railing (Well / Outer / Both / None; new stairs default to Well); headroom warning after placing. `ui-bim.js`: Properties → Railing, Railing height, Headroom.
+- Harness: dog-leg in a corner → rails 3.221 + 2.928 m; 15 treads low before the opening is cut, none after.
+
 ## 2026.11.21-z27
 - Stairs. Before: the flights always lay to the left of the going, nothing told the distance to walls, a stair could cross a wall without a word, and the slab above was not cut.
 - `bim.js`: stair `side` (1 / -1) in `stairGeom`; `B.stairOutline(e)` (rectangle, len, wd); `B.stairClear(doc, e)` (ray from the middle of each side to the wall faces of the level; `hit` = walls it overlaps, by edge crossing or containment); mirror flips `side`.

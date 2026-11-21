@@ -176,6 +176,19 @@
     return { steps: steps, plan: plan, flights: flights };
   }
   B.stairGeom = stairGeom;
+  /* railing lines of a stair: for each flight and each railed edge, the start and end on plan with the tread heights there; `gapBar` joins the two flights across the well at the landing */
+  B.stairRails = function (e) { var mode = e.rail == null ? "" : e.rail; if (!mode || mode === "none") return []; var S = stairGeom(e), out = [], k0 = 0, dog = S.flights.length > 1;
+    S.flights.forEach(function (cnt, fi) { var st = S.steps.slice(k0, k0 + cnt); k0 += cnt; if (!st.length) return; var a = st[0], b = st[st.length - 1], offs = [];
+      /* flight 0 lies from 0 to w across, flight 1 from w + gap to 2w + gap: the well is at w (flight 0) and at 0 of flight 1's own width */
+      var inner = fi === 0 ? e.w - 50 : 50, outer = fi === 0 ? 50 : e.w - 50; if (!dog) { inner = e.w - 50; outer = 50; }
+      if (mode === "in" || mode === "both") offs.push(inner); if (mode === "out" || mode === "both") offs.push(outer);
+      offs.forEach(function (o) { var p0 = G.add(a.a, G.mul(a.n, o)), p1 = G.add(G.add(b.a, G.mul(b.u, e.T)), G.mul(b.n, o)); out.push({ p0: p0, z0: a.z1, p1: p1, z1: b.z1 + e.R, u: a.u, n: st.length, len: Math.hypot(G.dist(p0, p1), b.z1 + e.R - a.z1) }); }); });
+    return out; };
+  /* least clear height over the treads under the solid part of the slab above (null = open above everywhere) */
+  B.stairHead = function (doc, e) { var Lv = B.level(doc.d, e.lvl), base = Lv ? Lv.elev : 0, top = base + e.n * e.R, S = stairGeom(e), min = null, low = 0;
+    var slabs = doc.d.ents.filter(function (s) { if (s.t !== "slab" || !s.pts) return false; var Ls = B.level(doc.d, s.lvl), zt = (Ls ? Ls.elev : 0) + (s.off || 0); return Math.abs(zt - top) <= 60; });
+    S.steps.forEach(function (st) { var c = G.add(G.add(st.a, G.mul(st.u, e.T / 2)), G.mul(st.n, e.w / 2)); slabs.forEach(function (s) { if (!G.inPoly(c, s.pts) || (s.holes || []).some(function (h) { return G.inPoly(c, h); })) return; var hd = top - (s.th || 125) - (base + st.z1); if (min == null || hd < min) min = hd; if (hd < 2100) low++; }); });
+    return { min: min, low: low }; };
   /* the rectangle a stair covers on plan: start corner, along the going, across the flights */
   B.stairOutline = function (e) { var S = stairGeom(e), dir = (e.dir || 0) * Math.PI / 180, u = [Math.cos(dir), Math.sin(dir)], n = G.mul(G.perp(u), +e.side === -1 ? -1 : 1), dog = S.flights.length > 1, len = dog ? (S.flights[0] - 1) * e.T + (e.land || e.w) : e.n * e.T, wd = dog ? 2 * e.w + (e.gap || 100) : e.w, p = e.p; return { len: len, wd: wd, u: u, n: n, pts: [p, G.add(p, G.mul(u, len)), G.add(G.add(p, G.mul(u, len)), G.mul(n, wd)), G.add(p, G.mul(n, wd))] }; };
   /* clear distances from the stair to the walls of its level: [behind the first step, beyond the far end, on the start side, on the other side] (null = no wall met within 20 m), and the walls it runs into */
@@ -460,6 +473,7 @@
       push("rcc_stair", "V", stepsV + waist + landV, "RCC staircase (waist slab + steps" + (landV ? " + landing" : "") + ")", e.n + " risers × " + e.R + " / treads " + e.T + ", width " + e.w);
       push("shut_stair", "A", incl * e.w + steps * e.R * e.w, "Shuttering — stairs", "");
       push("stair_finish", "A", steps * (e.T + e.R) * e.w, "Stair finish — treads + risers", "");
+      var RL = B.stairRails(e); if (RL.length) { var rl = RL.reduce(function (t, r) { return t + r.len; }, 0); push("railing", "L", rl, "Stair railing (" + RL.length + " run" + (RL.length > 1 ? "s" : "") + ", measured on the slope)", RL.map(function (r) { return m(r.len); }).join(" + ")); }
       push("steel_stair", "M", (stepsV + waist + landV) / 1e9 * bs.steel.stair, "Reinforcement — stair (thumb rule)", "");
       return rows;
     }

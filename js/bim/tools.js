@@ -151,11 +151,12 @@
     ed.say(kind + " roof " + (B.area(pts) / 1e6).toFixed(2) + " m² (plan) on top of this floor");
   });
   cmd("STAIR", ["ST", "STAIRS"], async function (ed) {
-    var b = ensureBim(ed), L = B.level(ed.doc.d, cur(ed)), kind = ed.stK || "Dogleg", w = ed.stW || 1000, T = ed.stT || 250, side = ed.stSide || "Left", gap = ed.stGap || 0, p, e = null;
+    var b = ensureBim(ed), L = B.level(ed.doc.d, cur(ed)), kind = ed.stK || "Dogleg", w = ed.stW || 1000, T = ed.stT || 250, side = ed.stSide || "Left", gap = ed.stGap || 0, rail = ed.stRail || "Well", p, e = null;
     var n = Math.max(2, Math.round(L.h / 150)), R = L.h / n, mm = function (v) { return v == null ? "no wall" : Math.round(v) + " mm"; };
-    var mk = function (p0, dirDeg, sd) { return { t: "stair", p: p0, dir: dirDeg, w: w, n: n, R: R, T: T, wt: 150, kind: kind.toLowerCase(), lvl: cur(ed), land: w, side: sd }; };
+    var mk = function (p0, dirDeg, sd) { return { t: "stair", p: p0, dir: dirDeg, w: w, n: n, R: R, T: T, wt: 150, kind: kind.toLowerCase(), lvl: cur(ed), land: w, side: sd, rail: rail === "None" ? "" : rail === "Both" ? "both" : rail === "Outer" ? "out" : "in" }; };
     while (true) {
-      p = await ed.getPoint("Start of the first step (bottom corner) — " + kind + ", width " + Math.round(w) + ", tread " + Math.round(T) + ", " + n + " risers of " + R.toFixed(0) + " mm, flights to the " + side.toLowerCase() + " of the going. Corner = fit it into a corner of a room", { kw: ["Corner", "Type", "Width", "Tread", "Side", "Gap"] });
+      p = await ed.getPoint("Start of the first step (bottom corner) — " + kind + ", width " + Math.round(w) + ", tread " + Math.round(T) + ", " + n + " risers of " + R.toFixed(0) + " mm, flights to the " + side.toLowerCase() + " of the going. Corner = fit it into a corner of a room", { kw: ["Corner", "Type", "Width", "Tread", "Side", "Gap", "Railing"] });
+      if (p === "Railing") { rail = ed.stRail = await ed.getKw("Railing on which side of the flights? (now: " + rail + ")", ["Well", "Outer", "Both", "None"], rail); continue; }
       if (p === "Type") { kind = ed.stK = await ed.getKw("Stair type", ["Straight", "Dogleg"], kind); continue; }
       if (p === "Width") { w = ed.stW = await ed.getDist("Flight width", { def: w }); continue; }
       if (p === "Tread") { T = ed.stT = await ed.getDist("Tread (going)", { def: T }); continue; }
@@ -180,7 +181,9 @@
     /* the floor above: offer to cut the stair opening */
     var top = L.elev + L.h, slabs = ed.doc.d.ents.filter(function (s) { if (s.t !== "slab" || !s.pts) return false; var Ls = B.level(ed.doc.d, s.lvl), zt = (Ls ? Ls.elev : 0) + (s.off || 0); if (Math.abs(zt - top) > 60) return false; return O.pts.every(function (q2) { return G.inPoly(q2, s.pts); }) && !(s.holes || []).some(function (h) { return G.inPoly(G.mid(O.pts[0], O.pts[2]), h); }); });
     if (slabs.length) { var yn = await ed.getKw("Cut the stair opening (" + Math.round(O.len) + " × " + Math.round(O.wd) + " mm) in the floor slab above?", ["Yes", "No"], "Yes"); if (yn === "Yes") { ed.doc.begin("Stair opening"); slabs.forEach(function (s) { var o2 = CAD.clone(s); o2.holes = (s.holes || []).concat([ccw(O.pts.map(function (q3) { return [q3[0], q3[1]]; }))]); ed.doc.mod(s.id, o2); }); ed.doc.commit(); ed.say("Opening cut in the slab above; its concrete, shuttering and steel are reduced by that area. Put a railing round it with Railing."); } }
-    else ed.say("No floor slab found above this stair yet — draw the slab, then run STAIRWELL to cut the opening.");
+    var Hd = B.stairHead(ed.doc, e); if (Hd.low) ed.say("⚠ Headroom: " + Hd.low + " tread(s) have less than 2100 mm under the slab above (least " + Math.round(Hd.min) + " mm). Cut the opening with Stair opening.");
+    if (slabs.length) return;
+    ed.say("No floor slab found above this stair yet — draw the slab, then run STAIRWELL to cut the opening.");
   });
   cmd("STAIRWELL", ["STAIROPENING", "STAIRCUT"], async function (ed) {
     var pk = await ed.getEnt("Click the stair whose opening should be cut in the slab above", { filter: function (x) { return x.t === "stair"; } }); if (!pk || !pk.e) return; var e = pk.e, L = B.level(ed.doc.d, e.lvl), O = B.stairOutline(e), top = L.elev + e.n * e.R, n = 0;

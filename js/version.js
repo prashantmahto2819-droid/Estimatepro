@@ -1,5 +1,5 @@
 /* App version + "what's new" — the super admin is offered to send this on WhatsApp after each upload. Change both with every release. */
-window.EP_VER = "2026.11.21-z27";
-window.EP_NOTES = "• Stairs fit into a room corner: Stair → Corner → click inside the room near the corner; it lies along the wall where it fits, with the Gap you set from the walls\n• Stair → Side chooses whether the flights lie left or right of the line you click (also in Properties)\n• After placing, the stair tells its size on plan and the clear distance to the walls on all four sides, and warns if it runs into a wall (also shown in Properties)\n• The stair opening is cut in the floor slab above (asked after placing; Stair opening does it later) — concrete, shuttering and steel of the slab reduce";
+window.EP_VER = "2026.11.21-z28";
+window.EP_NOTES = "• Stair railing: new stairs get a handrail with posts on the well (open) side — Stair → Railing, or Properties → Railing (well side / outer side / both / none, height); shown in 3D and its length on the slope is added to Σ Quantities\n• Headroom: the stair warns when treads have less than 2100 mm under the slab above, and Properties shows the least headroom\n• Stairs drawn before today have no railing until you choose one in Properties";
 /* pictures of this update: [file in /updates, caption]. Shown to the owner with the WhatsApp "what's new" message. */
-window.EP_PICS = [["z27-stair.jpg", "A stair fitted into a corner with its opening cut in the slab above"]];
+window.EP_PICS = [];
