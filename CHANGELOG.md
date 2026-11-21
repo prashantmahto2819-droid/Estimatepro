@@ -3,6 +3,11 @@
 This file is for the people maintaining the app. It is not published with the site (see `.assetsignore`).
 The text users see is `EP_NOTES` in `js/version.js`.
 
+## 2026.11.21-z34
+- Floor audit (`bim.js` quantities). Found and corrected: skirting ran across doors (now less the widths of doors / floor-level openings whose centre lies within half the wall thickness + 80 mm of the room outline); flooring and PCC ignored holes in the room's floor slab (now less the holes whose centre is inside the room); slab shuttering left out the sides of holes; the raised-floor brick edge was the whole perimeter (now only the door widths).
+- Not changed, noted: ceiling plaster is the whole soffit including over walls; a sunk floor (negative `fl`) has no filling item; rooms do not follow walls moved on the plan; false ceiling is not reduced for openings.
+- Harness: room 4.27 × 4.77 with one 1 m door → skirting (18.08 − 1.00) × 0.1; upper room 15.598 − 7.350 m² after the stair opening; roof slab shuttering + 11.2 m of opening sides.
+
 ## 2026.11.21-z33
 - Spiral: the last tread spans max(tread angle, 60°) as the top platform (`flat`, not railed with the flight; the opening's railing leaves the same 60° open). `mat` "steel" (default for new spirals): quantity `ms_stair` (kg = tread area × 6 mm × 7850 × 1.3 + post height × 19.5 kg/m → CPWD 10.25.2, map entry in `assets4.js`), treads drawn 12 mm thick in black steel; otherwise RCC as before.
 - Winders checked on the plan view (three wedge treads at the turn); picture in /updates.

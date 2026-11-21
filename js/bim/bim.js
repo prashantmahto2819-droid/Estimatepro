@@ -483,7 +483,8 @@
     if (e.t === "slab") {
       var Ap = area(e.pts) - (e.holes || []).reduce(function (s, h) { return s + area(h); }, 0), per = G.segsLength(G.polySegs(e.pts, true)), z = zone(e.lvl);
       push("rcc_slab", "V", Ap * e.th, (e.kind === "chajja" ? "RCC chajja / sunshade" : "RCC slab") + " " + Math.round(e.th) + " mm", (Ap / 1e6).toFixed(3) + " m² × " + m(e.th), z);
-      push("shut_slab", "A", Ap + per * e.th, "Shuttering — slab soffit + edges", "soffit " + (Ap / 1e6).toFixed(3) + " m² + edge " + m(per) + " × " + m(e.th), z);
+      var perH = (e.holes || []).reduce(function (t, h) { return t + G.segsLength(G.polySegs(h, true)); }, 0);   /* the sides of openings (stair wells, ducts) are shuttered too */
+      push("shut_slab", "A", Ap + (per + perH) * e.th, "Shuttering — slab soffit + edges", "soffit " + (Ap / 1e6).toFixed(3) + " m² + edge " + m(per) + (perH ? " + sides of openings " + m(perH) : "") + " × " + m(e.th), z);
       if (!rfPush("steel_slab", "slab", z)) push("steel_slab", "M", Ap * e.th / 1e9 * bs.steel.slab, "Reinforcement — slab (thumb rule " + bs.steel.slab + " kg/m³)", "", z);
       if (e.kind !== "chajja") push("ceiling_plaster", "A", Ap, "Ceiling plaster (soffit)", "", z);
       return rows;
@@ -534,12 +535,18 @@
       return rows;
     }
     if (e.t === "room") {
-      var Aroom = area(e.pts), perR = G.segsLength(G.polySegs(e.pts, true)), lvlR = B.level(d, e.lvl);
-      push("floor_" + (e.floor || "vitrified"), "A", Aroom, "Flooring — " + (e.name || "room") + " (" + (e.floor || "vitrified tiles") + ")", (Aroom / 1e6).toFixed(3) + " m²");
-      if (e.skirt) push("skirting", "A", perR * e.skirt, "Skirting " + e.skirt + " mm — " + (e.name || "room"), m(perR) + " × " + m(e.skirt));
-      if (e.ceil) push("false_ceiling", "A", Aroom, "False ceiling — " + (e.name || "room"), "");
-      if (lvlR.elev <= 0) push("pcc_floor", "V", Aroom * 75, "PCC under floor 75 mm — " + (e.name || "room"), "", "plinth");
-      if (+e.fl > 5) { push("backfill", "V", Aroom * (+e.fl), "Filling under the raised floor — " + (e.name || "room") + " (" + Math.round(+e.fl) + " mm)", (Aroom / 1e6).toFixed(3) + " m² × " + m(+e.fl)); push("brick", "V", perR * 115 * (+e.fl), "Brick edge wall of the raised floor — " + (e.name || "room"), m(perR) + " × 0.115 × " + m(+e.fl) + " (deduct the sides that are against full walls)"); }
+      var Agross = area(e.pts), perR = G.segsLength(G.polySegs(e.pts, true)), lvlR = B.level(d, e.lvl), nmR = e.name || "room";
+      /* openings in the floor slab of this room (stair wells, ducts) carry no flooring */
+      var Ahole = 0; d.ents.forEach(function (sl) { if (sl.t !== "slab" || !sl.holes || !sl.holes.length) return; var Ls = B.level(d, sl.lvl), zt = (Ls ? Ls.elev : 0) + (sl.off || 0); if (Math.abs(zt - lvlR.elev) > 60) return; sl.holes.forEach(function (h) { var cx = 0, cy = 0; h.forEach(function (q) { cx += q[0]; cy += q[1]; }); if (G.inPoly([cx / h.length, cy / h.length], e.pts)) Ahole += area(h); }); });
+      var Aroom = Math.max(0, Agross - Ahole);
+      /* doors and openings on the walls of this room: no skirting across them */
+      var dW = 0, dN = 0; d.ents.forEach(function (o) { if (o.t !== "door" && o.t !== "opening") return; if (o.t === "opening" && (o.sill || 0) > 50) return; var pl = B.place(doc, o); if (!pl || !pl.w || pl.w.lvl !== e.lvl) return; var tol = (pl.w.th || 230) / 2 + 80, best = Infinity; for (var k = 0; k < e.pts.length; k++) { var a = e.pts[k], b = e.pts[(k + 1) % e.pts.length], L2 = G.dist(a, b); if (L2 < 1) continue; var t = Math.max(0, Math.min(1, ((pl.p[0] - a[0]) * (b[0] - a[0]) + (pl.p[1] - a[1]) * (b[1] - a[1])) / (L2 * L2))), dd = Math.hypot(pl.p[0] - a[0] - (b[0] - a[0]) * t, pl.p[1] - a[1] - (b[1] - a[1]) * t); if (dd < best) best = dd; } if (best <= tol) { dW += o.w || 0; dN++; } });
+      dW = Math.min(dW, perR);
+      push("floor_" + (e.floor || "vitrified"), "A", Aroom, "Flooring — " + nmR + " (" + (e.floor || "vitrified tiles") + ")", (Agross / 1e6).toFixed(3) + " m²" + (Ahole ? " − openings in the floor " + (Ahole / 1e6).toFixed(3) + " m²" : ""));
+      if (e.skirt) push("skirting", "A", (perR - dW) * e.skirt, "Skirting " + e.skirt + " mm — " + nmR, (dW ? "(" + m(perR) + " − " + dN + " door" + (dN > 1 ? "s " : " ") + m(dW) + ")" : m(perR)) + " × " + m(e.skirt));
+      if (e.ceil) push("false_ceiling", "A", Agross, "False ceiling — " + nmR, "");
+      if (lvlR.elev <= 0) push("pcc_floor", "V", Aroom * 75, "PCC under floor 75 mm — " + nmR, "", "plinth");
+      if (+e.fl > 5) { push("backfill", "V", Aroom * (+e.fl), "Filling under the raised floor — " + nmR + " (" + Math.round(+e.fl) + " mm)", (Aroom / 1e6).toFixed(3) + " m² × " + m(+e.fl)); if (dW > 0) push("brick", "V", dW * 115 * (+e.fl), "Brick edge of the raised floor at the door" + (dN > 1 ? "s" : "") + " — " + nmR, m(dW) + " × 0.115 × " + m(+e.fl) + " (the walls of the room hold the filling elsewhere)"); }
       return rows;
     }
     if (e.t === "railing") { if (B.railQty) B.railQty(e, push); else push("railing", "L", G.segsLength(G.polySegs(e.pts, false)), "Railing / handrail", ""); return rows; }
