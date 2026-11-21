@@ -33,7 +33,7 @@ Last updated at version 2026.11.21-q.
 3a. Decisions: the 30 quick rates that differ from their analysis (tipper, tanker…); whether 1:30 / 1:40 / 1:60 scales may be used on Design Studio sheets.
 4. Commercial plans (owner will describe).
 
-5. Device limits (-x): run `server/devices.sql` once in Supabase → SQL editor. Until then every user can sign in on any number of devices as before. Then set multi-device users in Users → devices.
+5. Device limits (-x): owner ran `server/devices.sql` on 21 Nov. To check with the owner: the devices select shows in Users, a second device gets the 'in use on another device' screen.
 6. Windows application: plan in `desktop/PLAN.md`. Owner to decide — publisher name / code-signing certificate, bundled files or live site, offline grace days, Microsoft Store or direct download. Then: Tauri wrapper + GitHub Actions build on windows-latest.
 
 ## B. 3D Studio — to build (no server needed)
@@ -60,7 +60,7 @@ Last updated at version 2026.11.21-q.
 1. (done in -x: SHEET puts plan + elevations + sections in one frame at one scale and plots with the title block.) (-s: portrait.) (-z4: SHEETADD — several sheets, each with its own scale; plot all.) (-z5: all sheets in one PDF, list of sheets.) Still open: views at different scales inside one sheet.
 2. Real dimensions, ellipse and spline in DXF export; DWG is not possible in the browser.
 3. (curved walls done in -e; ramps / sloping slabs done in -s: RAMP.) (-z5: ramp kerbs.) Still open: split levels, slabs sloping two ways, ramp railings.
-4. (done in -x: ELEVATION, SECTION, VIEWSUPDATE.) (-n: cut parts are filled.) Still open: (-o: overall width and height on every view) (-q: level-to-level chain and door / window size tags) material notes and opening positions on elevations, door / window swing marks, outlines for library items that have no edges, views update on their own.
+4. (done in -x: ELEVATION, SECTION, VIEWSUPDATE.) (-n: cut parts are filled.) Still open: (-o: overall width and height on every view) (-q: level-to-level chain and door / window size tags) (-z9: finish notes and opening marks on elevations.) Still open: notes per wall where finishes differ, outlines for library items that have no edges, views update on their own.
 5. (done in -r: SCHEDULE — door / window and room finish tables.) (-z5: column, beam and wall schedules.)
 6. (-w: 37 hatch patterns.) Still open: stone / random rubble patterns, own .pat file import, text styles, blocks library shared between drawings.
 7. (done in -r: PIPE — CPVC, rain-water pipes, conduits, cable trays with lengths and SOR rates.) (-z6: drain pipes and wiring in conduit as runs.) (-z7: trench excavation and refilling.) Still open: drain slopes / invert levels, manholes and chambers along the run. (Fittings are inside the SOR pipe / conduit rates.)
@@ -68,5 +68,5 @@ Last updated at version 2026.11.21-q.
 
 ## D. Other
 1. Design Studio sheets: views are small and some labels overlap.
-2. (-t: 37 furniture / appliance / garden keys take Non-SOR items.) (-v: 25 more — partitions, grills, railing, curtains, site fittings.) Still open: fountains, temple pieces, boundary-wall bays and grand gates (composite works — need item-wise estimates), DG set, transformer, main panel (E&M SOR), rain-water pipes as library pieces, floor lamps, rugs.
+2. (-t: 37 furniture / appliance / garden keys take Non-SOR items.) (-v: 25 more — partitions, grills, railing, curtains, site fittings.) (-z9: fountain, DG set, transformer, main panel as budget Non-SOR items.) Still open: temple pieces, boundary-wall bays and grand gates (composite works — need item-wise estimates), rain-water pipes as library pieces, floor lamps, rugs.
 3. Deeper testing of screens that need a signed-in server session.

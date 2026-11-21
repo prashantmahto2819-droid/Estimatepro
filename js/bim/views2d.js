@@ -84,10 +84,13 @@
     if (!sect) doc.d.ents.forEach(function (o) { if (o.t !== "door" && o.t !== "window") return; var pl = B.place(doc, o); if (!pl) return; if (Math.abs(pl.u[0] * dv[0] + pl.u[1] * dv[1]) > 0.2) return;
       var Lw = B.level(doc.d, pl.w.lvl), zb2 = (Lw ? Lw.elev : 0) + (pl.w.base || 0) + (o.t === "door" ? 0 : (o.sill != null ? o.sill : 900)), cU = (pl.p[0] * ux + pl.p[1] * uy) / 1000, cV = (zb2 + o.h / 2) / 1000, cD = (pl.p[0] * dv[0] + pl.p[1] * dv[1]) / 1000 - pl.w.th / 2000;
       var px = Math.floor((cU - u0) / s), py = Math.floor((cV - v0) / s); if (px < 0 || py < 0 || px >= W || py >= H) return; if (cD > far(px, py) + pl.w.th / 1000 + 0.05) return; if (zb2 < ngl - 1 && zb2 + o.h < ngl) return;
-      tags.push({ u: Math.round(cU * 1000), v: Math.round(zb2 + o.h), s: (o.t === "door" ? "D " : "W ") + Math.round(o.w) + " × " + Math.round(o.h) }); });
+      var su = (pl.u[0] * ux + pl.u[1] * uy) >= 0 ? 1 : -1, hs = (o.swing === "r" ? 1 : -1) * su, opens = o.t === "door" ? !/slid|roll|shutter|fold/i.test(String(o.kind || "") + " " + String(o.preset || "")) : /^(win|casement)/.test(String(o.kind || "win")), two = /double|casement2/.test(String(o.kind || ""));
+      tags.push({ u: Math.round(cU * 1000), v: Math.round(zb2 + o.h), s: (o.t === "door" ? "D " : "W ") + Math.round(o.w) + " × " + Math.round(o.h), sw: opens ? { u0: Math.round(cU * 1000 - o.w / 2), u1: Math.round(cU * 1000 + o.w / 2), v0: Math.round(zb2), v1: Math.round(zb2 + o.h - B.archSp(o) / Math.max(1, o.w) * 0), hs: hs, two: two } : null }); });
+    var notes = []; if (!sect) { var nm = function (cat) { var c = B.catLook(doc.d, cat); return c && B.LOOKS[c.l] ? B.LOOKS[c.l].n.replace(/^[A-Za-z ]+ — /, function (m0) { return m0; }) : ""; }, hasRoof = doc.d.ents.some(function (e) { return e.t === "roof"; }), rk = hasRoof ? (function () { var r = doc.d.ents.filter(function (e) { return e.t === "roof"; })[0]; return r.mat === "tile" ? "roof_tile" : r.mat === "rcc" || r.kind === "flat" ? "roof_rcc" : "roof_sheet"; })() : null;
+      [["Outer walls", "wall_ext"], ["Roof", rk], ["Windows", "win_frame"], ["Doors", "door"]].forEach(function (q) { if (!q[1]) return; var t = nm(q[1]); if (t) notes.push(q[0] + ": " + t); }); }
     var ext = [Infinity, Infinity, -Infinity, -Infinity]; lines.forEach(function (L) { G.ext(ext, L.a); G.ext(ext, L.b); });
     if (!isFinite(ext[0])) return null;
-    return { lines: lines, fills: fills, tags: tags, ext: ext, ngl: ngl, levels: bs.levels.map(function (l) { return { name: l.name, elev: l.elev }; }), tris: tris.length / 10 };
+    return { lines: lines, fills: fills, tags: tags, notes: notes, ext: ext, ngl: ngl, levels: bs.levels.map(function (l) { return { name: l.name, elev: l.elev }; }), tris: tris.length / 10 };
   };
 
   /* block content for a view: the lines, ground line, level marks and the title under it; bb = everything, in block coordinates */
@@ -109,10 +112,14 @@
     var yb = Math.min(res.ext[1], res.ngl), chain = [res.ngl].concat(res.levels.map(function (l) { return l.elev; }).filter(function (z) { return z > res.ngl + 200 && z < top - 200; })).concat([top]).sort(function (p, q) { return p - q; });
     dimL([x0, yb], [x1, yb], 5 * N, false);
     if (top - res.ngl > 500) { if (chain.length > 2) { for (var ci = 0; ci + 1 < chain.length; ci++) dimL([x1 + 36 * N, chain[ci]], [x1 + 36 * N, chain[ci + 1]], 4 * N, true); dimL([x1 + 42 * N, res.ngl], [x1 + 42 * N, top], 4 * N, true); } else dimL([x1 + 26 * N, res.ngl], [x1 + 26 * N, top], 4 * N, true); }
+    (res.tags || []).forEach(function (t) { var w = t.sw; if (!w) return; var mid = (w.v0 + w.v1) / 2, L2 = function (a2, b2) { ents.push({ t: "line", a: a2, b: b2, layer: "A-ELEV-LVL" }); };   /* opening marks: the point of the V is on the hinge side */
+      if (w.two) { var um = (w.u0 + w.u1) / 2; L2([w.u0, mid], [um, w.v0]); L2([w.u0, mid], [um, w.v1]); L2([w.u1, mid], [um, w.v0]); L2([w.u1, mid], [um, w.v1]); }
+      else { var hu = w.hs < 0 ? w.u0 : w.u1, ou = w.hs < 0 ? w.u1 : w.u0; L2([hu, mid], [ou, w.v0]); L2([hu, mid], [ou, w.v1]); } });
     (res.tags || []).forEach(function (t) { var h2 = 1.8 * N; ents.push({ t: "text", p: [t.u - tw(t.s, h2) / 2, t.v + 0.9 * N], s: t.s, h: h2, rot: 0, al: "l", layer: "A-ELEV-TXT" }); });
     var cx = (x0 + x1) / 2, ty = yb - 16 * N, H1 = 3.5 * N, wt = tw(title, H1);
     ents.push({ t: "text", p: [cx - wt / 2, ty], s: title, h: H1, rot: 0, al: "l", layer: "A-ELEV-TXT" }); ents.push({ t: "line", a: [cx - wt / 2, ty - 1.5 * N], b: [cx + wt / 2, ty - 1.5 * N], layer: "A-ELEV-GL" });
     ents.push({ t: "text", p: [cx - tw("Scale 1 : " + N, th) / 2, ty - 6 * N], s: "Scale 1 : " + N, h: th, rot: 0, al: "l", layer: "A-ELEV-TXT" }); G.ext(bb, [cx - wt / 2, ty - 7 * N]); G.ext(bb, [cx + wt / 2, ty]);
+    (res.notes || []).forEach(function (nt, i) { var hn = 2 * N, yy = ty - 11 * N - i * 3.4 * N, wn = tw(nt, hn); ents.push({ t: "text", p: [cx - wn / 2, yy], s: nt, h: hn, rot: 0, al: "l", layer: "A-ELEV-TXT" }); G.ext(bb, [cx - wn / 2, yy - N]); G.ext(bb, [cx + wn / 2, yy]); });
     return { ents: ents, bb: bb };
   };
 

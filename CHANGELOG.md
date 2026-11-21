@@ -3,6 +3,11 @@
 This file is for the people maintaining the app. It is not published with the site (see `.assetsignore`).
 The text users see is `EP_NOTES` in `js/version.js`.
 
+## 2026.11.21-z9
+- `views2d.js`: tags carry `sw` (opening rectangle, hinge side from `swing` and the wall direction in the view, two leaves) → V marks on A-ELEV-LVL; `notes` (building default looks of wall_ext / roof / win_frame / door) written under the scale line of elevations.
+- `templates.json` + `B.NSMAP`: DG set 125 kVA, transformer 250 kVA, main LT panel, garden fountain (budget figures).
+- Owner ran `server/devices.sql` on 21 Nov — device limits are live on the server from then (not verified from here).
+
 ## 2026.11.21-z8
 - Pattern 17 `water` (`B.PT.water`): fbm ripples tilt the normal; reflection as strong as glass. Looks `water`, `water_green`, `water_deep`; land kind `water` (no quantity rows); LANDAREA offers Water.
 
