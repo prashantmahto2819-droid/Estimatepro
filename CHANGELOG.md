@@ -3,6 +3,12 @@
 This file is for the people maintaining the app. It is not published with the site (see `.assetsignore`).
 The text users see is `EP_NOTES` in `js/version.js`.
 
+## 2026.11.21-z5
+- `site.js`: SETBACK (`B.insetPoly`, layer C-SETBACK, per-side distances), AREASTATEMENT (`B.areaStatement`: per level floor slab → slab over → rooms; coverage and FAR against the largest C-PROP polygon); ramp `kerb` (mesh + rcc / shuttering rows).
+- `views2d.js`: schedules Columns, Beams, Walls, Sheets (`SCH_KINDS`). `plot.js`: `opts.raw` + `CAD.plotPdfPages` (multi-page); plot dialog "All sheets" → one PDF.
+- `roofs2.js`: dome `shape: "cone"`, `drum` height (230 mm wall; rcc + shut_wall rows).
+- `ui-bim.js`: `lift3d` (▲ ▼ 100 mm: assets z / dz, models, ramps, runs, dome / vault off), `copy3d` (⧉).
+
 ## 2026.11.21-z4
 - `views2d.js`: SHEETADD (frame pline + label on A-SHEET tagged `sheet: "S<n>"`, entry in `d.layouts` with paper / scale / land / title / number); `B.sheets(ed)` returns the layouts whose frame exists, with the frame's present rectangle; SHEET keeps the other sheets and tags its own as S1.
 - Plot dialog: one option per sheet (`sheet:<id>`) and `sheet:*` = all sheets, one PDF each.

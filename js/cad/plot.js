@@ -90,6 +90,7 @@
     tb(cols[2] + 3, y0 - 6, "SCALE", 2); tb(cols[2] + 3, y0 - 13, "1 : " + N + " (" + (opts.paper || "A3") + ")", 3.2, true); tb(cols[2] + 3, y0 - 20, "UNITS: " + (opts.units || "mm"), 2.2);
     tb(cols[3] + 3, y0 - 6, "DRAWING No.", 2); tb(cols[3] + 3, y0 - 13, opts.number || "D-01", 3.4, true); tb(cols[3] + 3, y0 - 20, "DATE: " + (opts.date || new Date().toLocaleDateString("en-IN")), 2.2); tb(cols[3] + 3, y0 - 25, "DRAWN: " + (opts.drawnBy || ""), 2.2);
     var content = s.join("\n");
+    if (opts.raw) return { content: content, imgs: imgs, W: W, H: H, scale: N };
     // assemble the PDF
     var objs = [], enc = new TextEncoder();
     objs.push("<< /Type /Catalog /Pages 2 0 R >>");
@@ -112,6 +113,22 @@
     var total = parts.reduce(function (a, p) { return a + p.length; }, 0), out = new Uint8Array(total), k = 0; parts.forEach(function (p) { out.set(p, k); k += p.length; });
     return { bytes: out, scale: N, paper: [W, H] };
   }
+  /* several sheets in one PDF: list = [opts of pdf()], one page each */
+  function pdfPages(doc, list) {
+    var mm2pt = 72 / 25.4, n = function (v) { return (Math.round(v * 100) / 100).toString(); }, enc = new TextEncoder(), pages = list.map(function (o) { return pdf(doc, Object.assign({}, o, { raw: true })); });
+    var objs = [null, null, "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>", "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold /Encoding /WinAnsiEncoding >>"], kids = [];
+    pages.forEach(function (pg) { var pi = objs.length + 1, ci = pi + 1, first = ci + 1, xo = pg.imgs.map(function (_, i) { return "/Im" + i + " " + (first + i) + " 0 R"; }).join(" "); kids.push(pi + " 0 R");
+      objs.push("<< /Type /Page /Parent 2 0 R /MediaBox [0 0 " + n(pg.W * mm2pt) + " " + n(pg.H * mm2pt) + "] /Contents " + ci + " 0 R /Resources << /Font << /F1 3 0 R /F2 4 0 R >>" + (xo ? " /XObject << " + xo + " >>" : "") + " >> >>");
+      objs.push({ stream: enc.encode(pg.content), dict: "" });
+      pg.imgs.forEach(function (im) { objs.push({ stream: im.bytes, dict: "/Type /XObject /Subtype /Image /Width " + im.w + " /Height " + im.h + " /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode" }); }); });
+    objs[0] = "<< /Type /Catalog /Pages 2 0 R >>"; objs[1] = "<< /Type /Pages /Kids [" + kids.join(" ") + "] /Count " + kids.length + " >>";
+    var parts = [enc.encode("%PDF-1.4\n%\xE2\xE3\xCF\xD3\n")], offs = [], len = parts[0].length;
+    objs.forEach(function (o, i) { var head, tail; if (typeof o === "string") { head = enc.encode((i + 1) + " 0 obj\n" + o + "\nendobj\n"); offs.push(len); parts.push(head); len += head.length; return; }
+      head = enc.encode((i + 1) + " 0 obj\n<< " + o.dict + " /Length " + o.stream.length + " >>\nstream\n"); tail = enc.encode("\nendstream\nendobj\n"); offs.push(len); parts.push(head, o.stream, tail); len += head.length + o.stream.length + tail.length; });
+    parts.push(enc.encode("xref\n0 " + (objs.length + 1) + "\n0000000000 65535 f \n" + offs.map(function (o) { return ("0000000000" + o).slice(-10) + " 00000 n \n"; }).join("") + "trailer\n<< /Size " + (objs.length + 1) + " /Root 1 0 R >>\nstartxref\n" + len + "\n%%EOF\n"));
+    var total = parts.reduce(function (a2, q) { return a2 + q.length; }, 0), out = new Uint8Array(total), k = 0; parts.forEach(function (q) { out.set(q, k); k += q.length; });
+    return { bytes: out, pages: pages.length };
+  }
   /* image underlays for the PDF: { assetId: { bytes (JPEG), w, h } } from loaded HTMLImageElements */
   function jpegOf(img) {
     var cv = document.createElement("canvas"), k = Math.min(1, 2400 / Math.max(img.naturalWidth, img.naturalHeight)); cv.width = Math.round(img.naturalWidth * k); cv.height = Math.round(img.naturalHeight * k);
@@ -127,5 +144,5 @@
     ed.cv = cv; ed.ctx = cv.getContext("2d"); ed.W = W; ed.H = H; ed.dpr = 1; ed.set.bg = "light"; ed.set.grid = false; ed.sel = new Set(); ed.hover = null; ed.set.cross = false; ed.snapPt = null;
     ed.zoomBox(b, 0.03); try { ed.render(); } finally { var url = cv.toDataURL("image/png"); ed.view = keep.view; ed.W = keep.W; ed.H = keep.H; ed.dpr = keep.dpr; ed.cv = keep.cv; ed.ctx = keep.ctx; ed.set.bg = keep.bg; ed.set.grid = keep.grid; ed.sel = keep.sel; ed.hover = keep.hover; ed.set.cross = keep.cross; ed.snapPt = keep.snap; ed.dirty = true; return url; }
   }
-  Object.assign(CAD, { plotPdf: pdf, plotPng: png, jpegOf: jpegOf, PAPER: PAPER, STD_SCALES: STD, flatEnts: flatEnts });
+  Object.assign(CAD, { plotPdfPages: pdfPages, plotPdf: pdf, plotPng: png, jpegOf: jpegOf, PAPER: PAPER, STD_SCALES: STD, flatEnts: flatEnts });
 })();

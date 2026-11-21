@@ -177,7 +177,7 @@
   });
 
   /* regenerate every placed view (used before plotting, so a sheet never prints an out-of-date elevation) */
-  B.refreshViews = function (ed) { var d = ed.doc.d, names = Object.keys(d.blocks || {}).filter(isViewBlock).filter(function (n) { return insertsOf(ed, n).length; }); if (!names.length) return 0; var N = scaleOf(d), n = 0; ed.doc.begin("Update views"); try { ensureLayers(ed); names.forEach(function (nm) { if (makeView(ed, nm, N)) n++; }); if (Object.keys(d.blocks).some(function (k) { return /^SCH-/.test(k) && insertsOf(ed, k).length; })) ["Doors", "Rooms"].forEach(function (w) { if (insertsOf(ed, "SCH-" + w).length) makeSchedule(ed, w, N); }); } finally { ed.doc.commit(); } return n; };
+  B.refreshViews = function (ed) { var d = ed.doc.d, names = Object.keys(d.blocks || {}).filter(isViewBlock).filter(function (n) { return insertsOf(ed, n).length; }); if (!names.length) return 0; var N = scaleOf(d), n = 0; ed.doc.begin("Update views"); try { ensureLayers(ed); names.forEach(function (nm) { if (makeView(ed, nm, N)) n++; }); if (Object.keys(d.blocks).some(function (k) { return /^SCH-/.test(k) && insertsOf(ed, k).length; })) SCH_KINDS.forEach(function (w) { if (insertsOf(ed, "SCH-" + w).length) makeSchedule(ed, w, N); }); } finally { ed.doc.commit(); } return n; };
 
   /* ---------- schedules as tables: doors / windows, room finishes ---------- */
   function table(title, heads, rows, widths, N) {
@@ -188,8 +188,18 @@
     all.forEach(function (r, ri) { var cx = 0; r.forEach(function (c, ci) { ents.push({ t: "text", p: [cx + 1.5 * N, -(ri + 1) * rh + 1.8 * N], s: String(c == null ? "" : c).slice(0, Math.floor(widths[ci] / 1.5)), h: th, rot: 0, al: "l", layer: L }); cx += widths[ci] * N; }); });
     return { ents: ents, bb: [0, -H, W, 6 * N] };
   }
+  var SCH_KINDS = ["Doors", "Rooms", "Columns", "Beams", "Walls", "Sheets"];
   function makeSchedule(ed, what, N) {
     var d = ed.doc.d, doc = ed.doc, T;
+    if (what === "Columns" || what === "Beams" || what === "Walls" || what === "Sheets") { var gg = {}, oo = [], add = function (k, row, q) { if (!gg[k]) { gg[k] = { row: row, n: 0, q: 0 }; oo.push(k); } gg[k].n++; gg[k].q += q || 0; }, mm2 = function (v) { return (v / 1000).toFixed(2); };
+      if (what === "Columns") { d.ents.forEach(function (o) { if (o.t !== "column") return; var Lv = B.level(d, o.lvl), cs = B.colSection(o), H = o.h != null ? o.h : (Lv ? Lv.h : 3000); add([o.lvl, cs.label, Math.round(H)].join("|"), [Lv ? Lv.name : "", cs.label, mm2(H)], cs.A * H / 1e9); });
+        if (!oo.length) return null; var cn = 0; T = table("COLUMN SCHEDULE", ["Mark", "Level", "Section (mm)", "Height (m)", "Nos", "Concrete (cum)"], oo.map(function (k) { var g2 = gg[k]; return ["C" + (++cn)].concat(g2.row, [g2.n, g2.q.toFixed(2)]); }), [14, 30, 40, 22, 12, 28], N); }
+      else if (what === "Beams") { var bsl = B.ensure(d).slabTh || 0; d.ents.forEach(function (o) { if (o.t !== "beam") return; var Lv = B.level(d, o.lvl), L = G.dist(o.a, o.b); add([o.lvl, Math.round(o.w), Math.round(o.d)].join("|"), [Lv ? Lv.name : "", Math.round(o.w) + " × " + Math.round(o.d)], L); gg[[o.lvl, Math.round(o.w), Math.round(o.d)].join("|")].v = (gg[[o.lvl, Math.round(o.w), Math.round(o.d)].join("|")].v || 0) + L * o.w * Math.max(0, o.d - bsl) / 1e9; });
+        if (!oo.length) return null; var bn = 0; T = table("BEAM SCHEDULE", ["Mark", "Level", "Size W × D (mm)", "Nos", "Total length (m)", "Concrete below slab (cum)"], oo.map(function (k) { var g2 = gg[k]; return ["B" + (++bn)].concat(g2.row, [g2.n, mm2(g2.q), (g2.v || 0).toFixed(2)]); }), [14, 30, 36, 12, 30, 44], N); }
+      else if (what === "Walls") { d.ents.forEach(function (o) { if (o.t !== "wall") return; var Lv = B.level(d, o.lvl), H = B.wallH(doc, o), L = G.dist(o.a, o.b), LI = o.lookI && B.LOOKS[o.lookI] ? B.LOOKS[o.lookI].n : "default", LO = o.ext ? (o.lookO && B.LOOKS[o.lookO] ? B.LOOKS[o.lookO].n : "default") : "-"; add([o.lvl, Math.round(o.th), o.ext ? 1 : 0, o.mat || "", LI, LO].join("|"), [Lv ? Lv.name : "", Math.round(o.th) + " mm" + (o.mat ? " " + o.mat : ""), o.ext ? "Outer" : "Inner", LI, LO], L); gg[[o.lvl, Math.round(o.th), o.ext ? 1 : 0, o.mat || "", LI, LO].join("|")].v = (gg[[o.lvl, Math.round(o.th), o.ext ? 1 : 0, o.mat || "", LI, LO].join("|")].v || 0) + L * H / 1e6; });
+        if (!oo.length) return null; var wn2 = 0; T = table("WALL SCHEDULE", ["Type", "Level", "Wall", "Position", "Inside finish", "Outside finish", "Length (m)", "Face area (sqm)"], oo.map(function (k) { var g2 = gg[k]; return ["W" + String.fromCharCode(65 + (wn2++ % 26))].concat(g2.row, [mm2(g2.q), (g2.v || 0).toFixed(1)]); }), [12, 26, 30, 18, 40, 40, 22, 28], N); }
+      else { var SH = B.sheets ? B.sheets(ed) : []; if (!SH.length) return null; T = table("LIST OF SHEETS", ["Sheet", "Drawing no.", "Title", "Paper", "Scale"], SH.map(function (l, i) { return [l.id.replace(/^S/, ""), l.number || ("A-" + (i + 1 < 10 ? "0" : "") + (i + 1)), l.title || (l.id === "S1" ? "Plan, elevations and sections" : ""), l.paper + (l.land === false ? " portrait" : " landscape"), "1 : " + l.scale]; }), [14, 26, 70, 34, 20], N); }
+      var Bl0 = Object.assign({}, ed.doc.d.blocks); Bl0["SCH-" + what] = { base: [0, 0], ents: T.ents }; ed.doc.set("blocks", Bl0); return T; }
     if (what === "Doors") { var g = {}, order = []; d.ents.forEach(function (o) { if (o.t !== "door" && o.t !== "window") return; if (!B.hostOf(doc, o)) return; var k = [o.t, Math.round(o.w), Math.round(o.h), o.t === "window" ? Math.round(o.sill || 0) : 0, o.kind || "", o.style || "", o.head || "", o.mat || ""].join("|"); if (!g[k]) { g[k] = { o: o, n: 0 }; order.push(k); } g[k].n++; });
       var dn = 0, wn = 0, SN = { "": "flush", groove: "flush, grooves", vgroove: "flush, grooves", panel: "panelled", panel6: "6 panels", carved: "main door", vision: "glass strip", halfglass: "half glass", glass: "glazed", louvre: "louvred", jali: "jali", grill: "grill" };
       order.sort(function (a, b) { return (g[a].o.t === g[b].o.t ? 0 : g[a].o.t === "door" ? -1 : 1) || g[b].o.w - g[a].o.w; });
@@ -203,12 +213,12 @@
   B.makeSchedule = makeSchedule;
   LAYERS["A-SCHED"] = { color: 7, lw: 0.18, lt: "CONTINUOUS" }; LAYERS["A-SYMB"] = { color: 7, lw: 0.25, lt: "CONTINUOUS" };
   cmd("SCHEDULE", ["SCH", "DOORSCHEDULE", "ROOMSCHEDULE"], async function (ed) {
-    var w = await ed.getKw("Which schedule?", ["Doors", "Rooms"], "Doors"), N = scaleOf(ed.doc.d); ensureLayers(ed); var T = makeSchedule(ed, w, N);
-    if (!T) { ed.say(w === "Doors" ? "No doors or windows in the model yet." : "No rooms yet — use Room inside each room first."); return; }
+    var w = await ed.getKw("Which schedule?", SCH_KINDS, ed.schKind || "Doors"), N = scaleOf(ed.doc.d); ed.schKind = w; ensureLayers(ed); var T = makeSchedule(ed, w, N);
+    if (!T) { ed.say({ Doors: "No doors or windows in the model yet.", Rooms: "No rooms yet — use Room inside each room first.", Columns: "No columns in the model yet.", Beams: "No beams in the model yet.", Walls: "No walls in the model yet.", Sheets: "No sheets yet — use Sheet or Add sheet first." }[w]); return; }
     if (insertsOf(ed, "SCH-" + w).length) { ed.say("The schedule on the drawing was brought up to date."); return; }
     var pb = planBox(ed), p = await ed.getPoint("Click where the table goes (its top-left corner), or press Enter to put it beside the drawing", { allowNone: true }), tl = p && p.length ? p : [pb ? pb[2] + 15 * N : 0, pb ? pb[3] : 0];
     ed.doc.add({ t: "insert", block: "SCH-" + w, p: [tl[0], tl[1] - 6 * N], sx: 1, sy: 1, rot: 0, layer: "A-SCHED" });
-    ed.say((w === "Doors" ? "Door and window" : "Room finish") + " schedule placed. Run SCHEDULE again (or Update views) after changes."); if (ed.zoomExtents) ed.zoomExtents();
+    ed.say(({ Doors: "Door and window", Rooms: "Room finish", Columns: "Column", Beams: "Beam", Walls: "Wall", Sheets: "Sheet list —" })[w] + " schedule placed. Run SCHEDULE again (or Update views) after changes."); if (ed.zoomExtents) ed.zoomExtents();
   });
   cmd("NORTHPOINT", ["NP", "NORTH"], async function (ed) {
     var N = scaleOf(ed.doc.d), bs = B.ensure(ed.doc.d), ang = ((bs.sun && +bs.sun.north) || +bs.north || 0), p = await ed.getPoint("Click where the north point goes"), R = 8 * N, a = (90 - ang) * Math.PI / 180, dir = [Math.cos(a), Math.sin(a)], nr = [-dir[1], dir[0]]; ensureLayers(ed);

@@ -18,11 +18,15 @@
     xform: function (e, M) { var o = JSON.parse(JSON.stringify(e)), k = Math.sqrt(Math.abs(M[0] * M[3] - M[1] * M[2])) || 1; o.a = G.mApply(M, e.a); o.b = G.mApply(M, e.b); o.w = (e.w || 1500) * k; return o; },
     qty: function (doc, e) { var bs = B.ensure(doc.d), z = e.lvl ? B.below(doc.d, e.lvl) : "super", sl = slopeLen(e), w = e.w || 1500, th = e.th || 150, I = B.rampInfo(e), st = (bs.steel && bs.steel.slab) || 90;
       var nm = (I.ratio ? "RCC ramp 1 in " + (Math.round(I.ratio * 10) / 10) : "RCC slab") + ", " + Math.round(th) + " mm";
-      return [{ k: "rcc_slab", dim: "V", v: sl * w * th, label: nm, f: m(sl) + " (on slope) × " + m(w) + " × " + m(th), z: z }, { k: "shut_slab", dim: "A", v: sl * w + 2 * sl * th, label: "Shuttering — ramp / sloping slab", f: m(sl) + " × " + m(w) + " + sides", z: z }, { k: "steel_slab", dim: "M", v: sl * w * th / 1e9 * st, label: "Reinforcement — ramp (thumb rule " + st + " kg/m³)", f: "", z: z }]; },
+      return [{ k: "rcc_slab", dim: "V", v: sl * w * th, label: nm, f: m(sl) + " (on slope) × " + m(w) + " × " + m(th), z: z }, { k: "shut_slab", dim: "A", v: sl * w + 2 * sl * th, label: "Shuttering — ramp / sloping slab", f: m(sl) + " × " + m(w) + " + sides", z: z }, { k: "steel_slab", dim: "M", v: sl * w * th / 1e9 * st, label: "Reinforcement — ramp (thumb rule " + st + " kg/m³)", f: "", z: z }].concat(+e.kerb > 0 ? [{ k: "rcc_slab", dim: "V", v: 2 * sl * 150 * (+e.kerb), label: "RCC kerbs on both edges of the ramp, 150 × " + Math.round(+e.kerb) + " mm", f: "2 × " + m(sl) + " × 0.15 × " + m(+e.kerb), z: z }, { k: "shut_slab", dim: "A", v: 2 * sl * 2 * (+e.kerb), label: "Shuttering — ramp kerbs", f: "2 kerbs × 2 faces × " + m(sl) + " × " + m(+e.kerb), z: z }] : []); },
     mesh: function (M, doc, e, H) { var Lv = B.level(doc.d, e.lvl), z0 = (Lv ? Lv.elev : 0) + (e.z || 0), th = e.th || 150, r = ccwQ(corners(e), [z0, z0 + (e.rise || 0), z0 + (e.rise || 0), z0]), P = r[0], Z = r[1], col = H.look("slab", e.look, e.col);
       var T = P.map(function (p, i) { return [p[0] * K, p[1] * K, Z[i] * K]; }), Bt = P.map(function (p, i) { return [p[0] * K, p[1] * K, (Z[i] - th) * K]; });
       M.tri(T[0], T[1], T[2], col); M.tri(T[0], T[2], T[3], col); M.tri(Bt[0], Bt[2], Bt[1], col); M.tri(Bt[0], Bt[3], Bt[2], col);
-      for (var i = 0; i < 4; i++) { var j = (i + 1) % 4; M.quad(Bt[i], Bt[j], T[j], T[i], col); M.edge(T[i], T[j]); M.edge(Bt[i], Bt[j]); M.edge(T[i], Bt[i]); } }
+      for (var i = 0; i < 4; i++) { var j = (i + 1) % 4; M.quad(Bt[i], Bt[j], T[j], T[i], col); M.edge(T[i], T[j]); M.edge(Bt[i], Bt[j]); M.edge(T[i], Bt[i]); }
+      var kh = +e.kerb || 0; if (kh > 0) { var u = G.norm(G.sub(e.b, e.a)), n = G.perp(u), w2 = (e.w || 1500) / 2, kw = 150, za = z0, zb = z0 + (e.rise || 0);
+        [1, -1].forEach(function (sd) { var o0 = G.add(e.a, G.mul(n, sd * w2)), o1 = G.add(e.b, G.mul(n, sd * w2)), i0 = G.add(e.a, G.mul(n, sd * (w2 - kw))), i1 = G.add(e.b, G.mul(n, sd * (w2 - kw))), rr = ccwQ([o0, o1, i1, i0], [za, zb, zb, za]), Pk = rr[0], Zk = rr[1];
+          var Tk = Pk.map(function (q, k) { return [q[0] * K, q[1] * K, (Zk[k] + kh) * K]; }), Bk = Pk.map(function (q, k) { return [q[0] * K, q[1] * K, Zk[k] * K]; });
+          M.tri(Tk[0], Tk[1], Tk[2], col); M.tri(Tk[0], Tk[2], Tk[3], col); for (var k = 0; k < 4; k++) { var k2 = (k + 1) % 4; M.quad(Bk[k], Bk[k2], Tk[k2], Tk[k], col); M.edge(Tk[k], Tk[k2]); } }); } }
   };
   cmd("RAMP", ["SLOPESLAB", "SLOPINGSLAB"], async function (ed) {
     var bs = B.ensure(ed.doc.d), w = ed.rampW || 1500, rise = ed.rampRise || 600, a;
@@ -80,6 +84,39 @@
     if (mode === "Bearings") { if (gap < 20) pts.pop(); else { var gu = G.sub(pts[0], pts[pts.length - 1]), gb = (90 - Math.atan2(gu[1], gu[0]) * 180 / Math.PI - nd + 720) % 360; msg = " The last side was added to close the plot: " + m(gap) + " m, " + B.fmtBearing(gb) + " — if the sides were meant to close by themselves, check the figures."; } }
     ed.doc.begin("Plot boundary"); var r = B.plotBoundary(ed, pts); ed.doc.commit();
     ed.say("Plot boundary drawn: " + r.area.toFixed(2) + " sqm (" + (r.area * 10.7639).toFixed(0) + " sqft), perimeter " + r.peri.toFixed(2) + " m." + msg); if (ed.zoomExtents) ed.zoomExtents();
+  });
+  /* ---------- setbacks and the area statement ---------- */
+  function plotOf(ed) { var P = ed.doc.d.ents.filter(function (e) { return e.t === "pline" && e.layer === "C-PROP" && e.closed && e.pts.length > 2; }); if (!P.length) return null; P.sort(function (a, b) { return Math.abs(polyArea(b.pts)) - Math.abs(polyArea(a.pts)); }); return P[0].pts.map(function (p) { return [p[0], p[1]]; }); }
+  /* polygon moved inward by a distance per edge (dist[i] for the edge i → i+1) */
+  B.insetPoly = function (P, dist) { var n = P.length, sg = polyArea(P) >= 0 ? 1 : -1, L = []; for (var i = 0; i < n; i++) { var a = P[i], b = P[(i + 1) % n], u = G.norm(G.sub(b, a)), nn = [-u[1] * sg, u[0] * sg], o = G.mul(nn, dist[i] || 0); L.push({ p: G.add(a, o), u: u }); }
+    var out = []; for (var j = 0; j < n; j++) { var A = L[(j + n - 1) % n], C2 = L[j], den = A.u[0] * C2.u[1] - A.u[1] * C2.u[0]; if (Math.abs(den) < 1e-9) { out.push(C2.p); continue; } var w = G.sub(C2.p, A.p), t = (w[0] * C2.u[1] - w[1] * C2.u[0]) / den; out.push([A.p[0] + A.u[0] * t, A.p[1] + A.u[1] * t]); } return out; };
+  cmd("SETBACK", ["SETBACKS", "BUILDLINE", "MARGINS"], async function (ed) {
+    var P = plotOf(ed); if (!P) throw new Error("Draw the plot first — Site & services → Plot boundary.");
+    siteLayers(ed); var Ls = ed.doc.d.layers; if (!Ls["C-SETBACK"]) { var Lc = CAD.clone(Ls); Lc["C-SETBACK"] = { color: 3, lw: 0.25, lt: "DASHED", on: true, lock: false, frz: false }; ed.doc.set("layers", Lc); }
+    var mode = await ed.getKw("Setbacks (open space to leave inside the plot line)", ["Same", "Each"], ed.sbMode || "Same"), n = P.length, dist = [], nd = northDeg(ed.doc.d); ed.sbMode = mode;
+    if (mode === "Same") { var v = await ed.getNum("Setback on all sides, in metres", { def: ed.sbAll == null ? 1.5 : ed.sbAll }); ed.sbAll = v; for (var i = 0; i < n; i++) dist.push(Math.max(0, v) * 1000); }
+    else { for (var k = 0; k < n; k++) { var a = P[k], b = P[(k + 1) % n], rot = Math.atan2(b[1] - a[1], b[0] - a[0]) * 180 / Math.PI; ed.preview = (function (a2, b2) { return function () { return [{ t: "line", a: a2, b: b2 }, { t: "circle", c: [(a2[0] + b2[0]) / 2, (a2[1] + b2[1]) / 2], r: G.dist(a2, b2) / 12 }]; }; })(a, b);
+        var x = await ed.getNum("Setback from side " + (k + 1) + " (" + m(G.dist(a, b)) + " m, " + B.fmtBearing((90 - rot - nd + 720) % 360) + " — marked on the drawing), in metres", { def: ed.sbLast == null ? 1.5 : ed.sbLast }); ed.sbLast = x; dist.push(Math.max(0, x) * 1000); } ed.preview = null; }
+    var Q = B.insetPoly(P, dist), Ap = Math.abs(polyArea(P)) / 1e6, Aq = Math.abs(polyArea(Q)) / 1e6; if (!(Aq > 0.5) || Aq >= Ap || (polyArea(Q) >= 0) !== (polyArea(P) >= 0)) throw new Error("With these setbacks nothing is left to build on — check the figures.");
+    var N = scaleOf(ed.doc.d), c = Q.reduce(function (t, q) { return [t[0] + q[0] / Q.length, t[1] + q[1] / Q.length]; }, [0, 0]);
+    ed.doc.begin("Setbacks"); ed.doc.d.ents.filter(function (e) { return e.layer === "C-SETBACK"; }).forEach(function (e) { ed.doc.del(e.id); });
+    ed.doc.add({ t: "pline", pts: Q.map(function (q) { return [q[0], q[1], 0]; }), closed: true, layer: "C-SETBACK" });
+    ed.doc.add({ t: "text", p: [c[0], c[1] - 9 * N], s: "BUILDABLE AREA " + Aq.toFixed(2) + " sqm (" + (Aq / Ap * 100).toFixed(1) + " % of the plot)", h: 2.5 * N, rot: 0, al: "c", layer: "C-SETBACK" });
+    for (var j = 0; j < n; j++) { if (!(dist[j] > 0)) continue; var a3 = P[j], b3 = P[(j + 1) % n], mid = G.mul(G.add(a3, b3), 0.5), q3 = G.mul(G.add(Q[j], Q[(j + 1) % n]), 0.5); ed.doc.add({ t: "text", p: G.mul(G.add(mid, q3), 0.5), s: m(dist[j]), h: 2 * N, rot: 0, al: "c", layer: "C-SETBACK" }); }
+    ed.doc.commit(); ed.say("Setback line drawn: buildable area " + Aq.toFixed(2) + " sqm out of " + Ap.toFixed(2) + " sqm. Check the distances against your local building rules — they differ by town and plot size.");
+  });
+  /* covered area of every level from its slabs (or its rooms where no slab is drawn) */
+  B.areaStatement = function (ed) { var d = ed.doc.d, bs = B.ensure(d), P = plotOf(ed), plot = P ? Math.abs(polyArea(P)) / 1e6 : 0, rows = [];
+    bs.levels.forEach(function (L) { var fl = 0, sl = 0, rm = 0; d.ents.forEach(function (e) { if (e.lvl !== L.id) return; if (e.t === "slab" && e.kind !== "chajja" && e.pts) { var ar = Math.abs(B.area(e.pts)); if (e.kind === "floor" || !(+e.off > 300)) fl += ar; else sl += ar; } else if (e.t === "room" && e.pts) rm += Math.abs(B.area(e.pts)); }); var a = (fl || sl || rm) / 1e6; if (a > 0) rows.push({ name: L.name, area: a, from: fl ? "floor" : sl ? "slab" : "rooms" }); });
+    var built = rows.reduce(function (t, r) { return t + r.area; }, 0), ground = rows.length ? rows[0].area : 0; return { plot: plot, rows: rows, built: built, ground: ground, cov: plot ? ground / plot * 100 : null, far: plot ? built / plot : null }; };
+  cmd("AREASTATEMENT", ["COVERAGE", "FAR", "FSI", "AREASTMT"], async function (ed) {
+    var S = B.areaStatement(ed); if (!S.rows.length) throw new Error("Nothing to add up yet — draw the slabs or mark the rooms first.");
+    siteLayers(ed); var N = scaleOf(ed.doc.d), lines = ["AREA STATEMENT"]; if (S.plot) lines.push("Plot area: " + S.plot.toFixed(2) + " sqm (" + (S.plot * 10.7639).toFixed(0) + " sqft)");
+    S.rows.forEach(function (r) { lines.push(r.name + ": " + r.area.toFixed(2) + " sqm" + (r.from === "rooms" ? " (carpet area of rooms)" : r.from === "slab" ? " (from the slab over it)" : "")); });
+    lines.push("Total built-up area: " + S.built.toFixed(2) + " sqm (" + (S.built * 10.7639).toFixed(0) + " sqft)"); if (S.plot) { lines.push("Ground coverage: " + S.cov.toFixed(1) + " %"); lines.push("FAR / FSI: " + S.far.toFixed(2)); }
+    ed.say(lines.slice(1).join("  ·  ")); var p = await ed.getPoint("Click where to write the area statement (Enter to skip)", { opt: true }); if (!p) return;
+    ed.doc.add({ t: "text", p: [p[0], p[1]], s: lines.join("\n"), h: 2.5 * N, rot: 0, al: "l", layer: "C-PROP-TXT" });
+    ed.say("Area statement written." + (S.plot ? "" : " Draw the plot boundary to get ground coverage and FAR.") + " Each level is taken from its floor slab (or, where none is drawn, from the slab over it, or from its rooms) — check balconies, projections and exempt areas against your building rules.");
   });
   /* camera path: a polyline on layer A-CAMPATH; 3D → Tour walks along it at eye height */
   cmd("CAMPATH", ["CAMERAPATH", "WALKPATH", "TOURPATH"], async function (ed) {

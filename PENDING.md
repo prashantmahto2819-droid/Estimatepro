@@ -45,8 +45,8 @@ Last updated at version 2026.11.21-q.
 6. Vehicles that turn at the end of the path, wheels that turn; people with a walking cycle.
 7. (-z2: CAMPATH + Tour walks the path; Record makes the video.) (-z3: speed, eye height, MP4 first.) Still open: look-at targets, stairs between levels, doors that open on the way.
 8. Section box: hide the shadows of cut-away parts; section fill colour.
-9. (done in -t: ✥ Move drags placed objects along the floor, ⟲ ⟳ turn by 15°.) Still open: move up / down, snap to walls, move walls and openings in 3D, copy in 3D.
-10. Slanting outlines with inside corners (hip), gable roofs on slanting outlines, (-y: DOME and VAULT roof elements.) (-z2: smooth shading.) Still open: domes on a drum / ring beam in one step, conical and pyramid-on-polygon roofs.
+9. (done in -t: ✥ Move drags placed objects along the floor, ⟲ ⟳ turn by 15°.) (-z5: ▲ ▼ raise / lower, ⧉ copy.) Still open: snap to walls, move walls and openings in 3D.
+10. Slanting outlines with inside corners (hip), gable roofs on slanting outlines, (-y: DOME and VAULT roof elements.) (-z2: smooth shading.) (-z5: cone, drum wall.) Still open: pyramid on a many-sided outline, ring beam.
 
 11. Materials: (done in -y: 386 looks — paint shade card, putty / primer / distemper, enamel, textures, tiles, granite, marble, wood, laminate, metal, glass, ACP; any material of a library item can be swapped in Properties.) Still open: picture-based (photo) materials built in for all users (needs the files above), bump / roughness maps, (-p: search box in Paint) material favourites, search by colour, brand shade codes.
 12. Plaster and façade decoration: (done in -y: 37 pieces — cornices, bands, surrounds, quoins, columns, balusters, jali, kangura.) (-z: RUN draws cornices, bands, skirting, LED lines from point to point with mitred corners.) (-d: 14 arch and round pieces — surrounds, infills that make an opening round-headed, fan-light, round window, niche, arcade bay, entrance arch.) (-f: doors, windows and openings take a round or flat-arched head, with a fan-light.) (-i: arch area deducted exactly; no lintel under an arch.) (-k: dashed bow on plan.) Still open: arched head / in the door schedule, pointed and horseshoe arches, (-g: CURVEDWALL makes a round wall from short straight walls) a true smooth curved wall, (-j: mouldings, LED lines, cladding and units follow an arc or a full circle) runs that follow a wall face by one click, profile at the free ends (returns), grooves cut into the plaster of a wall face, custom profile drawn by the user.
@@ -57,14 +57,14 @@ Last updated at version 2026.11.21-q.
 16. Estimate link for the new elements: (done in -l: rows with no SOR item take a Non-SOR item with its ready rate analysis — wardrobes, kitchen base / wall units, TV unit, study table, LED profile, taps; kitchen counter → CPWD 8.2.2.2, sink opening → CPWD 8.5.) (-m: six new Non-SOR templates with analysis — POP cornice ₹222/rm, stepped-ceiling extra ₹560/rm, plaster band ₹292/rm, GRC cornice ₹2,097/rm, decorative piece ₹1,773 each, kitchen chimney ₹22,000 each — and their rows in Σ Quantities. OWNER: these six rates are my indicative market figures; check them against local quotations and tell me what to change.) Still without an item: loose furniture (beds, sofas, dining), curtains, mirrors, whole decorative columns and arches (now priced as one 'decorative piece' each, which is too low for large pieces).
 
 ## C. CAD Studio — to build
-1. (done in -x: SHEET puts plan + elevations + sections in one frame at one scale and plots with the title block.) (-s: portrait.) (-z4: SHEETADD — several sheets, each with its own scale; plot all.) Still open: all sheets in one multi-page PDF, views at different scales inside one sheet, sheet index table.
+1. (done in -x: SHEET puts plan + elevations + sections in one frame at one scale and plots with the title block.) (-s: portrait.) (-z4: SHEETADD — several sheets, each with its own scale; plot all.) (-z5: all sheets in one PDF, list of sheets.) Still open: views at different scales inside one sheet.
 2. Real dimensions, ellipse and spline in DXF export; DWG is not possible in the browser.
-3. (curved walls done in -e; ramps / sloping slabs done in -s: RAMP.) Still open: split levels, slabs sloping two ways, ramp railings and kerbs.
+3. (curved walls done in -e; ramps / sloping slabs done in -s: RAMP.) (-z5: ramp kerbs.) Still open: split levels, slabs sloping two ways, ramp railings.
 4. (done in -x: ELEVATION, SECTION, VIEWSUPDATE.) (-n: cut parts are filled.) Still open: (-o: overall width and height on every view) (-q: level-to-level chain and door / window size tags) material notes and opening positions on elevations, door / window swing marks, outlines for library items that have no edges, views update on their own.
-5. (done in -r: SCHEDULE — door / window and room finish tables.) Still open: finish schedule for walls, column / beam schedules.
+5. (done in -r: SCHEDULE — door / window and room finish tables.) (-z5: column, beam and wall schedules.)
 6. (-w: 37 hatch patterns.) Still open: stone / random rubble patterns, own .pat file import, text styles, blocks library shared between drawings.
 7. (done in -r: PIPE — CPVC, rain-water pipes, conduits, cable trays with lengths and SOR rates.) Still open: wires in conduit, drainage with slopes. (Fittings are inside the SOR pipe / conduit rates.)
-8. (done in -r: north point and scale bar.) (-s: plot boundary from bearings, spot levels.) Still open: contours from spot levels, setback lines, ground coverage / FAR check.
+8. (done in -r: north point and scale bar.) (-s: plot boundary from bearings, spot levels.) (-z5: SETBACK, AREASTATEMENT with coverage and FAR.) Still open: contours from spot levels, permitted coverage / FAR / height check against entered rules.
 
 ## D. Other
 1. Design Studio sheets: views are small and some labels overlap.
