@@ -28,12 +28,14 @@ layout(location=3)in float aI;
 layout(location=4)in vec3 aM;
 uniform mat4 uVP,uL;
 uniform vec3 uOff,uFlip;
+uniform vec4 uWh;   /* a driving vehicle: wheel angle, its direction on plan, on */
 out vec3 vP,vN,vL;
 out vec4 vC;
 out float vI;
 out vec3 vM;
 void main(){
   vec3 p=aP, nn=aN;
+  if(uWh.w>0.5 && aM.x>17.5 && aM.x<18.5){ float c=cos(uWh.x), s=sin(uWh.x); vec2 q=aM.yz, r=vec2(q.x*c-q.y*s,q.x*s+q.y*c); p.xy+=uWh.yz*(r.x-q.x); p.z+=r.y-q.y; float nd=dot(nn.xy,uWh.yz); vec2 nr=vec2(nd*c-nn.z*s,nd*s+nn.z*c); nn.xy+=uWh.yz*(nr.x-nd); nn.z=nr.y; }   /* wheels turn about their axle */
   if(uFlip.x>0.5){ p.xy=2.0*uFlip.yz-p.xy; nn.xy=-nn.xy; }   /* a vehicle on its way back: turned half round about its own centre */
   p+=uOff;
   vP=p; vN=nn; vC=aC; vI=aI; vM=aM;
@@ -146,6 +148,7 @@ void main(){
   vec3 col=vC.rgb;
   float alpha=vC.a;
   float pat=vM.x, sz=vM.y, gloss=vM.z;
+  if(pat>17.5 && pat<18.5){ pat=0.0; sz=1.0; gloss=0.3; }   /* wheel: the slots hold its offsets from the axle, not a pattern */
 
   /* optionally linearize input color */
   if(uLinear) col=toLinear(col);
@@ -1559,9 +1562,10 @@ P.prototype._drawMovers=function(prog,full){
     let d=0, back=false; if(this.play&&m.mv.d>0.5){ const T=m.mv.d/5.5, ph=(((this._playT||0)+m.seed)%(2*T)); back=ph>T; d=back?(2*T-ph)*5.5:ph*5.5; }   /* about 20 km/h to the end of its run, turns round and comes back */
     if(!m.piv){ let x0=Infinity,x1=-Infinity,y0=Infinity,y1=-Infinity; const V=m.raw; if(V){ for(let i=0;i<V.length;i+=ST){ if(V[i]<x0)x0=V[i]; if(V[i]>x1)x1=V[i]; if(V[i+1]<y0)y0=V[i+1]; if(V[i+1]>y1)y1=V[i+1]; } m.piv=[(x0+x1)/2,(y0+y1)/2]; } else m.piv=[0,0]; }
     if(prog._flip) gl.uniform3f(prog._flip,back&&m.raw?1:0,m.piv[0],m.piv[1]);
+    if(prog._wh===undefined) prog._wh=gl.getUniformLocation(prog,'uWh'); if(prog._wh){ const T2=m.mv.d/5.5, ph2=this.play&&m.mv.d>0.5?(((this._playT||0)+m.seed)%(2*T2)):0; gl.uniform4f(prog._wh,-(ph2*5.5)/0.33,m.mv.dir[0],m.mv.dir[1],this.play&&m.mv.d>0.5?1:0); }
     gl.uniform3f(prog._off,m.mv.dir[0]*d,m.mv.dir[1]*d,0); gl.bindVertexArray(full?m.vF:m.vS); gl.drawArrays(gl.TRIANGLES,0,m.n);
   }
-  if(prog._flip) gl.uniform3f(prog._flip,0,0,0);
+  if(prog._flip) gl.uniform3f(prog._flip,0,0,0); if(prog._wh) gl.uniform4f(prog._wh,0,1,0,0);
   gl.uniform3f(prog._off,0,0,0); gl.bindVertexArray(null);
 };
 
@@ -1654,7 +1658,8 @@ P.prototype._drawCuts=function(vp,eye,sunD){
     if(this.box&&(x<this.box[0]||x>this.box[1]||y<this.box[2]||y>this.box[3])) continue;
     let dx=sunD?sunD[0]:eye[0]-x, dy=sunD?sunD[1]:eye[1]-y; const dl=Math.hypot(dx,dy)||1; dx/=dl; dy/=dl;
     const h=c.h, w=c.w||h*t.asp, rx=-dy*w/2, ry=dx*w/2, u0=fl?1:0, u1=fl?0:1;
-    const v=new Float32Array([x-rx,y-ry,z,u0,0, x+rx,y+ry,z,u1,0, x+rx,y+ry,z+h,u1,1, x-rx,y-ry,z,u0,0, x+rx,y+ry,z+h,u1,1, x-rx,y-ry,z+h,u0,1]);
+    let tx=0, ty=0; if(this.play&&c.walk>0.2){ const sw=Math.sin(((this._playT||0)+(c.seed||0))*6.5)*0.035*h; tx=-dy*sw; ty=dx*sw; }   /* the body sways from foot to foot */
+    const v=new Float32Array([x-rx,y-ry,z,u0,0, x+rx,y+ry,z,u1,0, x+rx+tx,y+ry+ty,z+h,u1,1, x-rx,y-ry,z,u0,0, x+rx+tx,y+ry+ty,z+h,u1,1, x-rx+tx,y-ry+ty,z+h,u0,1]);
     gl.bufferData(gl.ARRAY_BUFFER,v,gl.DYNAMIC_DRAW); gl.bindTexture(gl.TEXTURE_2D,t.tex); gl.drawArrays(gl.TRIANGLES,0,6);
   }
   gl.bindVertexArray(null); gl.activeTexture(gl.TEXTURE0);

@@ -30,7 +30,7 @@ Last updated at version 2026.11.21-q.
    1) sanitary ware and taps (GLB), 2) furniture — beds, sofas, wardrobes, TV units, doors (GLB), 3) decorative and garden lights (GLB), 4) cars, people, trees (GLB or PNG), 5) material pictures (JPG) with the real width of the area shown, 6) sky / site background (JPG). With each batch say the site it came from and the licence shown there.
 3. Confirm the indicative Non-SOR rates: fencing — precast RCC post ₹1,275 each, strut ₹1,000 each (-r).
 3b. Confirm / replace with quotations: 33 loose furniture and appliance rates (-t), 25 partition / grill / site-fitting rates (-v).
-3a. Decisions: the 30 quick rates that differ from their analysis (tipper, tanker…); whether 1:30 / 1:40 / 1:60 scales may be used on Design Studio sheets.
+3a. Decisions: the 30 quick rates that differ from their analysis (tipper, tanker…). (Design Studio scales: done in -z20.)
 4. Commercial plans (owner will describe).
 
 5. Device limits (-x): owner ran `server/devices.sql` on 21 Nov. To check with the owner: the devices select shows in Users, a second device gets the 'in use on another device' screen.
@@ -42,7 +42,7 @@ Last updated at version 2026.11.21-q.
 3. (done in -w: up to 5 own material pictures per drawing.) Still open: rotate / offset the picture on a surface, more than 5, a device library of materials.
 4. (done in -x: sky presets and an own background picture.) Still open: the picture does not light the model (no image-based lighting), (-r: sky saved per scene) ground materials by area.
 5. (-u: sky reflection on glass and polished surfaces.) (-z8: water surfaces with ripples.) (-z18: water mirrors what is on screen beside it.) (-z19: ✨ Reflections on glass and polished floors.) Still open: things outside the screen in the reflection, moving water, softer shadows.
-6. (-z10: vehicles turn round and come back.) (-z18: walkers bob with each step.) Still open: vehicles following a drawn path, wheels that turn, true walking animation (needs animated models).
+6. (-z10: vehicles turn round and come back.) (-z18: walkers bob with each step.) (-z20: wheels that turn, walkers sway.) Still open: vehicles following a drawn path, limbs that move (needs animated models).
 7. (-z2: CAMPATH + Tour walks the path; Record makes the video.) (-z3: speed, eye height, MP4 first.) Still open: look-at targets, stairs between levels, doors that open on the way.
 8. (done in -z17: cut faces hatched, cut-away parts throw no shadow.) Still open: choose the fill colour, a cut line on plan for the 3D section.
 9. (done in -t: ✥ Move drags placed objects along the floor, ⟲ ⟳ turn by 15°.) (-z5: ▲ ▼ raise / lower, ⧉ copy.) (-z11: doors / windows / openings slide along their wall.) (-z12: walls move square to themselves, joined walls stretch.) (-z13: rooms, slabs and roofs follow the wall.) Still open: snap to walls.
@@ -67,6 +67,6 @@ Last updated at version 2026.11.21-q.
 8. (done in -r: north point and scale bar.) (-s: plot boundary from bearings, spot levels.) (-z5: SETBACK, AREASTATEMENT with coverage and FAR.) (-z6: CONTOURS; permitted coverage / FAR check.) (-z7: CUTFILL, height check.) (-z14: joined, rounded contours.)
 
 ## D. Other
-1. Design Studio sheets: views are small and some labels overlap.
+1. Design Studio sheets: (-z20: scales 1:15 / 30 / 40 / 60 added so views are larger.) Still open: labels that overlap — needs the owner to point at a sheet where it happens.
 2. (-t: 37 furniture / appliance / garden keys take Non-SOR items.) (-v: 25 more — partitions, grills, railing, curtains, site fittings.) (-z9: fountain, DG set, transformer, main panel as budget Non-SOR items.) Still open: temple pieces, boundary-wall bays and grand gates (composite works — need item-wise estimates), rain-water pipes as library pieces, floor lamps, rugs.
 3. Deeper testing of screens that need a signed-in server session.

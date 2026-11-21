@@ -21,6 +21,20 @@
   function ccw(p) { var a = 0; for (var i = 0; i < p.length; i++) { var q = p[(i + 1) % p.length]; a += p[i][0] * q[1] - q[0] * p[i][1]; } return a < 0 ? p.slice().reverse() : p; }
   function ell(X, cx, cy, rx, ry) { var p = []; for (var i = 0; i < 20; i++) { var a = i / 20 * TAU; p.push(X([cx + rx * Math.cos(a), cy + ry * Math.sin(a)])); } return p; }
   /* mk(id, name, category, w, d, h, SOR key, options{m:mount, z:mount height}, plan shapes, 3D parts) */
+  /* a road wheel standing on the ground: axle across the vehicle (local y), tyre, rim with five spokes. Every vertex carries its
+     offset from the axle (along the vehicle, up) in the pattern slots, with pattern 18, so that the 3D view can turn the wheel
+     when the vehicle drives (see uWh in view3d.js). */
+  function wheel(M, X, lx, ly, r, wid, z0, LK) {
+    var K = 0.001, C = X([lx, ly]), F = X([lx + 1000, ly]), f = [F[0] - C[0], F[1] - C[1]], fl = Math.hypot(f[0], f[1]) || 1; f = [f[0] / fl, f[1] / fl]; var sd = [-f[1], f[0]], zc = z0 + r, N = 20, tyre = LK("rubber"), rim = LK("steel_ss"), dark = LK("steel_black");
+    var P = function (du, dz, s2) { return [(C[0] + f[0] * du + sd[0] * s2) * K, (C[1] + f[1] * du + sd[1] * s2) * K, (zc + dz) * K]; };
+    var tri = function (a, b, c, col) { var n0 = M.v.length; M.tri(P(a[0], a[1], a[2]), P(b[0], b[1], b[2]), P(c[0], c[1], c[2]), col); if (M.v.length !== n0 + 42) return; [a, b, c].forEach(function (q, i) { var o = n0 + i * 14; M.v[o + 11] = 18; M.v[o + 12] = q[0] * K; M.v[o + 13] = q[1] * K; }); };
+    var quad = function (a, b, c, d, col) { tri(a, b, c, col); tri(a, c, d, col); }, hw = wid / 2, ri = r * 0.62;
+    for (var i = 0; i < N; i++) { var a0 = 2 * Math.PI * i / N, a1 = 2 * Math.PI * (i + 1) / N, c0 = Math.cos(a0), s0 = Math.sin(a0), c1 = Math.cos(a1), s1 = Math.sin(a1), spoke = (i % 4) < 2;
+      quad([r * c0, r * s0, -hw], [r * c1, r * s1, -hw], [r * c1, r * s1, hw], [r * c0, r * s0, hw], tyre);                                  /* tread */
+      [hw, -hw].forEach(function (y, k) { var o = k ? [1, 0] : [0, 1], A = [[r * c0, r * s0, y], [r * c1, r * s1, y]], Bq = [[ri * c0, ri * s0, y], [ri * c1, ri * s1, y]];
+        if (k) { quad(A[1], A[0], Bq[0], Bq[1], tyre); tri([0, 0, y], Bq[1], Bq[0], spoke ? rim : dark); } else { quad(A[0], A[1], Bq[1], Bq[0], tyre); tri([0, 0, y], Bq[0], Bq[1], spoke ? rim : dark); } }); }
+  }
+  B.AH.wheel = wheel;
   function mk(id, n, cat, w, d, h, key, o, sy, pt) {
     o = o || {}; sy = sy || []; pt = pt || [];
     var def = { n: n, cat: cat, w: w, d: d, h: h, key: key || id };
@@ -44,6 +58,7 @@
         var t = q[0];
         if (t === "b") H.box(M, X([q[1], q[2]]), q[3] * s, q[4] * s, X.r, z0 + q[5] * s, z0 + q[6] * s, LK(q[7]));
         else if (t === "c") cyl(M, X([q[1], q[2]]), q[3] * s, z0 + q[4] * s, z0 + q[5] * s, LK(q[6]), 16, q[7] != null ? q[7] * s : undefined);
+        else if (t === "w") wheel(M, X, q[1], q[2], q[3] * s, q[4] * s, z0, LK);
         else if (t === "s") sphere(M, X([q[1], q[2]]), q[3] * s, z0 + q[4] * s, LK(q[5]), q[6]);
         else if (t === "e") H.prism(M, ccw(ell(X, q[1], q[2], q[3], q[4])), z0 + q[5] * s, z0 + q[6] * s, LK(q[7]));
         else if (t === "p") H.prism(M, ccw(q[1].map(function (p) { return X(p); })), z0 + q[2] * s, z0 + q[3] * s, LK(q[4]));
@@ -212,9 +227,9 @@
   mk("slide_play", "Children's slide", LA, 3500, 800, 1800, "play_equip", {}, [["r", 0, 0, 3400, 700], ["l", -1700, 0, 1700, 0]], [["b", -1500, 0, 700, 700, 0, 1800, "paint_blue"], ["p", [[-1150, -250], [1700, -250], [1700, 250], [-1150, 250]], 0, 60, "steel_ss"]]);
   mk("gazebo", "Gazebo 3000 × 3000 (pyramid roof)", LA, 3000, 3000, 3200, "gazebo", {}, [["r", 0, 0, 2800, 2800], ["l", -1500, -1500, 1500, 1500], ["l", -1500, 1500, 1500, -1500]], [["b", -1350, -1350, 150, 150, 0, 2500, "wood"], ["b", 1350, -1350, 150, 150, 0, 2500, "wood"], ["b", -1350, 1350, 150, 150, 0, 2500, "wood"], ["b", 1350, 1350, 150, 150, 0, 2500, "wood"], ["c", 0, 0, 2000, 2500, 3200, "rooftile", 40], ["b", 0, 0, 2800, 2800, 450, 500, "wood"]]);
   mk("umbrella_table_set", "Outdoor umbrella table set", LA, 2400, 2400, 2400, "bench", {}, [["c", 0, 0, 1200], ["c", 0, 0, 450]], [["c", 0, 0, 450, 700, 750, "steel"], ["c", 0, 0, 30, 0, 2300, "steel"], ["c", 0, 0, 1200, 2200, 2400, "fabric_blue", 100]]);
-  mk("car_sedan", "Car — sedan (4.5 × 1.8 m)", SI, 4500, 1800, 1450, "car", {}, [["r", 0, 0, 4400, 1750], ["r", -100, 0, 2000, 1500], ["c", 1300, -800, 160], ["c", 1300, 800, 160], ["c", -1300, -800, 160], ["c", -1300, 800, 160]], [["b", 0, 0, 4500, 1800, 250, 900, "car_white"], ["b", -200, 0, 2200, 1600, 900, 1400, "glass"], ["c", 1350, -800, 330, 0, 280, "rubber"], ["c", 1350, 800, 330, 0, 280, "rubber"], ["c", -1350, -800, 330, 0, 280, "rubber"], ["c", -1350, 800, 330, 0, 280, "rubber"]]);
-  mk("car_suv", "Car — SUV (4.7 × 1.9 m)", SI, 4700, 1900, 1700, "car", {}, [["r", 0, 0, 4600, 1850], ["r", -100, 0, 2400, 1600]], [["b", 0, 0, 4700, 1900, 300, 1100, "car_blue"], ["b", -100, 0, 2800, 1700, 1100, 1650, "glass"], ["c", 1400, -850, 360, 0, 300, "rubber"], ["c", 1400, 850, 360, 0, 300, "rubber"], ["c", -1400, -850, 360, 0, 300, "rubber"], ["c", -1400, 850, 360, 0, 300, "rubber"]]);
-  mk("motorbike", "Motorcycle (2.0 × 0.8 m)", SI, 2000, 800, 1100, "bike", {}, [["r", 0, 0, 1950, 250], ["c", 700, 0, 300], ["c", -700, 0, 300]], [["b", 0, 0, 1500, 300, 450, 900, "steel_black"], ["b", -400, 0, 600, 300, 900, 1000, "plastic_black"], ["b", 700, 0, 40, 700, 900, 1100, "steel"], ["c", 700, 0, 300, 0, 40, "rubber"], ["c", -700, 0, 300, 0, 40, "rubber"]]);
+  mk("car_sedan", "Car — sedan (4.5 × 1.8 m)", SI, 4500, 1800, 1450, "car", {}, [["r", 0, 0, 4400, 1750], ["r", -100, 0, 2000, 1500], ["c", 1300, -800, 160], ["c", 1300, 800, 160], ["c", -1300, -800, 160], ["c", -1300, 800, 160]], [["b", 0, 0, 4500, 1800, 250, 900, "car_white"], ["b", -200, 0, 2200, 1600, 900, 1400, "glass"], ["w", 1350, -790, 330, 220], ["w", 1350, 790, 330, 220], ["w", -1350, -790, 330, 220], ["w", -1350, 790, 330, 220]]);
+  mk("car_suv", "Car — SUV (4.7 × 1.9 m)", SI, 4700, 1900, 1700, "car", {}, [["r", 0, 0, 4600, 1850], ["r", -100, 0, 2400, 1600]], [["b", 0, 0, 4700, 1900, 300, 1100, "car_blue"], ["b", -100, 0, 2800, 1700, 1100, 1650, "glass"], ["w", 1400, -840, 360, 240], ["w", 1400, 840, 360, 240], ["w", -1400, -840, 360, 240], ["w", -1400, 840, 360, 240]]);
+  mk("motorbike", "Motorcycle (2.0 × 0.8 m)", SI, 2000, 800, 1100, "bike", {}, [["r", 0, 0, 1950, 250], ["c", 700, 0, 300], ["c", -700, 0, 300]], [["b", 0, 0, 1500, 300, 450, 900, "steel_black"], ["b", -400, 0, 600, 300, 900, 1000, "plastic_black"], ["b", 700, 0, 40, 700, 900, 1100, "steel"], ["w", 700, 0, 300, 90], ["w", -700, 0, 300, 90]]);
   mk("parking_bay_car", "Parking bay — car (2.5 × 5.0 m, marked)", SI, 2500, 5000, 15, "parking_bay", {}, [["l", -1250, -2500, -1250, 2500], ["l", 1250, -2500, 1250, 2500], ["l", -1250, 2500, 1250, 2500]], [["b", -1230, 0, 100, 5000, 0, 8, "paint_white"], ["b", 1230, 0, 100, 5000, 0, 8, "paint_white"], ["b", 0, 2450, 2500, 100, 0, 8, "paint_white"]]);
   mk("parking_bay_bike", "Parking bay — two-wheeler (1.0 × 2.2 m)", SI, 1000, 2200, 15, "parking_bay", {}, [["l", -500, -1100, -500, 1100], ["l", 500, -1100, 500, 1100]], [["b", -480, 0, 80, 2200, 0, 8, "paint_white"], ["b", 480, 0, 80, 2200, 0, 8, "paint_white"]]);
   mk("guard_cabin", "Guard cabin 2000 × 2000", SI, 2000, 2000, 2800, "guard_cabin", {}, [["r", 0, 0, 1800, 1800], ["l", -400, -1000, 400, -1000]], [["b", 0, 0, 2000, 2000, 0, 150, "concrete"], ["b", 0, 925, 1800, 150, 150, 2400, "paint_cream"], ["b", -925, 0, 150, 1700, 150, 2400, "paint_cream"], ["b", 925, 0, 150, 1700, 150, 2400, "paint_cream"], ["b", -600, -925, 600, 150, 150, 2400, "paint_cream"], ["b", 600, -925, 600, 150, 150, 2400, "paint_cream"], ["b", 0, -925, 600, 150, 2000, 2400, "paint_cream"], ["b", 0, 0, 2200, 2200, 2400, 2550, "concrete"]]);

@@ -3,6 +3,11 @@
 This file is for the people maintaining the app. It is not published with the site (see `.assetsignore`).
 The text users see is `EP_NOTES` in `js/version.js`.
 
+## 2026.11.21-z20
+- `assets2.js`: part type `w` (`B.AH.wheel`): tyre + rim with spoke sectors, axle across the vehicle; vertices carry pattern 18 and their offsets from the axle in the size / gloss slots. `view3d.js`: `uWh` turns them in the vertex shader while a mover drives; the fragment shader treats pattern 18 as plain. Cars and the motorcycle use it.
+- Walking cut-outs sway (top of the quad shifts ±3.5 % of the height).
+- Design Studio `STD_SCALES`: 15, 30, 40, 60 added (the owner asked for the sheets to be finished; the earlier question about these scales is taken as yes).
+
 ## 2026.11.21-z19
 - Lamp shadow: at night the fitting nearest the camera target renders a 1024 px depth map looking straight down (fov 2.25 rad, near 0.4 m, far 14 m; opaque geometry only) — `lsFB` / unit 11, `lampSh` in the main shader darkens that light's share to 25 % in shadow. `lampShadow = false` or 💡 Fast lights switches it off.
 - Wall mask: 3 × 3 tiles (nine storeys), windows are gaps as well as openings.

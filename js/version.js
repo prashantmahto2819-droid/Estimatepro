@@ -1,5 +1,5 @@
 /* App version + "what's new" — the super admin is offered to send this on WhatsApp after each upload. Change both with every release. */
-window.EP_VER = "2026.11.21-z19";
-window.EP_NOTES = "• 3D night view: the light fitting nearest to where you are looking now throws the shadows of furniture; light also passes out through windows\n• ✨ Reflections (new button): glass and polished floors mirror the building and furniture, as water does — switch it off if the view becomes slow\n• Light from fittings is now stopped by walls on up to nine storeys (was four)";
+window.EP_VER = "2026.11.21-z20";
+window.EP_NOTES = "• 3D: cars and the motorcycle have real wheels with rims and spokes, and the wheels turn when the vehicle drives in ▶ Play\n• ▶ Play: walking people sway from foot to foot as they go\n• Design Studio sheets: scales 1:15, 1:30, 1:40 and 1:60 are now used as well, so views fill the sheet better instead of dropping to the next coarse scale";
 /* pictures of this update: [file in /updates, caption]. Shown to the owner with the WhatsApp "what's new" message. */
-window.EP_PICS = [["updates/z19-lampshadow.jpg", "Furniture shadows from the ceiling light"]];
+window.EP_PICS = [["updates/z20-wheels.jpg", "Cars with real wheels"]];
