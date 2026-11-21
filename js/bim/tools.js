@@ -166,11 +166,11 @@
   cmd("STAIR", ["ST", "STAIRS"], async function (ed) {
     var b = ensureBim(ed), L = B.level(ed.doc.d, cur(ed)), kind = ed.stK || "Dogleg", w = ed.stW || 1000, T = ed.stT || 250, side = ed.stSide || "Left", gap = ed.stGap || 0, rail = ed.stRail || "Well", p, e = null;
     var n = Math.max(2, Math.round(L.h / 150)), R = L.h / n, mm = function (v) { return v == null ? "no wall" : Math.round(v) + " mm"; };
-    var mk = function (p0, dirDeg, sd) { return { t: "stair", p: p0, dir: dirDeg, w: w, n: n, R: R, T: T, wt: 150, kind: kind.toLowerCase(), lvl: cur(ed), land: w, side: sd, rail: rail === "None" ? "" : rail === "Both" ? "both" : rail === "Outer" ? "out" : "in" }; };
+    var mk = function (p0, dirDeg, sd) { return { t: "stair", p: p0, dir: dirDeg, w: w, n: n, R: R, T: T, wt: 150, kind: kind === "Lwinder" ? "lshape" : kind.toLowerCase(), winder: kind === "Lwinder" ? "3" : undefined, lvl: cur(ed), land: w, side: sd, rail: rail === "None" ? "" : rail === "Both" ? "both" : rail === "Outer" ? "out" : "in" }; };
     while (true) {
       p = await ed.getPoint("Start of the first step (bottom corner) — " + kind + ", width " + Math.round(w) + ", tread " + Math.round(T) + ", " + n + " risers of " + R.toFixed(0) + " mm, flights to the " + side.toLowerCase() + " of the going. Corner = fit it into a corner of a room", { kw: ["Corner", "Type", "Width", "Tread", "Side", "Gap", "Railing"] });
       if (p === "Railing") { rail = ed.stRail = await ed.getKw("Railing on which side of the flights? (now: " + rail + ")", ["Well", "Outer", "Both", "None"], rail); continue; }
-      if (p === "Type") { kind = ed.stK = await ed.getKw("Stair type (Lshape = two flights at a right angle; Ushape = three flights round a well; Spiral = round a centre post)", ["Straight", "Dogleg", "Lshape", "Ushape", "Spiral"], kind); continue; }
+      if (p === "Type") { kind = ed.stK = await ed.getKw("Stair type (Lshape = two flights at a right angle with a landing; Lwinder = the same turning on three winders; Ushape = three flights round a well; Spiral = round a centre post)", ["Straight", "Dogleg", "Lshape", "Lwinder", "Ushape", "Spiral"], kind); continue; }
       if (p === "Width") { w = ed.stW = await ed.getDist("Flight width", { def: w }); continue; }
       if (p === "Tread") { T = ed.stT = await ed.getDist("Tread (going)", { def: T }); continue; }
       if (p === "Side") { side = ed.stSide = await ed.getKw("The flights lie on which side of the line you click (walking up)?", ["Left", "Right"], side); continue; }
@@ -194,6 +194,7 @@
     /* the floor above: offer to cut the stair opening */
     var top = L.elev + L.h, slabs = ed.doc.d.ents.filter(function (s) { if (s.t !== "slab" || !s.pts) return false; var Ls = B.level(ed.doc.d, s.lvl), zt = (Ls ? Ls.elev : 0) + (s.off || 0); if (Math.abs(zt - top) > 60) return false; return O.pts.every(function (q2) { return G.inPoly(q2, s.pts); }) && !(s.holes || []).some(function (h) { return G.inPoly(O.inP, h); }); });
     if (slabs.length) { var yn = await ed.getKw("Cut the stair opening (" + Math.round(O.len) + " × " + Math.round(O.wd) + " mm) in the floor slab above?", ["Yes", "No"], "Yes"); if (yn === "Yes") { ed.doc.begin("Stair opening"); var cw = cutWell(ed, e); ed.doc.commit(); ed.say("Opening cut in the slab above; its concrete, shuttering and steel are reduced by that area." + (cw.rails ? " A railing is placed round it on the floor above (not where you step off, not along walls)." : " Put a railing round it with Railing.")); } }
+    var sT = B.spiralTurn(e); if (sT != null && sT < 2000) ed.say("⚠ This spiral goes round more than once and a tread has only " + Math.round(sT) + " mm under the tread one turn above (2000 mm is wanted). Make the angle of one tread smaller in Properties (" + Math.max(15, Math.floor(360 / Math.ceil((2000 + 60) / e.R))) + "° or less gives 2000 mm).");
     var Hd = B.stairHead(ed.doc, e); if (Hd.low) ed.say("⚠ Headroom: " + Hd.low + " tread(s) have less than 2100 mm under the slab above (least " + Math.round(Hd.min) + " mm). Cut the opening with Stair opening.");
     if (slabs.length) return;
     ed.say("No floor slab found above this stair yet — draw the slab, then run STAIRWELL to cut the opening.");

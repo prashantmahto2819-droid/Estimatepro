@@ -3,6 +3,11 @@
 This file is for the people maintaining the app. It is not published with the site (see `.assetsignore`).
 The text users see is `EP_NOTES` in `js/version.js`.
 
+## 2026.11.21-z32
+- `bim.js` `stairGeom`: L stair with `winder` "3" (seven risers or more) — `na` straight treads, three wedge treads round the inner corner (rays at 30° and 60°), `nb` treads on the second flight; returns `runs` (the straight flights, for the rails), `windRail` (outer rail over the winders, used for "out" / "both"), `L0`, `wdL`. `B.spiralTurn(e)`: height from a tread to the one a turn above (null when the spiral is a turn or less).
+- `tools.js`: type Lwinder; spiral warning with the angle that gives 2000 mm. `ui-bim.js`: "The turn is made on", "Height between turns".
+- Harness: Lwinder in the 3.27 m room — 3.25 × 3.25 m, 21 treads to 3200, fits where the landing version did not; spiral at 30° warns 1769 mm and suggests 25°. Earlier stair tests unchanged.
+
 ## 2026.11.21-z31
 - `bim.js` `stairGeom`: kind "ushape" (risers split about a third each, the third flight never longer than the first; returns `U`, `U0`, `W2`, `ua`), kind "spiral" (`e.p` is the corner of its square; centre post r 75, outer radius w + 75, tread angle `sa` 15–45°, turning to the stair's side; steps carry `poly`, `c`, `thin`; returns `S`, `c`, `Ro`, `thEnd`, `post`). All kinds return `landEdges` (outer edges of landings with their height).
 - `stairOutline`: `hole` and `ek` (per edge: clearance key, true, or null = where you step off) for L, U and spiral, `inP` (a point inside the opening). `cutWell` builds the railing chains from `hole` / `ek`.
