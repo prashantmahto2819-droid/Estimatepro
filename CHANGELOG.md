@@ -3,6 +3,13 @@
 This file is for the people maintaining the app. It is not published with the site (see `.assetsignore`).
 The text users see is `EP_NOTES` in `js/version.js`.
 
+## 2026.11.21-z27
+- Stairs. Before: the flights always lay to the left of the going, nothing told the distance to walls, a stair could cross a wall without a word, and the slab above was not cut.
+- `bim.js`: stair `side` (1 / -1) in `stairGeom`; `B.stairOutline(e)` (rectangle, len, wd); `B.stairClear(doc, e)` (ray from the middle of each side to the wall faces of the level; `hit` = walls it overlaps, by edge crossing or containment); mirror flips `side`.
+- `tools.js` STAIR: options Corner (room boundary at the click → nearest corner → along the edge where len × wd + gap fits, longer edge first), Side, Gap; reports size and the four clear distances, warns on `hit`; asks to add the outline as a hole to slabs whose top is at the level top and which contain it. New STAIRWELL (aliases STAIROPENING, STAIRCUT) for later.
+- `mesh.js`: step polygons reversed for side -1. `ui-bim.js`: Properties → Flights lie, Covers on plan, Clear to walls.
+- Harness: Corner in a 3.27 × 4.77 m room → stair at the corner, 0 mm to two walls; roof slab 45.16 m² after the 3.5 × 2.1 opening; a stair across the partition gives the warning.
+
 ## 2026.11.21-z26
 - `bim.js`: `B.grillOf(o)` — window `grill` ("v" upright bars at ~110, "h" level bars at ~120 with uprights at ~600, "sq" 150 grid, "box" 300 × 150); kind "grill" defaults to "v". Weight = bar length × 1.13 kg/m (12 mm square) + perimeter × 0.98 kg/m (25 × 5 flat). Quantity row `ms_grill` (CPWD 9.48.1, kg). This row is new for existing windows of kind "grill" too.
 - `mesh.js`: bars drawn from `B.grillOf`, 55 mm off the glass on the opening side (in the glass plane for kind "grill"). `ui-bim.js`: Properties → Safety grill.

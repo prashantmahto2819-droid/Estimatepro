@@ -151,19 +151,41 @@
     ed.say(kind + " roof " + (B.area(pts) / 1e6).toFixed(2) + " m² (plan) on top of this floor");
   });
   cmd("STAIR", ["ST", "STAIRS"], async function (ed) {
-    var b = ensureBim(ed), L = B.level(ed.doc.d, cur(ed)), kind = ed.stK || "Dogleg", w = ed.stW || 1000, T = ed.stT || 250, p;
-    var n = Math.max(2, Math.round(L.h / 150)), R = L.h / n;
+    var b = ensureBim(ed), L = B.level(ed.doc.d, cur(ed)), kind = ed.stK || "Dogleg", w = ed.stW || 1000, T = ed.stT || 250, side = ed.stSide || "Left", gap = ed.stGap || 0, p, e = null;
+    var n = Math.max(2, Math.round(L.h / 150)), R = L.h / n, mm = function (v) { return v == null ? "no wall" : Math.round(v) + " mm"; };
+    var mk = function (p0, dirDeg, sd) { return { t: "stair", p: p0, dir: dirDeg, w: w, n: n, R: R, T: T, wt: 150, kind: kind.toLowerCase(), lvl: cur(ed), land: w, side: sd }; };
     while (true) {
-      p = await ed.getPoint("Start of the first step (bottom corner) — " + kind + ", width " + Math.round(w) + ", tread " + Math.round(T) + ", " + n + " risers of " + R.toFixed(0) + " mm", { kw: ["Type", "Width", "Tread"] });
+      p = await ed.getPoint("Start of the first step (bottom corner) — " + kind + ", width " + Math.round(w) + ", tread " + Math.round(T) + ", " + n + " risers of " + R.toFixed(0) + " mm, flights to the " + side.toLowerCase() + " of the going. Corner = fit it into a corner of a room", { kw: ["Corner", "Type", "Width", "Tread", "Side", "Gap"] });
       if (p === "Type") { kind = ed.stK = await ed.getKw("Stair type", ["Straight", "Dogleg"], kind); continue; }
       if (p === "Width") { w = ed.stW = await ed.getDist("Flight width", { def: w }); continue; }
       if (p === "Tread") { T = ed.stT = await ed.getDist("Tread (going)", { def: T }); continue; }
+      if (p === "Side") { side = ed.stSide = await ed.getKw("The flights lie on which side of the line you click (walking up)?", ["Left", "Right"], side); continue; }
+      if (p === "Gap") { gap = ed.stGap = Math.max(0, await ed.getDist("Clear gap between the stair and the walls when it is fitted into a corner (0 = touching)", { def: gap })); continue; }
+      if (p === "Corner") {   /* fitted into the corner of the room nearest to the click, along the wall where it fits */
+        var c = await ed.getPoint("Click inside the room, near the corner where the stair should start"); if (!c || typeof c === "string") continue;
+        var bd = CAD.boundaryAt(ed.doc, c, ed.isolated, B.roomOpts(ed.doc)); if (!bd) { ed.say("No closed room there — close the walls first, or click the start point yourself."); continue; }
+        var P = ccw(G.loopPts(bd.outer)), k = 0; P.forEach(function (q, i) { if (G.dist(q, c) < G.dist(P[k], c)) k = i; });
+        var V = P[k], A = P[(k + P.length - 1) % P.length], Bn = P[(k + 1) % P.length], probe = mk([0, 0], 0, 1), O0 = B.stairOutline(probe), cands = [[A, Bn], [Bn, A]].map(function (pr) { var uu = G.norm(G.sub(pr[0], V)), vv = G.norm(G.sub(pr[1], V)), La = G.dist(pr[0], V), Lb = G.dist(pr[1], V); return { u: uu, v: vv, fit: La >= O0.len + gap - 1 && Lb >= O0.wd + gap - 1, La: La, Lb: Lb }; });
+        var pick = cands.filter(function (x) { return x.fit; }).sort(function (x, y) { return y.La - x.La; })[0];
+        if (!pick) { ed.say("This stair needs " + Math.round(O0.len + gap) + " × " + Math.round(O0.wd + gap) + " mm; the walls at this corner are " + Math.round(cands[0].La) + " and " + Math.round(cands[0].Lb) + " mm long. Try a narrower flight (Width), a shorter tread, or another corner."); continue; }
+        var pu = G.perp(pick.u), sd = pu[0] * pick.v[0] + pu[1] * pick.v[1] >= 0 ? 1 : -1; e = mk(G.add(G.add(V, G.mul(pick.u, gap)), G.mul(pick.v, gap)), Math.atan2(pick.u[1], pick.u[0]) * 180 / Math.PI, sd); break; }
       break;
     }
-    ed.preview = function (q) { return [{ t: "stair", p: p, dir: G.ang(p, q) * 180 / Math.PI, w: w, n: n, R: R, T: T, kind: kind.toLowerCase(), lvl: cur(ed), land: w }]; };
-    var q = await ed.getPoint("Direction of going up (click a point)", { base: p }); ed.preview = null;
-    ed.doc.add({ t: "stair", p: p, dir: G.ang(p, q) * 180 / Math.PI, w: w, n: n, R: R, T: T, wt: 150, kind: kind.toLowerCase(), lvl: cur(ed), land: w, layer: lay(ed, "A-STAIR") });
-    ed.say(kind + " stair: " + n + " risers × " + R.toFixed(1) + " mm" + (R > 190 ? " — riser is high; check the requirement" : ""));
+    if (!e) { if (!p || typeof p === "string") return; var sdn = side === "Right" ? -1 : 1;
+      ed.preview = function (q) { return [mk(p, G.ang(p, q) * 180 / Math.PI, sdn)]; };
+      var q = await ed.getPoint("Direction of going up (click a point)", { base: p }); ed.preview = null; if (!q || typeof q === "string") return; e = mk(p, G.ang(p, q) * 180 / Math.PI, sdn); }
+    e.layer = lay(ed, "A-STAIR"); var id = ed.doc.add(e); e = ed.doc.get((id && id.id) || id) || e;
+    var C = B.stairClear(ed.doc, e), O = C.out;
+    ed.say(kind + " stair: " + n + " risers × " + R.toFixed(1) + " mm" + (R > 190 ? " — riser is high; check the requirement" : "") + ". It covers " + Math.round(O.len) + " × " + Math.round(O.wd) + " mm. Clear to the walls — behind the first step " + mm(C.back) + ", beyond the far end " + mm(C.front) + ", start side " + mm(C.near) + ", other side " + mm(C.far) + "." + (C.hit ? " ⚠ It runs into " + C.hit + " wall(s) — move it, change the Side, or use Corner." : ""));
+    /* the floor above: offer to cut the stair opening */
+    var top = L.elev + L.h, slabs = ed.doc.d.ents.filter(function (s) { if (s.t !== "slab" || !s.pts) return false; var Ls = B.level(ed.doc.d, s.lvl), zt = (Ls ? Ls.elev : 0) + (s.off || 0); if (Math.abs(zt - top) > 60) return false; return O.pts.every(function (q2) { return G.inPoly(q2, s.pts); }) && !(s.holes || []).some(function (h) { return G.inPoly(G.mid(O.pts[0], O.pts[2]), h); }); });
+    if (slabs.length) { var yn = await ed.getKw("Cut the stair opening (" + Math.round(O.len) + " × " + Math.round(O.wd) + " mm) in the floor slab above?", ["Yes", "No"], "Yes"); if (yn === "Yes") { ed.doc.begin("Stair opening"); slabs.forEach(function (s) { var o2 = CAD.clone(s); o2.holes = (s.holes || []).concat([ccw(O.pts.map(function (q3) { return [q3[0], q3[1]]; }))]); ed.doc.mod(s.id, o2); }); ed.doc.commit(); ed.say("Opening cut in the slab above; its concrete, shuttering and steel are reduced by that area. Put a railing round it with Railing."); } }
+    else ed.say("No floor slab found above this stair yet — draw the slab, then run STAIRWELL to cut the opening.");
+  });
+  cmd("STAIRWELL", ["STAIROPENING", "STAIRCUT"], async function (ed) {
+    var pk = await ed.getEnt("Click the stair whose opening should be cut in the slab above", { filter: function (x) { return x.t === "stair"; } }); if (!pk || !pk.e) return; var e = pk.e, L = B.level(ed.doc.d, e.lvl), O = B.stairOutline(e), top = L.elev + e.n * e.R, n = 0;
+    ed.doc.begin("Stair opening"); ed.doc.d.ents.forEach(function (s) { if (s.t !== "slab" || !s.pts) return; var Ls = B.level(ed.doc.d, s.lvl), zt = (Ls ? Ls.elev : 0) + (s.off || 0); if (Math.abs(zt - top) > 60 || !O.pts.every(function (q) { return G.inPoly(q, s.pts); }) || (s.holes || []).some(function (h) { return G.inPoly(G.mid(O.pts[0], O.pts[2]), h); })) return; var o2 = CAD.clone(s); o2.holes = (s.holes || []).concat([ccw(O.pts.map(function (q) { return [q[0], q[1]]; }))]); ed.doc.mod(s.id, o2); n++; }); ed.doc.commit();
+    ed.say(n ? "Opening of " + Math.round(O.len) + " × " + Math.round(O.wd) + " mm cut in " + n + " slab(s) above the stair." : "No slab above this stair covers it fully (or the opening is already cut).");
   });
   cmd("ROOM", ["RM", "SPACE"], async function (ed) {
     ensureBim(ed);

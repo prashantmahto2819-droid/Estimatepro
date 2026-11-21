@@ -161,7 +161,7 @@
   B.roofRidge = roofRidge;
   /* stair: steps along dir from p; dog-leg turns back after a landing */
   function stairGeom(e) {
-    var dir = (e.dir || 0) * Math.PI / 180, u = [Math.cos(dir), Math.sin(dir)], n = G.perp(u), w = e.w, T = e.T, R = e.R, N = e.n, steps = [], plan = [];
+    var dir = (e.dir || 0) * Math.PI / 180, u = [Math.cos(dir), Math.sin(dir)], n = G.mul(G.perp(u), +e.side === -1 ? -1 : 1), w = e.w, T = e.T, R = e.R, N = e.n, steps = [], plan = [];
     var flights = e.kind === "dogleg" ? [Math.ceil(N / 2), Math.floor(N / 2)] : [N], land = e.land || w, z = 0, origin = e.p;
     flights.forEach(function (cnt, fi) {
       var treads = cnt - 1, o = fi === 0 ? origin : G.add(G.add(origin, G.mul(u, (flights[0] - 1) * T)), G.mul(n, w + (e.gap || 100))), dirU = fi === 0 ? u : G.mul(u, -1);
@@ -176,6 +176,14 @@
     return { steps: steps, plan: plan, flights: flights };
   }
   B.stairGeom = stairGeom;
+  /* the rectangle a stair covers on plan: start corner, along the going, across the flights */
+  B.stairOutline = function (e) { var S = stairGeom(e), dir = (e.dir || 0) * Math.PI / 180, u = [Math.cos(dir), Math.sin(dir)], n = G.mul(G.perp(u), +e.side === -1 ? -1 : 1), dog = S.flights.length > 1, len = dog ? (S.flights[0] - 1) * e.T + (e.land || e.w) : e.n * e.T, wd = dog ? 2 * e.w + (e.gap || 100) : e.w, p = e.p; return { len: len, wd: wd, u: u, n: n, pts: [p, G.add(p, G.mul(u, len)), G.add(G.add(p, G.mul(u, len)), G.mul(n, wd)), G.add(p, G.mul(n, wd))] }; };
+  /* clear distances from the stair to the walls of its level: [behind the first step, beyond the far end, on the start side, on the other side] (null = no wall met within 20 m), and the walls it runs into */
+  B.stairClear = function (doc, e) { var O = B.stairOutline(e), W = doc.d.ents.filter(function (w) { return w.t === "wall" && w.lvl === e.lvl; }).map(function (w) { return B.wallPoly(doc, w); }).filter(Boolean).map(function (P) { return [P.sL, P.eL, P.eR, P.sR]; });
+    var ray = function (o, d) { var best = null; W.forEach(function (Q) { for (var i = 0; i < 4; i++) { var a = Q[i], b = Q[(i + 1) % 4], ex = b[0] - a[0], ey = b[1] - a[1], den = d[0] * ey - d[1] * ex; if (Math.abs(den) < 1e-9) continue; var t = ((a[0] - o[0]) * ey - (a[1] - o[1]) * ex) / den, k = ((a[0] - o[0]) * d[1] - (a[1] - o[1]) * d[0]) / den; if (t >= -1 && k >= 0 && k <= 1 && (best == null || t < best)) best = t; } }); return best != null && best < 20000 ? Math.max(0, best) : null; };
+    var mid = function (i, j) { return G.mid(O.pts[i], O.pts[j]); }, neg = function (v) { return [-v[0], -v[1]]; }, hit = 0, c = G.mid(O.pts[0], O.pts[2]);
+    W.forEach(function (Q) { var inQ = function (q) { return G.inPoly(q, Q); }, sh = O.pts.map(function (q) { return [q[0] + (c[0] - q[0]) * 0.04, q[1] + (c[1] - q[1]) * 0.04]; }); var X = function (p1, p2, p3, p4) { var d1 = (p4[0] - p3[0]) * (p1[1] - p3[1]) - (p4[1] - p3[1]) * (p1[0] - p3[0]), d2 = (p4[0] - p3[0]) * (p2[1] - p3[1]) - (p4[1] - p3[1]) * (p2[0] - p3[0]), d3 = (p2[0] - p1[0]) * (p3[1] - p1[1]) - (p2[1] - p1[1]) * (p3[0] - p1[0]), d4 = (p2[0] - p1[0]) * (p4[1] - p1[1]) - (p2[1] - p1[1]) * (p4[0] - p1[0]); return d1 * d2 < 0 && d3 * d4 < 0; }, cross = false; for (var i = 0; i < 4 && !cross; i++) for (var j = 0; j < 4; j++) if (X(sh[i], sh[(i + 1) % 4], Q[j], Q[(j + 1) % 4])) { cross = true; break; } if (cross || sh.some(inQ) || inQ(c) || Q.some(function (q) { return G.inPoly(q, sh); })) hit++; });
+    return { back: ray(mid(0, 3), neg(O.u)), front: ray(mid(1, 2), O.u), near: ray(mid(0, 1), neg(O.n)), far: ray(mid(2, 3), O.n), hit: hit, out: O }; };
 
   /* room / area detection: walls as solid footprints (door gaps closed), columns; other building elements ignored */
   /* column cross-sections. w × d is the overall size; tw = thickness of the legs of L / T / + sections; octagon and hexagon are measured across the flats (w). */
@@ -359,7 +367,7 @@
       case "wall": case "beam": o.a = P(e.a); o.b = P(e.b); if (det < 0 && e.t === "wall" && e.just && e.just !== "c") o.just = e.just === "l" ? "r" : "l"; break;
       case "slab": case "roof": case "room": case "railing": o.pts = e.pts.map(P); if (e.holes) o.holes = e.holes.map(function (h) { return h.map(P); }); if (e.dir != null) o.dir = det < 0 ? -e.dir + 2 * rr : e.dir + rr; break;
       case "column": case "footing": o.p = P(e.p); o.rot = (e.rot || 0) + (det < 0 ? -rr : rr); break;
-      case "stair": o.p = P(e.p); o.dir = (e.dir || 0) + rr; break;
+      case "stair": o.p = P(e.p); var sd0 = (e.dir || 0) * Math.PI / 180, sq = P([e.p[0] + Math.cos(sd0) * 1000, e.p[1] + Math.sin(sd0) * 1000]); o.dir = Math.atan2(sq[1] - o.p[1], sq[0] - o.p[0]) * 180 / Math.PI; if (det < 0) o.side = +e.side === -1 ? 1 : -1; break;
       case "door": case "window": case "opening":
         var doc = B.ctx.doc, pl = doc && B.place(doc, e); if (!pl) break;
         var np = P(pl.p), c = pl.c; o.at = Math.max(e.w / 2, Math.min(c.L - e.w / 2, G.dot(G.sub(np, c.a), c.u))); if (det < 0) o.flip = !e.flip; break;

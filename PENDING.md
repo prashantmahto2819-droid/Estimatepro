@@ -1,6 +1,6 @@
 # Estimate Pro — pending work (kept with the code; not published)
 
-Last updated at version 2026.11.21-z26.
+Last updated at version 2026.11.21-z27.
 
 ## A. Waiting for the owner
 1. Server work: (-z21) module switches and a shared library of blocks and hatch patterns are built — the owner has to run `server/shared.sql` once in Supabase, then check that a switched-off module disappears for a normal user. Still open: shared 3D models / cut-outs / material pictures (large files — need Supabase Storage), WhatsApp update messages with real pictures attached (needs a sending gateway; links to the pictures are already added).
@@ -65,6 +65,9 @@ Last updated at version 2026.11.21-z26.
 6. (-w: 37 hatch patterns.) (-z15: STONE, RUBBLE.) (-z13: HATCHLOAD reads .pat files) (-z10: bold / italic text) (-z14: Times / Courier fonts) (-z13: block library on the device.) Still open: block library shared between users (needs the server).
 7. (done in -r: PIPE — CPVC, rain-water pipes, conduits, cable trays with lengths and SOR rates.) (-z6: drain pipes and wiring in conduit as runs.) (-z7: trench excavation and refilling.) (-z14: fall and manholes.) (-z22: manholes at ends, bends and junctions, shown on plan; 120 × 90 cm and extra depth by depth.) Still open: manholes deeper than 2.5 m (circular), drop connections. (-z24: covers shown in 3D.) (Fittings are inside the SOR pipe / conduit rates.)
 8. (done in -r: north point and scale bar.) (-s: plot boundary from bearings, spot levels.) (-z5: SETBACK, AREASTATEMENT with coverage and FAR.) (-z6: CONTOURS; permitted coverage / FAR check.) (-z7: CUTFILL, height check.) (-z14: joined, rounded contours.)
+
+## C2. Stairs
+1. (-z27: corner fitting, side, clear distances, wall warning, opening in the slab above.) Still open: railing placed with the stair, mid-landing length as a field, L / U stairs with a quarter landing, spiral stair, headroom check, stair carried to several floors at once.
 
 ## D. Other
 1. Design Studio sheets: (-z20: scales 1:15 / 30 / 40 / 60 added so views are larger.) Still open: labels that overlap — needs the owner to point at a sheet where it happens.

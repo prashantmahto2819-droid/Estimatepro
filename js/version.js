@@ -1,5 +1,5 @@
 /* App version + "what's new" — the super admin is offered to send this on WhatsApp after each upload. Change both with every release. */
-window.EP_VER = "2026.11.21-z26";
-window.EP_NOTES = "• Windows: Safety grill in Properties — upright bars, level bars, square grid or oblong grid on any kind of window; shown in 3D and its steel weight (kg) is added to Σ Quantities under the M.S. grill item\n• Note: windows of the kind Steel grill + glass now also bring their grill weight into Σ Quantities";
+window.EP_VER = "2026.11.21-z27";
+window.EP_NOTES = "• Stairs fit into a room corner: Stair → Corner → click inside the room near the corner; it lies along the wall where it fits, with the Gap you set from the walls\n• Stair → Side chooses whether the flights lie left or right of the line you click (also in Properties)\n• After placing, the stair tells its size on plan and the clear distance to the walls on all four sides, and warns if it runs into a wall (also shown in Properties)\n• The stair opening is cut in the floor slab above (asked after placing; Stair opening does it later) — concrete, shuttering and steel of the slab reduce";
 /* pictures of this update: [file in /updates, caption]. Shown to the owner with the WhatsApp "what's new" message. */
-window.EP_PICS = [["z26-grill.jpg", "A sliding window with a square safety grill"]];
+window.EP_PICS = [["z27-stair.jpg", "A stair fitted into a corner with its opening cut in the slab above"]];
