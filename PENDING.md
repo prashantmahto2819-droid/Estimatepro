@@ -1,6 +1,6 @@
 # Estimate Pro — pending work (kept with the code; not published)
 
-Last updated at version 2026.11.21-b.
+Last updated at version 2026.11.21-c.
 
 ## A. Waiting for the owner
 1. Connect the app's Supabase project (ref starts `eaygozhjsmohfcuiazfm`) to the build session. Then: admin dashboard switches (module on / off), WhatsApp update messages with real pictures, shared cut-out / model library for all users.
@@ -47,7 +47,7 @@ Last updated at version 2026.11.21-b.
 12. Plaster and façade decoration: (done in -y: 37 pieces — cornices, bands, surrounds, quoins, columns, balusters, jali, kangura.) (-z: RUN draws cornices, bands, skirting, LED lines from point to point with mitred corners.) Still open: arches and curved pieces, runs that follow a wall face by one click, profile at the free ends (returns), grooves cut into the plaster of a wall face, custom profile drawn by the user.
 13. ACP / POP: (done in -y: ACP sheet finishes for WALLFINISH, 11 ACP pieces, 7 POP ceiling designs with lights.) (-z: CLADDING draws WPC louvres / planks, ACP panels / planks, HPL, stone strips, fins and glass panels from point to point, with LED in joints / top / bottom.) (-a: cladding is cut round the doors and windows of the wall behind, area deducted.) Still open: cladding on ceilings and on sloping lines, panel layout starting from a chosen corner, (-b: a room's false ceiling takes a design — tray, double step, island, border — with LED and spot lights, counted in Σ Quantities.) Still open: free-form POP shapes (curves, circles, plus-minus patterns) drawn inside a room, different heights in parts of one room.
 14. Lights: (done in -y: 30 more decorative / garden lights.) (-z: LED and lamp surfaces glow; LED colour per run.) Still open: light colour and strength per fitting in Properties, shadows from fittings, bloom round lamps, light cones on walls.
-15. Furniture / doors / fittings: (-a: any library item takes its own width, depth and height — a plain stretch.) Still open: true parametric units where the number of shutters, shelves and handles follows the size, for wardrobes, TV units, beds and kitchen units; (-b: 12 door designs and 5 handle types on the door element.) Still open: door frame designs, arched heads, double-door designs with a fixed leaf, window grill patterns.
+15. Furniture / doors / fittings: (-a: any library item takes its own width, depth and height — a plain stretch.) (-c: CABINET draws wardrobes, loft, kitchen base / wall / tall units, TV unit, crockery, bookshelf, study table, vanity and shoe cabinet from point to point; shutters, drawers and handles follow the length.) Still open: inside fittings (shelves, hanging rail, baskets) shown with open shutters, sink / hob cut-outs in the counter, corner units, parametric beds and sofas; (-b: 12 door designs and 5 handle types on the door element.) Still open: door frame designs, arched heads, double-door designs with a fixed leaf, window grill patterns.
 
 ## C. CAD Studio — to build
 1. (done in -x: SHEET puts plan + elevations + sections in one frame at one scale and plots with the title block.) Still open: several sheets per drawing, views at different scales on one sheet, print sets, sheet in portrait.

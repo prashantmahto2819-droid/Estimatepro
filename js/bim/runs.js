@@ -40,6 +40,25 @@
     alu_fins: { n: "Aluminium / ACP fins (vertical, standing out)", fam: "c", z: 0, h: 3000, look: "aluminium_wood", key: "acp_panel", mw: 300, gen: "batten", bw: 50, dp: 200, back: 0 },
     glass_panels: { n: "Back-painted glass panels", fam: "c", z: 0, h: 2700, look: "glass_white_lacquer", key: "wall_panel", mw: 900, rh: 0, gen: "grid", dp: 12, gv: 3 }
   };
+  /* fitted units drawn from a start point to an end point: the number of shutters follows the length.
+     rows: [bottom, top, type] above the unit's underside — sh shutters, gl glass shutters, dr drawers, mx shutters and drawers
+     alternately, sl sliding panels, op open shelves. The last row ends at the unit's height. */
+  Object.assign(RUNS, {
+    wardrobe_hinged: { n: "Wardrobe — hinged shutters", fam: "u", z: 0, h: 2100, dp: 600, mw: 450, pl: 80, rows: [[80, 2100, "sh"]], look: "laminate_oak", key: "wardrobe" },
+    wardrobe_loft: { n: "Wardrobe with loft (full height)", fam: "u", z: 0, h: 2700, dp: 600, mw: 450, pl: 80, rows: [[80, 2100, "sh"], [2100, 2700, "sh"]], look: "laminate_oak", key: "wardrobe" },
+    wardrobe_slide: { n: "Wardrobe — sliding shutters", fam: "u", z: 0, h: 2400, dp: 650, mw: 900, pl: 80, rows: [[80, 2400, "sl"]], look: "laminate_oak", key: "wardrobe" },
+    loft_only: { n: "Loft cabinet (above door / wardrobe)", fam: "u", z: 2100, h: 600, dp: 600, mw: 450, pl: 0, rows: [[0, 600, "sh"]], look: "laminate_oak", key: "wardrobe" },
+    kitchen_base: { n: "Kitchen base units with counter", fam: "u", z: 0, h: 850, dp: 600, mw: 500, pl: 100, rows: [[100, 830, "mx"]], top: 20, look: "laminate_sage", key: "kitchen_unit", dim: "L" },
+    kitchen_wall: { n: "Kitchen wall units", fam: "u", z: 1450, h: 700, dp: 350, mw: 500, pl: 0, rows: [[0, 700, "sh"]], look: "laminate_sage", key: "kitchen_unit", dim: "L", under: 1 },
+    kitchen_tall: { n: "Kitchen tall unit (oven / pantry)", fam: "u", z: 0, h: 2150, dp: 600, mw: 600, pl: 100, rows: [[100, 800, "dr"], [800, 2150, "sh"]], look: "laminate_sage", key: "kitchen_unit", dim: "L" },
+    tv_unit: { n: "TV unit — console with back panel", fam: "u", z: 250, h: 400, dp: 400, mw: 600, pl: 0, rows: [[0, 400, "dr"]], back: 2100, look: "laminate_oak", key: "tv_unit" },
+    crockery: { n: "Crockery unit — glass shutters above", fam: "u", z: 0, h: 2100, dp: 450, mw: 450, pl: 80, rows: [[80, 850, "sh"], [900, 2100, "gl"]], look: "laminate_oak", key: "wardrobe" },
+    bookshelf: { n: "Book shelf / display — open", fam: "u", z: 0, h: 2100, dp: 300, mw: 600, pl: 80, rows: [[80, 2100, "op"]], look: "laminate_oak", key: "bookshelf" },
+    study_table: { n: "Study / work table with drawers", fam: "u", z: 0, h: 750, dp: 600, mw: 450, pl: 0, rows: [[450, 730, "dr"]], top: 20, legs: 1, look: "laminate_oak", key: "wardrobe" },
+    vanity: { n: "Vanity / basin cabinet with top", fam: "u", z: 150, h: 650, dp: 500, mw: 450, pl: 0, rows: [[0, 630, "sh"]], top: 20, look: "laminate_charcoal", key: "wardrobe" },
+    shoe_rack: { n: "Shoe cabinet", fam: "u", z: 0, h: 1000, dp: 350, mw: 450, pl: 80, rows: [[80, 1000, "sh"]], look: "laminate_oak", key: "shoe_rack" }
+  });
+  B.RUN_HANDLES = [["", "Bar handle"], ["knob", "Knob"], ["profile", "Handle-less (profile groove)"], ["gold", "Bar handle — gold"], ["black", "Bar handle — black"]];
   B.RUN_LED = [["", "No LED"], ["joint", "LED in the vertical joints"], ["top", "LED line at the top"], ["bottom", "LED line at the bottom"], ["both", "LED lines at top and bottom"], ["all", "LED in the joints, top and bottom"]];
   B.RUN_LEDLOOKS = ["led_warm", "led_cool", "led_daylight", "led_amber", "led_blue", "led_green", "led_pink"];
   function def(e) { return RUNS[e.kind] || RUNS.band; }
@@ -59,7 +78,7 @@
   function segsOf(p, closed) { var s = []; for (var i = 0; i + 1 < p.length; i++) s.push([p[i], p[i + 1]]); if (closed && p.length > 2) s.push([p[p.length - 1], p[0]]); return s; }
   function ledLookOf(e) { var D = def(e), id = e.ledLook || D.ledLook || (D.led && /^led_/.test(e.look || D.look) ? (e.look || D.look) : "led_warm"); return B.LOOKS[id] ? id : "led_warm"; }
   B.runLedLen = function (e) {
-    var D = def(e), L = runLen(e); if (D.fam === "p") return D.led ? L : 0;
+    var D = def(e), L = runLen(e); if (D.fam === "p") return D.led ? L : 0; if (D.fam === "u") return 0;
     var m = e.led || "", H = e.h || D.h, mw = e.mw || D.mw, n = 0; if (m === "top" || m === "bottom") n += L; if (m === "both" || m === "all") n += 2 * L;
     if (m === "joint" || m === "all") { var step = D.gen === "batten" ? Math.max(mw * 8, 600) : mw; segsOf(path(e), e.closed).forEach(function (s) { n += Math.max(0, Math.floor(G.dist(s[0], s[1]) / step)) * H; }); }
     return n;
@@ -74,6 +93,38 @@
     return out;
   }
   B.runHoles = holesOn;
+  function unitMesh(M, e, D, H, p, z0, side, own, led) {
+    var Hh = e.h || D.h, dp = Math.max(150, e.dp || D.dp), mw = Math.max(200, e.mw || D.mw), car = B.look(B.LOOKS[e.look2] ? e.look2 : "paint_pure_white"), dark = B.look("steel_matt_black"), glass = B.look("glass_clear"), topL = B.look(B.LOOKS[e.lookT] ? e.lookT : "granite_black"),
+      hk = B.look(e.handle === "gold" ? "steel_gold_pvd" : e.handle === "black" ? "steel_matt_black" : "steel_ss"), hd = e.handle || "", tT = D.top || 0, rows = D.rows.map(function (r) { return r.slice(); });
+    rows[rows.length - 1][1] = Math.max(rows[rows.length - 1][0] + 100, Hh - tT);
+    segsOf(p, e.closed).forEach(function (s) {
+      var a = s[0], b = s[1], len = G.dist(a, b); if (len < 50) return; var u = G.norm(G.sub(b, a)), nv = [u[1] * side, -u[0] * side];
+      var at = function (d, off) { return [a[0] + u[0] * d + nv[0] * off, a[1] + u[1] * d + nv[1] * off]; }, st = function (d0, d1, o0, o1, za, zb, look) { if (d1 - d0 < 0.5 || zb - za < 0.5 || o1 - o0 < 0.5) return; H.boxAlong(M, at(d0, (o0 + o1) / 2), at(d1, (o0 + o1) / 2), o1 - o0, z0 + za, z0 + zb, look); };
+      var n = Math.max(1, Math.round(len / mw)), cw = len / n, F = dp - 18;
+      if (D.back) { st(0, len, 0, 18, -D.z + 100 > 0 ? 0 : 0, D.back, own); st(len * 0.12, len * 0.88, 18, 22, Hh + 40, Hh + 52, led); st(len * 0.1, len * 0.9, 18, 240, Hh + 950, Hh + 980, own); }
+      if (D.pl) st(0, len, 0, dp - 60, 0, D.pl, dark);
+      if (D.legs) { [[30, 80], [len - 80, len - 30]].forEach(function (q) { st(q[0], q[1], 30, 80, 0, Hh - tT, dark); st(q[0], q[1], dp - 80, dp - 30, 0, Hh - tT, dark); }); }
+      rows.forEach(function (r, ri) {
+        var za = r[0], zb = r[1], ty = r[2]; st(0, len, D.back ? 18 : 0, F, za, zb, car);
+        if (ty === "op") { for (var i = 0; i <= n; i++) st(Math.max(0, i * cw - 9), Math.min(len, i * cw + 9), 0, dp, za, zb, own); for (var z = za; z <= zb - 20; z += Math.max(250, (zb - za) / Math.max(1, Math.round((zb - za) / 350)))) st(0, len, 0, dp, z, z + 18, own); st(0, len, 0, dp, zb - 18, zb, own); st(0, len, 0, 12, za, zb, own); return; }
+        if (ty === "sl") { var ns = Math.max(2, Math.round(len / mw)), sw = len / ns; for (var k = 0; k < ns; k++) { var o = k % 2 ? 22 : 0, mir = e.mirror && k % 2 === 1; st(k * sw + (k ? -15 : 0), (k + 1) * sw, F - 22 + o, F + o, za, zb, mir ? B.look("mirror") : own); if (hd !== "profile") st((k % 2 ? k * sw + 30 : (k + 1) * sw - 60), (k % 2 ? k * sw + 60 : (k + 1) * sw - 30), F + o, F + o + 6, za + (zb - za) * 0.35, za + (zb - za) * 0.65, hk); } st(0, len, F - 30, F + 30, zb - 30, zb, dark); st(0, len, F - 30, F + 30, za, za + 20, dark); return; }
+        for (var m = 0; m < n; m++) {
+          var d0 = m * cw + 1.5, d1 = (m + 1) * cw - 1.5, drawers = ty === "dr" || (ty === "mx" && m % 3 === 1), nd = drawers ? Math.max(1, Math.min(4, Math.round((zb - za) / 240))) : 1, hh = (zb - za) / nd;
+          for (var q = 0; q < nd; q++) { var a0 = za + q * hh + 1.5, a1 = za + (q + 1) * hh - 1.5;
+            if (ty === "gl") { st(d0, d0 + 45, F, dp, a0, a1, own); st(d1 - 45, d1, F, dp, a0, a1, own); st(d0, d1, F, dp, a0, a0 + 45, own); st(d0, d1, F, dp, a1 - 45, a1, own); st(d0 + 45, d1 - 45, F + 5, F + 11, a0 + 45, a1 - 45, glass); }
+            else st(d0, d1, F, dp, a0, a1, own);
+            if (hd === "profile") st(d0, d1, F + 2, dp + 1, a1 - 14, a1 - 4, dark);
+            else if (drawers) { var mc = (d0 + d1) / 2; if (hd === "knob") st(mc - 14, mc + 14, dp, dp + 22, (a0 + a1) / 2 - 14, (a0 + a1) / 2 + 14, hk); else st(mc - Math.min(90, cw * 0.25), mc + Math.min(90, cw * 0.25), dp, dp + 22, (a0 + a1) / 2 - 6, (a0 + a1) / 2 + 6, hk); }
+            else { var hx = m % 2 === 0 ? d1 - 45 : d0 + 33, zc = D.under || za > 1200 ? a0 + 90 : (zb - za) > 1200 ? za + Math.min(1000, (zb - za) * 0.5) : a1 - 90; if (ri > 0 && za >= 2000) zc = a0 + 90; if (hd === "knob") st(hx - 8, hx + 20, dp, dp + 22, zc - 14, zc + 14, hk); else st(hx, hx + 12, dp, dp + 22, zc - 70, zc + 70, hk); }
+          }
+        }
+      });
+      if (tT) st(-0, len, 0, dp + 25, Hh - tT, Hh, topL);
+      if (D.under && e.led !== "none") st(20, len - 20, dp - 120, dp - 100, -8, 0, led);
+      if (e.led === "top" || e.led === "all") st(0, len, 10, 26, Hh, Hh + 12, led);
+      if ((D.under || e.led) && H.lights) { var q2 = at(len / 2, dp + 200); H.lights.push([q2[0] / 1000, q2[1] / 1000, (z0 + (D.under ? -100 : Hh + 150)) / 1000, 0.5]); }
+    });
+  }
   function mesh(M, doc, e, H) {
     var D = def(e), L = B.level(doc.d, e.lvl), z0 = (L ? L.elev : 0) + (e.z == null ? D.z : e.z), side = +e.side === -1 ? -1 : 1, p = path(e); if (p.length < 2) return;
     var own = B.look(e.look && B.LOOKS[e.look] ? e.look : D.look, e.col), led = B.look(ledLookOf(e));
@@ -83,6 +134,7 @@
       if (D.led && H.lights) { var Lt = runLen(e), nL = Math.max(1, Math.min(8, Math.round(Lt / 1500))), acc = 0, sg = segsOf(p, e.closed), tot = Lt / nL, need = tot / 2; sg.forEach(function (s) { var l = G.dist(s[0], s[1]); while (need <= acc + l && l > 0) { var t = (need - acc) / l, q = [s[0][0] + (s[1][0] - s[0][0]) * t, s[0][1] + (s[1][1] - s[0][1]) * t]; H.lights.push([q[0] / 1000, q[1] / 1000, (z0 + 20) / 1000, 0.6]); need += tot; } acc += l; }); }
       return;
     }
+    if (D.fam === "u") { unitMesh(M, e, D, H, p, z0, side, own, led); return; }
     var Hh = e.h || D.h, mw = Math.max(10, e.mw || D.mw), z1 = z0 + Hh, mode = e.led || "", joint = mode === "joint" || mode === "all", top = mode === "top" || mode === "both" || mode === "all", bot = mode === "bottom" || mode === "both" || mode === "all";
     segsOf(p, e.closed).forEach(function (s) {
       var a = s[0], b = s[1], len = G.dist(a, b); if (len < 5) return; var u = G.norm(G.sub(b, a)), nv = [u[1] * side, -u[0] * side];
@@ -106,13 +158,16 @@
     });
   }
   B.EXT.run = {
-    plan: function (doc, e) { var D = def(e), p = path(e), side = +e.side === -1 ? -1 : 1, w = D.fam === "p" ? Math.max.apply(null, D.pr.map(function (r) { return r[1]; })) : (D.dp + (D.back || 0)), o = offsetPath(p, w, e.closed, side);
+    plan: function (doc, e) { var D = def(e), p = path(e), side = +e.side === -1 ? -1 : 1, w = D.fam === "p" ? Math.max.apply(null, D.pr.map(function (r) { return r[1]; })) : D.fam === "u" ? Math.max(150, e.dp || D.dp) + (D.top ? 25 : 0) : (D.dp + (D.back || 0)), o = offsetPath(p, w, e.closed, side);
       var segs = G.polySegs(p, !!e.closed).concat(G.polySegs(o, !!e.closed)); if (!e.closed) { segs.push({ k: "L", a: p[0], b: o[0] }); segs.push({ k: "L", a: p[p.length - 1], b: o[o.length - 1] }); }
       return { segs: segs, fill: [], dashed: [] }; },
     labels: function () { return []; },
     xform: function (e, M) { var o = JSON.parse(JSON.stringify(e)); o.pts = e.pts.map(function (p) { return G.mApply(M, p); }); var det = M[0] * M[3] - M[1] * M[2]; if (det < 0) o.side = +e.side === -1 ? 1 : -1; return o; },
     qty: function (doc, e) { var D = def(e), L = runLen(e), z = e.lvl ? B.below(doc.d, e.lvl) : "super", m = function (v) { return (v / 1000).toFixed(2); }, rows = [];
       if (e.noq === true) return rows;
+      if (D.fam === "u") { var Hu = e.h || D.h, du = Math.max(150, e.dp || D.dp); if (D.dim === "L") rows.push({ k: D.key, dim: "L", v: L, label: D.n, f: m(L) + " m run", z: z }); else rows.push({ k: D.key, dim: "A", v: L * Hu, label: D.n, f: m(L) + " × " + m(Hu) + " (front)", z: z });
+        if (D.top && D.key === "kitchen_unit") rows.push({ k: "kitchen_counter", dim: "A", v: L * (du + 25), label: "Counter top — " + D.n, f: m(L) + " × " + m(du + 25), z: z });
+        if (D.back) rows.push({ k: "wall_panel", dim: "A", v: L * D.back, label: "TV back panel", f: m(L) + " × " + m(D.back), z: z }); return rows; }
       if (D.fam === "p") { if (D.key !== "led_strip") rows.push({ k: D.key, dim: "L", v: L, label: D.n, f: m(L) + " m run", z: z }); }
       else { var Hh = e.h || D.h, Lv = B.level(doc.d, e.lvl), zr0 = (Lv ? Lv.elev : 0) + (e.z == null ? D.z : e.z), ded = 0; segsOf(path(e), e.closed).forEach(function (sg) { var ln = G.dist(sg[0], sg[1]); holesOn(doc, e, sg[0], sg[1]).forEach(function (h) { var w = Math.min(ln, h.d1) - Math.max(0, h.d0), hh = Math.min(zr0 + Hh, h.z1) - Math.max(zr0, h.z0); if (w > 0 && hh > 0) ded += w * hh; }); });
         rows.push({ k: D.key, dim: "A", v: Math.max(0, L * Hh - ded), label: D.n, f: m(L) + " × " + m(Hh) + (ded > 0 ? " − openings " + (ded / 1e6).toFixed(2) + " m²" : ""), z: z }); }
@@ -151,7 +206,7 @@
   function cmd(name, al, fn) { cmds[name] = { fn: fn }; (al || []).forEach(function (a) { AL[a] = name; }); }
   function kwOf(fam) { var o = {}; Object.keys(RUNS).forEach(function (k) { if (RUNS[k].fam === fam) o[k.split("_").map(function (w) { return w[0].toUpperCase() + w.slice(1); }).join("")] = k; }); return o; }
   async function draw(ed, fam) {
-    B.ensure(ed.doc.d); var KW = kwOf(fam), names = Object.keys(KW), memo = fam === "p" ? "runKind" : "cladKind", cur = ed[memo] && RUNS[ed[memo]] && RUNS[ed[memo]].fam === fam ? ed[memo] : KW[names[0]];
+    B.ensure(ed.doc.d); var KW = kwOf(fam), names = Object.keys(KW), memo = fam === "p" ? "runKind" : fam === "u" ? "unitKind" : "cladKind", cur = ed[memo] && RUNS[ed[memo]] && RUNS[ed[memo]].fam === fam ? ed[memo] : KW[names[0]];
     var kind = cur, side = ed.runSide === -1 ? -1 : 1, lvl = B.ensure(ed.doc.d).cur, pts = [], D = RUNS[kind];
     var head = function () { return RUNS[kind].n + " — start point"; };
     while (true) {
@@ -168,5 +223,6 @@
     ed.say(RUNS[kind].n + " added, " + (B.runLen({ pts: pts }) / 1000).toFixed(2) + " m. Height, size, material and LED are in Properties.");
   }
   cmd("RUN", ["MOULDING", "MOLDING", "CORNICE", "LEDLINE", "LEDSTRIP", "SKIRTING"], function (ed) { return draw(ed, "p"); });
+  cmd("CABINET", ["WARDROBE", "KITCHEN", "TVUNIT", "CUPBOARD", "ALMIRAH"], function (ed) { return draw(ed, "u"); });
   cmd("CLADDING", ["CLAD", "WPC", "ACP", "LOUVRE"], function (ed) { return draw(ed, "c"); });
 })();

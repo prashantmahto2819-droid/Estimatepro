@@ -1,5 +1,5 @@
 /* App version + "what's new" — the super admin is offered to send this on WhatsApp after each upload. Change both with every release. */
-window.EP_VER = "2026.11.21-b";
-window.EP_NOTES = "• POP / gypsum ceiling designs in a room: select the room → False ceiling: Yes → Ceiling design — tray, double step, floating island or border, with LED colour and spot lights (border, grid or both); LED length and spots are counted in Σ Quantities\n• Door designs: 12 leaf designs (grooves, 2 and 6 panels, main door, glass strip, half glass, louvred, jali…) and handles (lever in steel / black / gold, long pull bar)";
+window.EP_VER = "2026.11.21-c";
+window.EP_NOTES = "• Wardrobe / kitchen / TV unit by points: Building (BIM) → Wardrobe / kitchen / TV unit — click the start and end along the wall; the shutters, drawers and handles are set out to the length\n• 13 kinds: hinged, loft and sliding wardrobes (mirror shutters), kitchen base units with counter, wall units with under-cabinet light, tall unit, TV unit with back panel and LED, crockery unit with glass shutters, book shelf, study table, vanity, shoe cabinet\n• In Properties: height, depth, shutter width, handles (bar, knob, handle-less, gold, black), shutter, carcass and counter materials";
 /* pictures of this update: [file in /updates, caption]. Shown to the owner with the WhatsApp "what's new" message. */
-window.EP_PICS = [["updates/b2-ceiling.jpg", "Tray ceiling with cove LED and spots; floating island ceiling"]];
+window.EP_PICS = [["updates/c2-units.jpg", "Kitchen, wardrobes, TV unit and crockery unit drawn by points"]];

@@ -3,6 +3,9 @@
 This file is for the people maintaining the app. It is not published with the site (see `.assetsignore`).
 The text users see is `EP_NOTES` in `js/version.js`.
 
+## 2026.11.21-c
+- Fitted units (`fam: "u"` in `B.RUNS`, `unitMesh` in `runs.js`): 13 kinds built from `rows` ([bottom, top, type]: sh, gl, dr, mx, sl, op), shutter count = round(length / mw). Entity extras: `dp`, `handle` (`B.RUN_HANDLES`), `look` = shutters, `look2` = carcass, `lookT` = top, `mirror`, `led`. Qty: front area (`wardrobe`, `tv_unit`, `bookshelf`, `shoe_rack`) or running length (`kitchen_unit`) + `kitchen_counter` area + TV back panel as `wall_panel`. Command CABINET (WARDROBE, KITCHEN, TVUNIT, CUPBOARD, ALMIRAH). At an L corner the two legs simply overlap.
+
 ## 2026.11.21-b
 - Room false ceiling designs: `room.cdes` (`B.CEIL_DES`: tray, double, island, border), `cbw` border width, `cdrop` step, `cled` LED look, `cspot` (`B.CEIL_SPOTS`). `B.ceilDesign(M, doc, e, zf, H)` in `runs.js` (called from the room case in `mesh.js`), inset by `offsetPath`; `B.ceilInfo` → LED length and spot count, appended to the room's quantities by a `B.qty` wrapper (`led_strip` L, `light_point` N). Concave rooms: the inset is a plain mitred offset, so very narrow necks can overlap.
 - Doors: leaf styles groove, vgroove, panel6, carved, vision, halfglass, louvre, jali added to `leafShape` (`mesh.js`); `door.handle` ("" lever steel, black, gold, pull, none).
