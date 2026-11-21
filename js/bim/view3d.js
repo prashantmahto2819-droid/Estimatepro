@@ -58,6 +58,9 @@ uniform float uPLk;
 uniform int uK;
 uniform sampler2D uSM;
 uniform sampler2D uTx0,uTx1,uTx2,uTx3,uTx4;   /* the user's own material pictures (pattern 20…24) */
+uniform sampler2D uLS; uniform mat4 uLSm; uniform vec4 uLSp;   /* depth seen from the nearest ceiling light looking down, its matrix, its position (w = on) */
+float lampSh(vec3 P){ vec4 c=uLSm*vec4(P,1.0); if(c.w<=0.01) return 1.0; vec3 n=c.xyz/c.w*0.5+0.5; if(n.x<0.01||n.x>0.99||n.y<0.01||n.y>0.99||n.z>1.0) return 1.0;
+  float s=0.0, t=1.0/1024.0; for(int i=0;i<4;i++){ vec2 o=vec2(float(i-(i/2)*2)-0.5,float(i/2)-0.5)*t*1.5; s+=step(n.z-0.0009,texture(uLS,n.xy+o).r); } return s*0.25; }
 uniform sampler2D uRC,uRD;  /* the frame before this one — colour and depth — for reflections on water */
 uniform mat4 uVPf; uniform vec3 uRf;   /* uRf: on, near, far */
 float rLin(float d){ return 2.0*uRf.y*uRf.z/(uRf.z+uRf.y-(d*2.0-1.0)*(uRf.z-uRf.y)); }
@@ -69,12 +72,12 @@ vec4 ssr(vec3 P,vec3 R){
     if(df>0.0 && df<max(0.6,stp*2.5)){ vec2 e=min(uv,1.0-uv); float fade=clamp(min(e.x,e.y)*12.0,0.0,1.0)*clamp(1.0-float(i)/26.0,0.0,1.0); return vec4(texture(uRC,uv).rgb,fade); } }
   return vec4(0.0);
 }
-uniform sampler2D uWM;      /* plan of the walls and columns, one tile per storey (2 × 2): light from fittings stops at them */
+uniform sampler2D uWM;      /* plan of the walls and columns, one tile per storey (3 × 3): light from fittings stops at them */
 uniform vec4 uWMb;          /* x0, y0, 1/width, 1/height of the plan in metres */
 uniform int uWMn;           /* storeys in the plan (0 = no wall check) */
-uniform float uWMz[4];      /* floor level of each storey, metres */
-int wmLvl(float z){ int k=0; for(int i=0;i<4;i++){ if(i>=uWMn) break; if(z>=uWMz[i]-0.03) k=i; } return k; }
-float wmAt(vec2 p,int lv){ vec2 q=(p-uWMb.xy)*uWMb.zw; if(q.x<0.0||q.y<0.0||q.x>1.0||q.y>1.0) return 0.0; vec2 tile=vec2(float(lv-(lv/2)*2),float(lv/2)); return texture(uWM,(tile+clamp(q,0.002,0.998))*0.5).r; }
+uniform float uWMz[9];      /* floor level of each storey, metres */
+int wmLvl(float z){ int k=0; for(int i=0;i<9;i++){ if(i>=uWMn) break; if(z>=uWMz[i]-0.03) k=i; } return k; }
+float wmAt(vec2 p,int lv){ vec2 q=(p-uWMb.xy)*uWMb.zw; if(q.x<0.0||q.y<0.0||q.x>1.0||q.y>1.0) return 0.0; vec2 tile=vec2(float(lv-(lv/3)*3),float(lv/3)); return texture(uWM,(tile+clamp(q,0.002,0.998))/3.0).r; }
 /* 1 = the fitting at b is seen from a, 0 = a wall, a column or a floor slab stands between */
 float wmSee(vec3 a,vec3 b){
   if(uWMn==0) return 1.0;
@@ -222,7 +225,7 @@ void main(){
   vec3 amb=mix(uGnd,uSky,N.z*0.5+0.5)*uAmb;
   vec3 lit=amb + uSunCol*diff*sh;
   /* light fittings (no shadows): warm point lights that fall off with distance */
-  for(int i=0;i<32;i++){ if(i>=uPLn) break; vec3 toL=uPL[i].xyz-vP; float dL=length(toL); float nl=max(dot(N,toL/max(dL,1e-4)),0.0); float att=uPL[i].w*uPLk*(0.18+0.82*nl)/(1.0+dL*dL*0.16); if(att>0.012) att*=wmSee(vP+N*0.16,uPL[i].xyz); lit+=uPLc[i]*att; }
+  for(int i=0;i<32;i++){ if(i>=uPLn) break; vec3 toL=uPL[i].xyz-vP; float dL=length(toL); float nl=max(dot(N,toL/max(dL,1e-4)),0.0); float att=uPL[i].w*uPLk*(0.18+0.82*nl)/(1.0+dL*dL*0.16); if(att>0.012){ att*=wmSee(vP+N*0.16,uPL[i].xyz); if(uLSp.w>0.5 && abs(uPL[i].x-uLSp.x)+abs(uPL[i].y-uLSp.y)+abs(uPL[i].z-uLSp.z)<0.02) att*=0.25+0.75*lampSh(vP+N*0.02); } lit+=uPLc[i]*att; }
   /* walk-through: a soft warm light carried by the viewer, so rooms the sun does not reach are still readable */
   if(uHead>0.01){ vec3 toE=uEye-vP; float dE=length(toE); lit+=vec3(1.0,0.95,0.86)*uHead*(0.35+0.65*max(dot(N,toE/max(dE,1e-4)),0.0))/(1.0+dE*dE*0.012); }
 
@@ -242,6 +245,7 @@ void main(){
     vec3 env=R.z>0.0 ? mix(uHor,uSky,pow(clamp(R.z,0.0,1.0),0.45)) : mix(uHor,uGnd,clamp(-R.z*3.0,0.0,1.0))*0.8;
     float fr=0.04+0.96*pow(1.0-nv,5.0);
     if(pi==17){ fr=0.12+0.88*pow(1.0-nv,3.0); if(uRf.x>0.5 && R.z>0.02){ vec4 h=ssr(vP,R); env=mix(env,h.rgb,h.a*0.85); } }   /* water mirrors what stands beside it */
+    else if(uRf.x>1.5 && (pi==12 || gloss>0.45)){ vec4 h2=ssr(vP,R); env=mix(env,h2.rgb,h2.a*0.8); fr=max(fr,pi==12?0.10:0.06*gloss); }   /* ✨ Reflections: glass and polished floors mirror the scene too */
     col=mix(col,env,clamp(fr*(pi==12||pi==17?0.9:gloss*0.55),0.0,pi==12||pi==17?0.75:0.4));
   }
 
@@ -1021,8 +1025,23 @@ P.prototype.render=function(pick){
     return;
   }
 
+  /* 1b. the nearest light fitting looks straight down and throws the shadows of furniture (night view) */
+  this._ls=null;
+  if(this.night && this.lampShadow!==false && !this.lightThru && this.lightsOn!==false && (this.lights||[]).length && this.style<0.5 && this.vaoOpS){ try{
+    const tC=this.walk&&this.we?this.we:this.t, Lg=this.lights.slice().sort(function(a,b){ return ((a[0]-tC[0])*(a[0]-tC[0])+(a[1]-tC[1])*(a[1]-tC[1])+(a[2]-tC[2])*(a[2]-tC[2]))-((b[0]-tC[0])*(b[0]-tC[0])+(b[1]-tC[1])*(b[1]-tC[1])+(b[2]-tC[2])*(b[2]-tC[2])); })[0];
+    if(!this.lsFB){ const n=1024, tex=gl.createTexture(); gl.activeTexture(gl.TEXTURE11); gl.bindTexture(gl.TEXTURE_2D,tex); gl.texImage2D(gl.TEXTURE_2D,0,gl.DEPTH_COMPONENT24,n,n,0,gl.DEPTH_COMPONENT,gl.UNSIGNED_INT,null);
+      gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.NEAREST); gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,gl.NEAREST); gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_COMPARE_MODE,gl.NONE); gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE); gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE);
+      const fb=gl.createFramebuffer(); gl.bindFramebuffer(gl.FRAMEBUFFER,fb); gl.framebufferTexture2D(gl.FRAMEBUFFER,gl.DEPTH_ATTACHMENT,gl.TEXTURE_2D,tex,0); gl.drawBuffers([gl.NONE]); gl.readBuffer(gl.NONE); gl.bindTexture(gl.TEXTURE_2D,null); gl.activeTexture(gl.TEXTURE0); this.lsFB=fb; this.lsTex=tex; }
+    const lvm=mul(look([Lg[0],Lg[1],Lg[2]],[Lg[0],Lg[1],Lg[2]-1],[0,1,0]),persp(2.25,1,0.4,14));
+    gl.activeTexture(gl.TEXTURE11); gl.bindTexture(gl.TEXTURE_2D,null); gl.activeTexture(gl.TEXTURE0);
+    gl.bindFramebuffer(gl.FRAMEBUFFER,this.lsFB); gl.viewport(0,0,1024,1024); gl.colorMask(false,false,false,false); gl.depthMask(true); gl.clear(gl.DEPTH_BUFFER_BIT); gl.enable(gl.DEPTH_TEST); gl.depthFunc(gl.LESS);
+    gl.useProgram(this.sp); gl.uniformMatrix4fv(this.sp.u.uVP,false,lvm); if(!this._scLoc) this._scLoc={c:gl.getUniformLocation(this.sp,'uCutS'),b:gl.getUniformLocation(this.sp,'uBoxS')}; gl.uniform1f(this._scLoc.c,1e9); gl.uniform4f(this._scLoc.b,-1e9,1e9,-1e9,1e9);
+    gl.bindVertexArray(this.vaoOpS); gl.drawArrays(gl.TRIANGLES,0,this.opN); gl.bindVertexArray(null);
+    gl.colorMask(true,true,true,true); gl.bindFramebuffer(gl.FRAMEBUFFER,null); this._ls={m:lvm,p:Lg};
+  }catch(eL){ this.lampShadow=false; this._ls=null; gl.colorMask(true,true,true,true); gl.bindFramebuffer(gl.FRAMEBUFFER,null); } }
+
   const bloomOn=this.night && this.bloom!==false && !this.ortho_ && (this.lights||[]).length>0 && this.style<0.5;
-  const rfWant=!!this._hasWater && this.reflect!==false && this.style<0.5 && !this.ortho_;
+  const rfWant=(!!this._hasWater || !!this.reflAll) && this.reflect!==false && this.style<0.5 && !this.ortho_;
   const usePost=this.ssao || bloomOn || rfWant;
 
   /* 1. Shadow map pass */
@@ -1092,10 +1111,13 @@ P.prototype.render=function(pick){
   const u=this.mp.u;
   gl.uniformMatrix4fv(u.uVP,false,vp);
   gl.uniformMatrix4fv(u.uL,false,lvp);
+  { if(!this._lsLoc) this._lsLoc={s:gl.getUniformLocation(this.mp,'uLS'),m:gl.getUniformLocation(this.mp,'uLSm'),p:gl.getUniformLocation(this.mp,'uLSp')}; const LS=this._ls;
+    gl.activeTexture(gl.TEXTURE11); gl.bindTexture(gl.TEXTURE_2D,LS?this.lsTex:null); gl.activeTexture(gl.TEXTURE0); gl.uniform1i(this._lsLoc.s,11);
+    if(LS){ gl.uniformMatrix4fv(this._lsLoc.m,false,LS.m); gl.uniform4f(this._lsLoc.p,LS.p[0],LS.p[1],LS.p[2],1); } else gl.uniform4f(this._lsLoc.p,0,0,0,0); }
   { if(!this._rfLoc) this._rfLoc={c:gl.getUniformLocation(this.mp,'uRC'),d:gl.getUniformLocation(this.mp,'uRD'),m:gl.getUniformLocation(this.mp,'uVPf'),f:gl.getUniformLocation(this.mp,'uRf')};
     const rOn=rfWant && usePost && this.rfFBO && this._rfValid && this.rfW===w && this.rfH===h;
     gl.activeTexture(gl.TEXTURE9); gl.bindTexture(gl.TEXTURE_2D,rOn?this.rfCol:null); gl.activeTexture(gl.TEXTURE10); gl.bindTexture(gl.TEXTURE_2D,rOn?this.rfDep:null); gl.activeTexture(gl.TEXTURE0);
-    gl.uniform1i(this._rfLoc.c,9); gl.uniform1i(this._rfLoc.d,10); gl.uniformMatrix4fv(this._rfLoc.m,false,this._rfVP||vp); gl.uniform3f(this._rfLoc.f,rOn?1:0,this._rfNF?this._rfNF[0]:near,this._rfNF?this._rfNF[1]:far); }
+    gl.uniform1i(this._rfLoc.c,9); gl.uniform1i(this._rfLoc.d,10); gl.uniformMatrix4fv(this._rfLoc.m,false,this._rfVP||vp); gl.uniform3f(this._rfLoc.f,rOn?(this.reflAll?2:1):0,this._rfNF?this._rfNF[0]:near,this._rfNF?this._rfNF[1]:far); }
   gl.uniform3fv(u.uSun,sd);
   gl.uniform3fv(u.uEye,eyePos);
   gl.uniform3fv(u.uSunCol,lt.sunCol);
@@ -1115,7 +1137,7 @@ P.prototype.render=function(pick){
     if(!this._plcLoc) this._plcLoc=gl.getUniformLocation(this.mp,'uPLc'); gl.uniform3fv(this._plcLoc,arc);
     { const W=this.wallMask, on=!!(W&&W.tex&&this.lightWalls!==false&&!this.lightThru); if(!this._wmLoc) this._wmLoc={s:gl.getUniformLocation(this.mp,'uWM'),b:gl.getUniformLocation(this.mp,'uWMb'),n:gl.getUniformLocation(this.mp,'uWMn'),z:gl.getUniformLocation(this.mp,'uWMz')};
       gl.activeTexture(gl.TEXTURE8); gl.bindTexture(gl.TEXTURE_2D,on?W.tex:(this._wmBlank||(this._wmBlank=this._wmMake(null)))); gl.activeTexture(gl.TEXTURE0); gl.uniform1i(this._wmLoc.s,8); gl.uniform1i(this._wmLoc.n,on?W.z.length:0);
-      if(on){ gl.uniform4f(this._wmLoc.b,W.box[0],W.box[1],1/(W.box[2]-W.box[0]),1/(W.box[3]-W.box[1])); const zz=new Float32Array(4); W.z.forEach(function(v,i){ zz[i]=v; }); gl.uniform1fv(this._wmLoc.z,zz); } }
+      if(on){ gl.uniform4f(this._wmLoc.b,W.box[0],W.box[1],1/(W.box[2]-W.box[0]),1/(W.box[3]-W.box[1])); const zz=new Float32Array(9); W.z.forEach(function(v,i){ zz[i]=v; }); gl.uniform1fv(this._wmLoc.z,zz); } }
     if(!this._plLoc) this._plLoc=gl.getUniformLocation(this.mp,'uPL'); gl.uniform4fv(this._plLoc,arr); gl.uniform1i(u.uPLn,this.lightsOn===false?0:near.length); gl.uniform1f(u.uPLk,this.night?1.0:0.22); }
   gl.uniform1f(u.uAmb,this.night?(this.walk?0.42:0.75):this.walk?0.70:0.50); gl.uniform1f(u.uHead,this.walk?(this.night?0.22:0.9):0.0);   /* brighter fill light indoors while walking */
   gl.uniform1i(u.uK,this.kern);
@@ -1677,7 +1699,7 @@ P.prototype.project=function(p){   /* model point (m) → CSS px, or null when b
 P.prototype._wmMake=function(cv){ const gl=this.gl, tx=gl.createTexture(); gl.activeTexture(gl.TEXTURE8); gl.bindTexture(gl.TEXTURE_2D,tx);
   if(cv) gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,gl.RGBA,gl.UNSIGNED_BYTE,cv); else gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,1,1,0,gl.RGBA,gl.UNSIGNED_BYTE,new Uint8Array([0,0,0,255]));
   gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.LINEAR); gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,gl.LINEAR); gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE); gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE); gl.activeTexture(gl.TEXTURE0); return tx; };
-P.prototype.setWallMask=function(m){ const gl=this.gl; if(this.wallMask&&this.wallMask.tex) gl.deleteTexture(this.wallMask.tex); this.wallMask=null; if(m&&m.canvas&&m.z&&m.z.length){ try{ this.wallMask={tex:this._wmMake(m.canvas),box:m.box,z:m.z.slice(0,4)}; }catch(e){ this.wallMask=null; } } this.dirty=true; };
+P.prototype.setWallMask=function(m){ const gl=this.gl; if(this.wallMask&&this.wallMask.tex) gl.deleteTexture(this.wallMask.tex); this.wallMask=null; if(m&&m.canvas&&m.z&&m.z.length){ try{ this.wallMask={tex:this._wmMake(m.canvas),box:m.box,z:m.z.slice(0,9)}; }catch(e){ this.wallMask=null; } } this.dirty=true; };
 /* ray through a screen point: {o, d} in world metres */
 P.prototype.rayAt=function(x,y){
   const m=this.mats(), iv=inv(m.vp); if(!iv) return null;

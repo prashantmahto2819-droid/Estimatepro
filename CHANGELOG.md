@@ -3,6 +3,11 @@
 This file is for the people maintaining the app. It is not published with the site (see `.assetsignore`).
 The text users see is `EP_NOTES` in `js/version.js`.
 
+## 2026.11.21-z19
+- Lamp shadow: at night the fitting nearest the camera target renders a 1024 px depth map looking straight down (fov 2.25 rad, near 0.4 m, far 14 m; opaque geometry only) — `lsFB` / unit 11, `lampSh` in the main shader darkens that light's share to 25 % in shadow. `lampShadow = false` or 💡 Fast lights switches it off.
+- Wall mask: 3 × 3 tiles (nine storeys), windows are gaps as well as openings.
+- `reflAll` (✨ Reflections): `uRf.x = 2` → glass and gloss > 0.45 use the same screen-space reflection as water.
+
 ## 2026.11.21-z18
 - Reflections on water: after the scene pass the frame (colour + depth) is copied to `rfFBO` (units 9 / 10); the next frame's water fragments march their mirrored ray on that copy (`ssr`, 26 growing steps, thickness test on linear depth, fade at the screen edge and with distance). One extra frame is drawn after the view changes. Only when the scene has pattern-17 vertices (`_hasWater`), Realistic style, perspective; `reflect = false` switches it off (also set if the copy fails).
 - **Fix**: look id `water` already existed (dsmodel.js, a glass look) and replaced the new one, so z8's water was plain glass. New ids `water_pool`; the land kind uses it.

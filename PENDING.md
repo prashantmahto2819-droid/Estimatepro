@@ -38,10 +38,10 @@ Last updated at version 2026.11.21-q.
 
 ## B. 3D Studio — to build (no server needed)
 1. (done in -u for one device: My 3D models.) (-v: texture colours baked per vertex.) Still open: true per-pixel textures, Draco files, a shared library for all users (needs the server), thumbnails, plan symbol from the model outline.
-2. (done in -t: fittings light the scene, Night view.) (-z16: light stops at walls, columns and floors.) Still open: shadows of furniture from fittings, light through windows and open doors, more than four storeys.
+2. (done in -t: fittings light the scene, Night view.) (-z16: light stops at walls, columns and floors.) (-z19: furniture shadows from the nearest fitting, light through windows, nine storeys.) Still open: shadows from every fitting, light through open doors, wall lights (the shadow map looks down only).
 3. (done in -w: up to 5 own material pictures per drawing.) Still open: rotate / offset the picture on a surface, more than 5, a device library of materials.
 4. (done in -x: sky presets and an own background picture.) Still open: the picture does not light the model (no image-based lighting), (-r: sky saved per scene) ground materials by area.
-5. (-u: sky reflection on glass and polished surfaces.) (-z8: water surfaces with ripples.) (-z18: water mirrors what is on screen beside it.) Still open: reflections on glass and polished floors of the scene itself, things outside the screen in the reflection, moving water, softer shadows.
+5. (-u: sky reflection on glass and polished surfaces.) (-z8: water surfaces with ripples.) (-z18: water mirrors what is on screen beside it.) (-z19: ✨ Reflections on glass and polished floors.) Still open: things outside the screen in the reflection, moving water, softer shadows.
 6. (-z10: vehicles turn round and come back.) (-z18: walkers bob with each step.) Still open: vehicles following a drawn path, wheels that turn, true walking animation (needs animated models).
 7. (-z2: CAMPATH + Tour walks the path; Record makes the video.) (-z3: speed, eye height, MP4 first.) Still open: look-at targets, stairs between levels, doors that open on the way.
 8. (done in -z17: cut faces hatched, cut-away parts throw no shadow.) Still open: choose the fill colour, a cut line on plan for the 3D section.
