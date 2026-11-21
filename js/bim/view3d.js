@@ -58,6 +58,17 @@ uniform float uPLk;
 uniform int uK;
 uniform sampler2D uSM;
 uniform sampler2D uTx0,uTx1,uTx2,uTx3,uTx4;   /* the user's own material pictures (pattern 20…24) */
+uniform sampler2D uRC,uRD;  /* the frame before this one — colour and depth — for reflections on water */
+uniform mat4 uVPf; uniform vec3 uRf;   /* uRf: on, near, far */
+float rLin(float d){ return 2.0*uRf.y*uRf.z/(uRf.z+uRf.y-(d*2.0-1.0)*(uRf.z-uRf.y)); }
+/* what a ray from P along R meets on the screen: colour and how sure (0…1) */
+vec4 ssr(vec3 P,vec3 R){
+  float stp=0.25; vec3 p=P+R*0.1;
+  for(int i=0;i<26;i++){ p+=R*stp; stp*=1.16; vec4 c=uVPf*vec4(p,1.0); if(c.w<=0.001) break; vec3 n=c.xyz/c.w; vec2 uv=n.xy*0.5+0.5; if(uv.x<0.0||uv.x>1.0||uv.y<0.0||uv.y>1.0) break;
+    float d=texture(uRD,uv).r; if(d>0.99999) continue; float ls=rLin(d), lr=rLin(n.z*0.5+0.5), df=lr-ls;
+    if(df>0.0 && df<max(0.6,stp*2.5)){ vec2 e=min(uv,1.0-uv); float fade=clamp(min(e.x,e.y)*12.0,0.0,1.0)*clamp(1.0-float(i)/26.0,0.0,1.0); return vec4(texture(uRC,uv).rgb,fade); } }
+  return vec4(0.0);
+}
 uniform sampler2D uWM;      /* plan of the walls and columns, one tile per storey (2 × 2): light from fittings stops at them */
 uniform vec4 uWMb;          /* x0, y0, 1/width, 1/height of the plan in metres */
 uniform int uWMn;           /* storeys in the plan (0 = no wall check) */
@@ -230,7 +241,7 @@ void main(){
     vec3 Vr=normalize(uEye-vP); float nv=max(dot(Vr,N),0.0); vec3 R=reflect(-Vr,N);
     vec3 env=R.z>0.0 ? mix(uHor,uSky,pow(clamp(R.z,0.0,1.0),0.45)) : mix(uHor,uGnd,clamp(-R.z*3.0,0.0,1.0))*0.8;
     float fr=0.04+0.96*pow(1.0-nv,5.0);
-    if(pi==17) fr=0.12+0.88*pow(1.0-nv,3.0);
+    if(pi==17){ fr=0.12+0.88*pow(1.0-nv,3.0); if(uRf.x>0.5 && R.z>0.02){ vec4 h=ssr(vP,R); env=mix(env,h.rgb,h.a*0.85); } }   /* water mirrors what stands beside it */
     col=mix(col,env,clamp(fr*(pi==12||pi==17?0.9:gloss*0.55),0.0,pi==12||pi==17?0.75:0.4));
   }
 
@@ -712,6 +723,7 @@ P.prototype._delVAOs=function(){
 
 /* set scene data + build buffers + VAOs */
 P.prototype.setScene=function(sc,keepCam){
+  this._hasWater=false; try{ for(const g of (sc.groups||[])){ const V=g.v; if(!V) continue; for(let i=11;i<V.length;i+=42){ if(V[i]===17){ this._hasWater=true; break; } } if(this._hasWater) break; } }catch(eW){}
   const gl=this.gl;
   this._delVAOs();
 
@@ -1010,7 +1022,8 @@ P.prototype.render=function(pick){
   }
 
   const bloomOn=this.night && this.bloom!==false && !this.ortho_ && (this.lights||[]).length>0 && this.style<0.5;
-  const usePost=this.ssao || bloomOn;
+  const rfWant=!!this._hasWater && this.reflect!==false && this.style<0.5 && !this.ortho_;
+  const usePost=this.ssao || bloomOn || rfWant;
 
   /* 1. Shadow map pass */
   if(this.shadows && lt.sunCol[0]>0){
@@ -1079,6 +1092,10 @@ P.prototype.render=function(pick){
   const u=this.mp.u;
   gl.uniformMatrix4fv(u.uVP,false,vp);
   gl.uniformMatrix4fv(u.uL,false,lvp);
+  { if(!this._rfLoc) this._rfLoc={c:gl.getUniformLocation(this.mp,'uRC'),d:gl.getUniformLocation(this.mp,'uRD'),m:gl.getUniformLocation(this.mp,'uVPf'),f:gl.getUniformLocation(this.mp,'uRf')};
+    const rOn=rfWant && usePost && this.rfFBO && this._rfValid && this.rfW===w && this.rfH===h;
+    gl.activeTexture(gl.TEXTURE9); gl.bindTexture(gl.TEXTURE_2D,rOn?this.rfCol:null); gl.activeTexture(gl.TEXTURE10); gl.bindTexture(gl.TEXTURE_2D,rOn?this.rfDep:null); gl.activeTexture(gl.TEXTURE0);
+    gl.uniform1i(this._rfLoc.c,9); gl.uniform1i(this._rfLoc.d,10); gl.uniformMatrix4fv(this._rfLoc.m,false,this._rfVP||vp); gl.uniform3f(this._rfLoc.f,rOn?1:0,this._rfNF?this._rfNF[0]:near,this._rfNF?this._rfNF[1]:far); }
   gl.uniform3fv(u.uSun,sd);
   gl.uniform3fv(u.uEye,eyePos);
   gl.uniform3fv(u.uSunCol,lt.sunCol);
@@ -1163,6 +1180,19 @@ P.prototype.render=function(pick){
   }
 
   gl.bindVertexArray(null);
+
+  /* keep a copy of this frame (colour + depth) for the reflections of the next one */
+  if(usePost && rfWant){ try{
+    if(!this.rfFBO || this.rfW!==w || this.rfH!==h){ if(this.rfFBO){ gl.deleteFramebuffer(this.rfFBO); gl.deleteTexture(this.rfCol); gl.deleteTexture(this.rfDep); }
+      const fb=gl.createFramebuffer(), ct=gl.createTexture(), dt=gl.createTexture(), hdr=gl.getExtension('EXT_color_buffer_float'); gl.bindFramebuffer(gl.FRAMEBUFFER,fb);
+      gl.activeTexture(gl.TEXTURE9); gl.bindTexture(gl.TEXTURE_2D,ct); gl.texImage2D(gl.TEXTURE_2D,0,hdr?gl.RGBA16F:gl.RGBA8,w,h,0,gl.RGBA,hdr?gl.HALF_FLOAT:gl.UNSIGNED_BYTE,null); gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.LINEAR); gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,gl.LINEAR); gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE); gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE); gl.framebufferTexture2D(gl.FRAMEBUFFER,gl.COLOR_ATTACHMENT0,gl.TEXTURE_2D,ct,0);
+      gl.bindTexture(gl.TEXTURE_2D,dt); gl.texImage2D(gl.TEXTURE_2D,0,gl.DEPTH_COMPONENT24,w,h,0,gl.DEPTH_COMPONENT,gl.UNSIGNED_INT,null); gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.NEAREST); gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,gl.NEAREST); gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE); gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE); gl.framebufferTexture2D(gl.FRAMEBUFFER,gl.DEPTH_ATTACHMENT,gl.TEXTURE_2D,dt,0);
+      gl.bindTexture(gl.TEXTURE_2D,null); gl.activeTexture(gl.TEXTURE0); this.rfFBO=fb; this.rfCol=ct; this.rfDep=dt; this.rfW=w; this.rfH=h; this._rfValid=false; }
+    gl.activeTexture(gl.TEXTURE9); gl.bindTexture(gl.TEXTURE_2D,null); gl.activeTexture(gl.TEXTURE10); gl.bindTexture(gl.TEXTURE_2D,null); gl.activeTexture(gl.TEXTURE0);
+    gl.bindFramebuffer(gl.READ_FRAMEBUFFER,this.ppFBO); gl.bindFramebuffer(gl.DRAW_FRAMEBUFFER,this.rfFBO); gl.blitFramebuffer(0,0,w,h,0,0,w,h,gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT,gl.NEAREST); gl.bindFramebuffer(gl.FRAMEBUFFER,null);
+    const moved=!this._rfVP || this._rfVP.some(function(x,i){ return Math.abs(x-vp[i])>1e-5; }); this._rfVP=Array.from(vp); this._rfNF=[near,far];
+    if(!this._rfValid || moved){ this._rfValid=true; this.dirty=true; }   /* one more frame, so the reflection is of the view as it now stands */
+  }catch(eR){ this.reflect=false; } }
 
   /* 9. Post-process composite (SSAO + tone mapping) */
   if(usePost){
@@ -1595,9 +1625,9 @@ P.prototype._drawCuts=function(vp,eye,sunD){
   gl.bindVertexArray(this.bVAO); gl.bindBuffer(gl.ARRAY_BUFFER,this.bBuf); gl.activeTexture(gl.TEXTURE7); gl.disable(gl.CULL_FACE);
   for(const c of this.cuts){
     const t=this._cutTex(c.src); if(!t.ready) continue; if(this.cut<1e8&&c.p[2]>this.cut) continue;
-    let x=c.p[0], y=c.p[1], fl=!!c.flip; const z=c.p[2];
+    let x=c.p[0], y=c.p[1], fl=!!c.flip, z=c.p[2];
     if(this.play&&c.walk>0.2){   /* walks back and forth along its direction at about 1.2 m/s */
-      const T=c.walk/1.2, ph=((this._playT||0)+(c.seed||0))%(2*T), back=ph>T, d=back?(2*T-ph)*1.2:ph*1.2; x+=c.dir[0]*d; y+=c.dir[1]*d; if(back) fl=!fl;
+      const T=c.walk/1.2, ph=((this._playT||0)+(c.seed||0))%(2*T), back=ph>T, d=back?(2*T-ph)*1.2:ph*1.2; x+=c.dir[0]*d; y+=c.dir[1]*d; if(back) fl=!fl; z+=Math.abs(Math.sin(((this._playT||0)+(c.seed||0))*6.5))*0.035;   /* a small rise and fall with each step */
     }
     if(this.box&&(x<this.box[0]||x>this.box[1]||y<this.box[2]||y>this.box[3])) continue;
     let dx=sunD?sunD[0]:eye[0]-x, dy=sunD?sunD[1]:eye[1]-y; const dl=Math.hypot(dx,dy)||1; dx/=dl; dy/=dl;

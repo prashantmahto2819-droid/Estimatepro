@@ -43,7 +43,7 @@
     steel_black: { n: "Steel (painted black)", c: "#2c2e31", p: PT.plain, g: 0.5 },
     upvc: { n: "uPVC (white)", c: "#f1f1ee", p: PT.plain, g: 0.35 },
     glass: { n: "Glass (clear)", c: "#9ec7de", p: PT.glass, g: 0.95, a: 0.35 },
-    water: { n: "Water — pool / pond (blue)", c: "#2f86b0", p: PT.water, g: 0.9 }, water_green: { n: "Water — pond (green)", c: "#3f8f7a", p: PT.water, g: 0.85 }, water_deep: { n: "Water — deep (dark blue)", c: "#1f5f8e", p: PT.water, g: 0.9 },
+    water_pool: { n: "Water — pool / pond (blue)", c: "#2f86b0", p: PT.water, g: 0.9 }, water_green: { n: "Water — pond (green)", c: "#3f8f7a", p: PT.water, g: 0.85 }, water_deep: { n: "Water — deep (dark blue)", c: "#1f5f8e", p: PT.water, g: 0.9 },
     glass_tint: { n: "Glass (tinted)", c: "#4f6f80", p: PT.glass, g: 0.95, a: 0.55 },
     grass: { n: "Grass", c: "#6b8c4a", p: PT.grass, g: 0.02 },
     soil: { n: "Soil / murrum", c: "#8c7356", p: PT.soil, g: 0.02 },

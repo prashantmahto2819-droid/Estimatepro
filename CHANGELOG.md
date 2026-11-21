@@ -3,6 +3,11 @@
 This file is for the people maintaining the app. It is not published with the site (see `.assetsignore`).
 The text users see is `EP_NOTES` in `js/version.js`.
 
+## 2026.11.21-z18
+- Reflections on water: after the scene pass the frame (colour + depth) is copied to `rfFBO` (units 9 / 10); the next frame's water fragments march their mirrored ray on that copy (`ssr`, 26 growing steps, thickness test on linear depth, fade at the screen edge and with distance). One extra frame is drawn after the view changes. Only when the scene has pattern-17 vertices (`_hasWater`), Realistic style, perspective; `reflect = false` switches it off (also set if the copy fails).
+- **Fix**: look id `water` already existed (dsmodel.js, a glass look) and replaced the new one, so z8's water was plain glass. New ids `water_pool`; the land kind uses it.
+- Cut-out people bob by 35 mm per step while walking.
+
 ## 2026.11.21-z17
 - Main shader `uSecFill`: when a cut or section box is on, back faces of opaque surfaces (not grass / water) are drawn as hatched cut material. Shadow pass: `uCutS` / `uBoxS` discard what is cut away, so it throws no shadow.
 
