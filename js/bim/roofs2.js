@@ -10,6 +10,8 @@
   function steel(doc) { var bs = B.ensure(doc.d); return (bs.steel && bs.steel.slab) || 90; }
   function rows(doc, e, A, name, f) { var th = e.th || 100, st = steel(doc), z = e.lvl ? B.below(doc.d, e.lvl) : "super";
     return [{ k: "rcc_slab", dim: "V", v: A * th, label: name + " " + Math.round(th) + " mm", f: f + " × " + m(th), z: z }, { k: "shut_slab", dim: "A", v: A, label: "Shuttering — " + name.toLowerCase() + " (curved)", f: f, z: z }, { k: "steel_slab", dim: "M", v: A * th / 1e9 * st, label: "Reinforcement — " + name.toLowerCase() + " (thumb rule " + st + " kg/m³)", f: "", z: z }]; }
+  /* smooth shading: give the vertices written since index v0 the normal fn(x, y, z) (metres) instead of the flat one */
+  function smooth(M, v0, fn) { var V = M.v; for (var i = v0; i + 14 <= V.length; i += 14) { var n = fn(V[i], V[i + 1], V[i + 2]), l = Math.hypot(n[0], n[1], n[2]) || 1; V[i + 3] = n[0] / l; V[i + 4] = n[1] / l; V[i + 5] = n[2] / l; } }
   function circ(c, r, n) { var P = []; for (var i = 0; i < n; i++) P.push([c[0] + r * Math.cos(2 * Math.PI * i / n), c[1] + r * Math.sin(2 * Math.PI * i / n)]); return P; }
   function ring(P) { return P.map(function (p, i) { return { k: "L", a: p, b: P[(i + 1) % P.length] }; }); }
 
@@ -27,7 +29,8 @@
           for (var i = 0; i < NS; i++) { var an = 2 * Math.PI * i / NS; row.push([(c[0] + rad * Math.cos(an)) * K, (c[1] + rad * Math.sin(an)) * K, (z0 + Math.max(0, t - dz)) * K]); }
           if (prev) for (var q = 0; q < NS; q++) { var q2 = (q + 1) % NS; if (j === NR) { if (inward) M.tri(prev[q], row[q], prev[q2], col); else M.tri(prev[q], prev[q2], row[q], col); } else if (inward) M.quad(prev[q2], prev[q], row[q], row[q2], col); else M.quad(prev[q], prev[q2], row[q2], row[q], col); }
           prev = row; } };
-      shell(0, 0, false); shell(th, th, true);
+      var cx = c[0] * K, cy = c[1] * K, cz = (z0 + I.h - I.R) * K, v0 = M.v.length; shell(0, 0, false); smooth(M, v0, function (x, y, z) { return [x - cx, y - cy, z - cz]; });
+      v0 = M.v.length; shell(th, th, true); smooth(M, v0, function (x, y, z) { return [cx - x, cy - y, cz - th * K - z]; });
       var P0 = circ(c, I.r, NS), P1 = circ(c, Math.max(0, I.r - th), NS); for (var i = 0; i < NS; i++) { var j = (i + 1) % NS, a0 = [P0[i][0] * K, P0[i][1] * K, z0 * K], a1 = [P0[j][0] * K, P0[j][1] * K, z0 * K], b0 = [P1[i][0] * K, P1[i][1] * K, z0 * K], b1 = [P1[j][0] * K, P1[j][1] * K, z0 * K]; M.quad(a1, a0, b0, b1, col); M.edge(a0, a1); } }
   };
 
@@ -42,9 +45,12 @@
     mesh: function (M, doc, e, H) { var I = B.vaultInfo(e), z0 = zBase(doc, e), th = Math.min(e.th || 100, I.w * 0.2), col = H.look("roof_rcc", e.look, e.col), N = 20, u = G.norm(G.sub(e.b, e.a)), n = G.perp(u), zc = I.h - I.R;
       var prof = function (dr) { var P = [], half = I.w / 2 - dr, R2 = I.R - dr; for (var i = 0; i <= N; i++) { var s = -half + 2 * half * i / N, zz = zc + Math.sqrt(Math.max(0, R2 * R2 - s * s)); P.push([s, Math.max(0, zz)]); } return P; };
       var pt = function (base, s, zz) { return [(base[0] + n[0] * s) * K, (base[1] + n[1] * s) * K, (z0 + zz) * K]; }, O = prof(0), In = prof(th);
-      for (var i = 0; i < N; i++) {
-        M.quad(pt(e.a, O[i + 1][0], O[i + 1][1]), pt(e.a, O[i][0], O[i][1]), pt(e.b, O[i][0], O[i][1]), pt(e.b, O[i + 1][0], O[i + 1][1]), col);
-        M.quad(pt(e.a, In[i][0], In[i][1]), pt(e.a, In[i + 1][0], In[i + 1][1]), pt(e.b, In[i + 1][0], In[i + 1][1]), pt(e.b, In[i][0], In[i][1]), col);
+      var ax = e.a[0] * K, ay = e.a[1] * K, az = (z0 + zc) * K, rad = function (sg) { return function (x, y, z) { var dx = x - ax, dy = y - ay, t = dx * u[0] + dy * u[1]; return [sg * (dx - t * u[0]), sg * (dy - t * u[1]), sg * (z - az)]; }; }, i, v0 = M.v.length;
+      for (i = 0; i < N; i++) M.quad(pt(e.a, O[i + 1][0], O[i + 1][1]), pt(e.a, O[i][0], O[i][1]), pt(e.b, O[i][0], O[i][1]), pt(e.b, O[i + 1][0], O[i + 1][1]), col);
+      smooth(M, v0, rad(1)); v0 = M.v.length;
+      for (i = 0; i < N; i++) M.quad(pt(e.a, In[i][0], In[i][1]), pt(e.a, In[i + 1][0], In[i + 1][1]), pt(e.b, In[i + 1][0], In[i + 1][1]), pt(e.b, In[i][0], In[i][1]), col);
+      smooth(M, v0, rad(-1));
+      for (i = 0; i < N; i++) {
         M.quad(pt(e.a, O[i][0], O[i][1]), pt(e.a, O[i + 1][0], O[i + 1][1]), pt(e.a, In[i + 1][0], In[i + 1][1]), pt(e.a, In[i][0], In[i][1]), col);
         M.quad(pt(e.b, O[i + 1][0], O[i + 1][1]), pt(e.b, O[i][0], O[i][1]), pt(e.b, In[i][0], In[i][1]), pt(e.b, In[i + 1][0], In[i + 1][1]), col);
         M.edge(pt(e.a, O[i][0], O[i][1]), pt(e.a, O[i + 1][0], O[i + 1][1])); M.edge(pt(e.b, O[i][0], O[i][1]), pt(e.b, O[i + 1][0], O[i + 1][1])); }

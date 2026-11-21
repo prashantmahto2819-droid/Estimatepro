@@ -3,6 +3,10 @@
 This file is for the people maintaining the app. It is not published with the site (see `.assetsignore`).
 The text users see is `EP_NOTES` in `js/version.js`.
 
+## 2026.11.21-z2
+- `site.js`: CAMPATH — one polyline on layer A-CAMPATH (replaced each time). `ui-bim.js` Tour: if that polyline exists the camera walks along it in walk mode (`v.we`, `v.yaw`; eye 1.6 m above the current level, 1.4 m/s or `bim.camSpeed`, look-ahead 1.5 m, time-based turn smoothing); otherwise scenes / orbit as before.
+- `roofs2.js`: `smooth()` rewrites vertex normals of the dome / vault shells.
+
 ## 2026.11.21-y
 - New `js/bim/roofs2.js`: types `dome` (`B.domeInfo`: spherical cap, area 2πRh) and `vault` (`B.vaultInfo`: arc × length); qty as rcc_slab / shut_slab / steel_slab on the curved surface; commands DOME, VAULT; Properties in `ui-assets.js`; movable in 3D. Aliases are only registered when free.
 

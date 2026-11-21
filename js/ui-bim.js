@@ -221,8 +221,27 @@
       return;
     }
     if (m === "tour") {
-      if (C.v3tour) { C.v3tour = null; btn("tour", false); say(""); return; }
+      if (C.v3tour) { C.v3tour = null; btn("tour", false); say(""); if (C.v3tourWalk) { C.v3tourWalk = false; v.setWalk(false); } return; }
       if (v.walk) { v.setWalk(false); btn("walk", false); pad.hidden = true; }
+      var cpE = ed.doc.d.ents.filter(function (x) { return x.t === "pline" && x.layer === "A-CAMPATH" && x.pts && x.pts.length > 1; })[0];
+      if (cpE) {   /* walk along the camera path drawn on the plan */
+        var PP = cpE.pts.map(function (q) { return [q[0] / 1000, q[1] / 1000]; }); if (cpE.closed) PP.push(PP[0]);
+        var cum = [0]; for (var ci = 1; ci < PP.length; ci++) cum.push(cum[ci - 1] + Math.hypot(PP[ci][0] - PP[ci - 1][0], PP[ci][1] - PP[ci - 1][1]));
+        var tot = cum[cum.length - 1], spd = Math.max(0.3, +(bim(ed).camSpeed) || 1.4), LvC = B.level(ed.doc.d, bim(ed).cur), fz = ((LvC ? LvC.elev : 0) + (+(bim(ed).ngl) < 0 ? 0 : 0)) / 1000;
+        if (tot > 0.5) {
+          var at = function (d) { d = Math.max(0, Math.min(tot, d)); var k2 = 1; while (k2 < cum.length - 1 && cum[k2] < d) k2++; var f2 = (d - cum[k2 - 1]) / ((cum[k2] - cum[k2 - 1]) || 1); return [PP[k2 - 1][0] + (PP[k2][0] - PP[k2 - 1][0]) * f2, PP[k2 - 1][1] + (PP[k2][1] - PP[k2 - 1][1]) * f2]; };
+          var runW = C.v3tour = {}, Tw = performance.now(), a0 = at(0), a1 = at(1.5); v.spin = false; v.setWalk(true, fz, a0); C.v3tourWalk = true; v.yaw = Math.atan2(-(a1[0] - a0[0]), a1[1] - a0[1]); btn("tour", true);
+          say("Walking the camera path — " + tot.toFixed(1) + " m at " + spd + " m/s. Press Tour again to stop. Use ● Record with it to make a video.");
+          (function stepW() {
+            if (C.v3tour !== runW || !C.v3 || C.v3.dead) return;
+            var dW = (performance.now() - Tw) / 1000 * spd, pW = at(dW), qW = at(dW + 1.5), ty = Math.hypot(qW[0] - pW[0], qW[1] - pW[1]) > 0.05 ? Math.atan2(-(qW[0] - pW[0]), qW[1] - pW[1]) : v.yaw, dy2 = ty - v.yaw; while (dy2 > Math.PI) dy2 -= 2 * Math.PI; while (dy2 < -Math.PI) dy2 += 2 * Math.PI;
+            v.we = [pW[0], pW[1], fz + 1.6]; var nowW = performance.now(), dtW = Math.min(0.2, (nowW - (runW.t || nowW)) / 1000); runW.t = nowW; v.yaw += dy2 * (1 - Math.exp(-dtW * 5)); v.wpitch = 0; v.dirty = true;
+            if (dW >= tot) { C.v3tour = null; C.v3tourWalk = false; v.setWalk(false); btn("tour", false); say("Tour finished."); if (C.v3rec && C.v3rec.auto) v3mode(ed, C, "rec"); return; }
+            requestAnimationFrame(stepW);
+          })();
+          return;
+        }
+      }
       var sc = (bim(ed).scenes || []).map(function (x) { return x.view; }).filter(function (x) { return x && x.t; }), g0 = v.getView(), keys;
       if (sc.length >= 2) keys = [g0].concat(sc); else { keys = []; for (var qi = 0; qi <= 8; qi++) keys.push({ t: g0.t.slice(), yaw: g0.yaw + qi * Math.PI / 4, pitch: Math.max(0.18, Math.min(0.6, g0.pitch)), dist: g0.dist }); }
       var per = 3500, T0 = performance.now(), run = C.v3tour = {}; btn("tour", true); v.spin = false;

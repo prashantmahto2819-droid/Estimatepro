@@ -81,6 +81,18 @@
     ed.doc.begin("Plot boundary"); var r = B.plotBoundary(ed, pts); ed.doc.commit();
     ed.say("Plot boundary drawn: " + r.area.toFixed(2) + " sqm (" + (r.area * 10.7639).toFixed(0) + " sqft), perimeter " + r.peri.toFixed(2) + " m." + msg); if (ed.zoomExtents) ed.zoomExtents();
   });
+  /* camera path: a polyline on layer A-CAMPATH; 3D → Tour walks along it at eye height */
+  cmd("CAMPATH", ["CAMERAPATH", "WALKPATH", "TOURPATH"], async function (ed) {
+    var L = ed.doc.d.layers; if (!L["A-CAMPATH"]) { var Lc = CAD.clone(L); Lc["A-CAMPATH"] = { color: 6, lw: 0.25, lt: "DASHED", on: true, lock: false, frz: false, plot: false }; ed.doc.set("layers", Lc); }
+    var pts = [];
+    while (true) { ed.preview = pts.length ? (function (P) { return function (w) { return [{ t: "pline", pts: P.concat([[w[0], w[1], 0]]), closed: false }]; }; })(pts.slice()) : null;
+      var p = await ed.getPoint(pts.length ? "Next point of the walk (Enter to finish)" : "Camera path — where the walk starts", { opt: pts.length > 0, base: pts.length ? pts[pts.length - 1] : null, kw: pts.length ? ["Undo"] : undefined });
+      if (p === "Undo") { pts.pop(); continue; } if (p == null) break; pts.push([p[0], p[1], 0]); }
+    ed.preview = null; if (pts.length < 2) return;
+    ed.doc.begin("Camera path"); ed.doc.d.ents.filter(function (e) { return e.layer === "A-CAMPATH"; }).forEach(function (e) { ed.doc.del(e.id); }); ed.doc.add({ t: "pline", pts: pts, closed: false, layer: "A-CAMPATH" }); ed.doc.commit();
+    var len = 0; for (var i = 1; i < pts.length; i++) len += G.dist(pts[i - 1], pts[i]);
+    ed.say("Camera path saved (" + m(len) + " m, about " + Math.round(len / 1400) + " s). Open 3D and press Tour — the camera walks along it at eye height on the current level. Drag its corners to change the route; ● Record makes a video of it.");
+  });
   cmd("SPOTLEVEL", ["SPOT", "LEVELMARK"], async function (ed) {
     siteLayers(ed); var N = scaleOf(ed.doc.d), v = ed.spotLvl == null ? 0 : ed.spotLvl, cnt = 0;
     while (true) { var p = await ed.getPoint("Click the point (Enter to finish)", { opt: true }); if (p == null) break;
