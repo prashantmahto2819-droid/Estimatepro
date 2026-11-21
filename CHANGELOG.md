@@ -3,6 +3,13 @@
 This file is for the people maintaining the app. It is not published with the site (see `.assetsignore`).
 The text users see is `EP_NOTES` in `js/version.js`.
 
+## 2026.11.21-z14
+- `runs.js`: drain `slope` (1 in N → average trench depth) and `mh` (spacing in m → `manhole` rows, CPWD 19.7.1.1); Properties show the depths at both ends.
+- `site.js` CONTOURS: pieces chained end to end per level, two passes of corner cutting, written as polylines.
+- `roofs2.js`: dome `ring` (ring beam: mesh + rcc_beam / shut_beam rows).
+- `views2d.js`: detail inserts carry `det` (the window); `B.refreshDetails`; VIEWSUPDATE and `B.refreshViews` also refresh details and all schedule kinds.
+- Text `font` ("times", "courier"): canvas font and PDF fonts F5–F12 (image objects now start at 17 in the single-page PDF).
+
 ## 2026.11.21-z13
 - New `js/cad/libs.js`: BLOCKKEEP / BLOCKLIB (localStorage `ep_blocklib`, nested blocks carried in `sub`), HATCHLOAD (`CAD.parsePat`; patterns in localStorage `ep_pats` and in the drawing's `d.pats`, registered on open through `CAD.HOOKS.wire`; built-in names are never replaced).
 - `ui-bim.js`: wall move — `follow` lists the corners of rooms / slabs / roofs within the wall's half thickness (+ overhang for slabs and roofs) and shifts them with the wall.

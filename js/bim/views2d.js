@@ -179,12 +179,13 @@
 
   cmd("VIEWSUPDATE", ["VU"], async function (ed) {
     var d = ed.doc.d, names = Object.keys(d.blocks).filter(isViewBlock).filter(function (n) { return insertsOf(ed, n).length; }), N = scaleOf(d), n = 0;
-    if (!names.length) { ed.say("No elevations or sections in this drawing yet. Use ELEVATION, SECTION or SHEET."); return; }
-    ensureLayers(ed); pruneSections(ed); names = names.filter(function (n2) { return insertsOf(ed, n2).length; }); names.forEach(function (nm) { if (makeView(ed, nm, N)) n++; }); ed.say(n + " view(s) redrawn from the model.");
+    var nd = 0, ns = 0; ed.doc.begin("Update views"); try { nd = B.refreshDetails ? B.refreshDetails(ed) : 0; SCH_KINDS.forEach(function (w) { if (insertsOf(ed, "SCH-" + w).length && makeSchedule(ed, w, N)) ns++; }); } finally { ed.doc.commit(); }
+    if (!names.length) { ed.say(nd || ns ? (nd ? nd + " detail view(s) " : "") + (nd && ns ? "and " : "") + (ns ? ns + " schedule(s) " : "") + "brought up to date." : "No elevations, sections, details or schedules in this drawing yet. Use ELEVATION, SECTION, SHEET, DETAILVIEW or SCHEDULE."); return; }
+    ensureLayers(ed); pruneSections(ed); names = names.filter(function (n2) { return insertsOf(ed, n2).length; }); names.forEach(function (nm) { if (makeView(ed, nm, N)) n++; }); ed.say(n + " view(s) redrawn from the model" + (nd ? ", " + nd + " detail view(s)" : "") + (ns ? ", " + ns + " schedule(s)" : "") + ".");
   });
 
   /* regenerate every placed view (used before plotting, so a sheet never prints an out-of-date elevation) */
-  B.refreshViews = function (ed) { var d = ed.doc.d, names = Object.keys(d.blocks || {}).filter(isViewBlock).filter(function (n) { return insertsOf(ed, n).length; }); if (!names.length) return 0; var N = scaleOf(d), n = 0; ed.doc.begin("Update views"); try { ensureLayers(ed); names.forEach(function (nm) { if (makeView(ed, nm, N)) n++; }); if (Object.keys(d.blocks).some(function (k) { return /^SCH-/.test(k) && insertsOf(ed, k).length; })) SCH_KINDS.forEach(function (w) { if (insertsOf(ed, "SCH-" + w).length) makeSchedule(ed, w, N); }); } finally { ed.doc.commit(); } return n; };
+  B.refreshViews = function (ed) { var d = ed.doc.d, names = Object.keys(d.blocks || {}).filter(isViewBlock).filter(function (n) { return insertsOf(ed, n).length; }), hasDet = d.ents.some(function (e) { return e.t === "insert" && e.det; }), hasSch = Object.keys(d.blocks || {}).some(function (k) { return /^SCH-/.test(k) && insertsOf(ed, k).length; }); if (!names.length && !hasDet && !hasSch) return 0; var N = scaleOf(d), n = 0; ed.doc.begin("Update views"); try { ensureLayers(ed); names.forEach(function (nm) { if (makeView(ed, nm, N)) n++; }); if (Object.keys(d.blocks).some(function (k) { return /^SCH-/.test(k) && insertsOf(ed, k).length; })) SCH_KINDS.forEach(function (w) { if (insertsOf(ed, "SCH-" + w).length) makeSchedule(ed, w, N); }); if (hasDet) n += B.refreshDetails(ed); } finally { ed.doc.commit(); } return n; };
 
   /* ---------- schedules as tables: doors / windows, room finishes ---------- */
   function table(title, heads, rows, widths, N) {
@@ -248,27 +249,31 @@
     if (B.TYPES[e.t]) { var pl; try { pl = B.plan(doc, M ? B.xform(e, M) : e); } catch (er) { return; } if (!pl) return; var conv = function (sg, lt) { var o = sg.k === "L" ? { t: "line", a: [sg.a[0], sg.a[1]], b: [sg.b[0], sg.b[1]] } : sg.full ? { t: "circle", c: [sg.c[0], sg.c[1]], r: sg.r } : { t: "arc", c: [sg.c[0], sg.c[1]], r: sg.r, a1: sg.s * 180 / Math.PI, a2: sg.e * 180 / Math.PI }; if (lt) o.lt = lt; o.layer = e.layer || "0"; out.push(o); };
       (pl.segs || []).forEach(function (sg) { conv(sg); }); (pl.dashed || []).forEach(function (sg) { conv(sg, "DASHED"); }); return; }
     if (e.t === "xline" || e.t === "ray" || e.t === "image") return; var c = CAD.clone(M ? G.xform(e, M) : e); delete c.id; out.push(c); }
-  cmd("DETAILVIEW", ["DETAIL", "ENLARGE", "BLOWUP"], async function (ed) {
-    ensureLayers(ed); var d = ed.doc.d, N = scaleOf(d), a = await ed.getPoint("Detail — first corner of the part to repeat"); ed.preview = function (q) { return [{ t: "pline", pts: [[a[0], a[1], 0], [q[0], a[1], 0], [q[0], q[1], 0], [a[0], q[1], 0]], closed: true }]; };
-    var b = await ed.getPoint("Opposite corner", { base: a }); ed.preview = null; var x0 = Math.min(a[0], b[0]), x1 = Math.max(a[0], b[0]), y0 = Math.min(a[1], b[1]), y1 = Math.max(a[1], b[1]); if (x1 - x0 < 10 || y1 - y0 < 10) return;
-    var want = +(await ed.getNum("Scale of the detail 1 : ?  (the sheet is 1 : " + N + " — 50, 25, 20 or 10 make it larger)", { def: ed.detN || Math.max(1, Math.round(N / 2)) })); if (!(want >= 1)) return; ed.detN = want; var k = N / want;
+  function detEnts(ed, x0, y0, x1, y1) { var d = ed.doc.d;
     var out = []; d.ents.forEach(function (e) { if (!ed.doc.visible(e) || e.layer === "A-SHEET" || e.layer === "A-DETAIL" || (e.t === "insert" && /^(DET|SCH)-/.test(e.block || ""))) return; var bb; try { bb = ed.doc.bbox(e); } catch (er) { return; } if (!bb || !isFinite(bb[0]) || bb[2] < x0 || bb[0] > x1 || bb[3] < y0 || bb[1] > y1) return; prims(ed, e, out, null, 0); });
     var clip = function (p, q) { var t0 = 0, t1 = 1, dx = q[0] - p[0], dy = q[1] - p[1], P = [-dx, dx, -dy, dy], Q = [p[0] - x0, x1 - p[0], p[1] - y0, y1 - p[1]]; for (var i = 0; i < 4; i++) { if (Math.abs(P[i]) < 1e-12) { if (Q[i] < 0) return null; } else { var r = Q[i] / P[i]; if (P[i] < 0) { if (r > t1) return null; if (r > t0) t0 = r; } else { if (r < t0) return null; if (r < t1) t1 = r; } } } return [[p[0] + dx * t0, p[1] + dy * t0], [p[0] + dx * t1, p[1] + dy * t1]]; };
     var kept = []; out.forEach(function (e) {   /* lines and straight polylines are cut at the window; other things stay whole if their middle is inside */
       if (e.t === "line") { var c2 = clip(e.a, e.b); if (c2 && G.dist(c2[0], c2[1]) > 0.5) kept.push(Object.assign({}, e, { a: c2[0], b: c2[1] })); return; }
       if (e.t === "pline" && e.pts && !e.pts.some(function (q) { return q[2]; })) { var n = e.pts.length, m2 = e.closed ? n : n - 1; for (var i = 0; i < m2; i++) { var c3 = clip(e.pts[i], e.pts[(i + 1) % n]); if (c3 && G.dist(c3[0], c3[1]) > 0.5) kept.push({ t: "line", a: c3[0], b: c3[1], layer: e.layer, color: e.color, lt: e.lt }); } return; }
       var bb; try { bb = G.bbox(e, d.blocks); } catch (er) { return; } if (!bb || !isFinite(bb[0])) return; var mx = (bb[0] + bb[2]) / 2, my = (bb[1] + bb[3]) / 2; if (mx >= x0 && mx <= x1 && my >= y0 && my <= y1) kept.push(e); }); out = kept;
+    return out; }
+  B.refreshDetails = function (ed) { var n = 0, Bl = null; ed.doc.d.ents.forEach(function (e) { if (e.t !== "insert" || !e.det || !/^DET-/.test(e.block || "")) return; var w = e.det, out = detEnts(ed, w[0], w[1], w[2], w[3]); if (!out.length) return; Bl = Bl || Object.assign({}, ed.doc.d.blocks); Bl[e.block] = { base: [(w[0] + w[2]) / 2, (w[1] + w[3]) / 2], ents: out }; n++; }); if (Bl) ed.doc.set("blocks", Bl); return n; };
+  cmd("DETAILVIEW", ["DETAIL", "ENLARGE", "BLOWUP"], async function (ed) {
+    ensureLayers(ed); var d = ed.doc.d, N = scaleOf(d), a = await ed.getPoint("Detail — first corner of the part to repeat"); ed.preview = function (q) { return [{ t: "pline", pts: [[a[0], a[1], 0], [q[0], a[1], 0], [q[0], q[1], 0], [a[0], q[1], 0]], closed: true }]; };
+    var b = await ed.getPoint("Opposite corner", { base: a }); ed.preview = null; var x0 = Math.min(a[0], b[0]), x1 = Math.max(a[0], b[0]), y0 = Math.min(a[1], b[1]), y1 = Math.max(a[1], b[1]); if (x1 - x0 < 10 || y1 - y0 < 10) return;
+    var want = +(await ed.getNum("Scale of the detail 1 : ?  (the sheet is 1 : " + N + " — 50, 25, 20 or 10 make it larger)", { def: ed.detN || Math.max(1, Math.round(N / 2)) })); if (!(want >= 1)) return; ed.detN = want; var k = N / want;
+    var out = detEnts(ed, x0, y0, x1, y1);
     if (!out.length) throw new Error("Nothing inside that window.");
     var w = (x1 - x0) * k, h = (y1 - y0) * k; ed.preview = function (q) { return [{ t: "pline", pts: [[q[0] - w / 2, q[1] - h / 2, 0], [q[0] + w / 2, q[1] - h / 2, 0], [q[0] + w / 2, q[1] + h / 2, 0], [q[0] - w / 2, q[1] + h / 2, 0]], closed: true }]; };
     var c = await ed.getPoint("Click where the detail goes (its centre)"); ed.preview = null; if (!c) return;
     var used = Object.keys(d.blocks || {}).filter(function (n) { return /^DET-/.test(n); }).length, mark = String.fromCharCode(65 + (used % 26)), name = "DET-" + mark + (used >= 26 ? used : ""), Ls = ed.doc.d.layers; ed.doc.begin("Detail view");
     if (!Ls["A-DETAIL"]) { var Lc = CAD.clone(Ls); Lc["A-DETAIL"] = { color: 6, lw: 0.25, lt: "DASHED", on: true, lock: false, frz: false }; ed.doc.set("layers", Lc); }
     var Bl = Object.assign({}, ed.doc.d.blocks); Bl[name] = { base: [(x0 + x1) / 2, (y0 + y1) / 2], ents: out }; ed.doc.set("blocks", Bl);
-    ed.doc.add({ t: "insert", block: name, p: [c[0], c[1]], sx: k, sy: k, rot: 0, layer: "0" });
+    ed.doc.add({ t: "insert", block: name, p: [c[0], c[1]], sx: k, sy: k, rot: 0, layer: "0", det: [x0, y0, x1, y1] });
     ed.doc.add({ t: "pline", pts: [[x0, y0, 0], [x1, y0, 0], [x1, y1, 0], [x0, y1, 0]], closed: true, layer: "A-DETAIL" }); ed.doc.add({ t: "text", p: [x0, y1 + 1.5 * N], s: mark, h: 3.5 * N, rot: 0, al: "l", layer: "A-DETAIL", st: "b" });
     ed.doc.add({ t: "pline", pts: [[c[0] - w / 2, c[1] - h / 2, 0], [c[0] + w / 2, c[1] - h / 2, 0], [c[0] + w / 2, c[1] + h / 2, 0], [c[0] - w / 2, c[1] + h / 2, 0]], closed: true, layer: "A-DETAIL" });
     ed.doc.add({ t: "text", p: [c[0], c[1] - h / 2 - 6 * N], s: "DETAIL " + mark, h: 3.5 * N, rot: 0, al: "c", layer: "A-ELEV-TXT", st: "b" }); ed.doc.add({ t: "text", p: [c[0], c[1] - h / 2 - 10.5 * N], s: "Scale 1 : " + want, h: 2.5 * N, rot: 0, al: "c", layer: "A-ELEV-TXT" });
-    ed.doc.commit(); ed.say("Detail " + mark + " placed at 1:" + want + " (" + (k >= 1 ? k.toFixed(k % 1 ? 1 : 0) + " times larger" : "smaller") + " than the sheet's 1:" + N + "). It is a copy as the drawing stands now — after changes erase it and make it again. Lines are cut at the window edge. Dimensions inside it show the enlarged size: dimension the original, not the detail.");
+    ed.doc.commit(); ed.say("Detail " + mark + " placed at 1:" + want + " (" + (k >= 1 ? k.toFixed(k % 1 ? 1 : 0) + " times larger" : "smaller") + " than the sheet's 1:" + N + "). It is brought up to date by Update views and before every plot. Lines are cut at the window edge. Dimensions inside it show the enlarged size: dimension the original, not the detail.");
   });
   cmd("SHEETADD", ["ADDSHEET", "NEWSHEET", "SHEETFRAME"], async function (ed) {
     ensureLayers(ed); var d = ed.doc.d, paper = await ed.getKw("Paper size of the new sheet", Object.keys(CAD.PAPER), ed.shPaper || (d.sheet && d.sheet.size) || "A3"); ed.shPaper = paper;
