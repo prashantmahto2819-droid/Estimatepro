@@ -58,8 +58,16 @@
   ];
   function matCatOf(id) { for (var i = 0; i < MAT_CATS.length; i++) if (MAT_CATS[i][2].test(id)) return MAT_CATS[i]; return null; }
   /* search box over the material grid: hide what does not match (name or id), and the groups left empty */
-  function matFilter(C) { var q = String(C.matQ || "").trim().toLowerCase().split(/\s+/).filter(Boolean), lib = C.root.querySelector(".v3-pop .mat-lib"); if (!lib) return;
-    lib.querySelectorAll("[data-matpick]").forEach(function (b) { var k = b.dataset.matpick, L = B.LOOKS[k], txt = (k + " " + (L ? L.n : "")).toLowerCase(); b.hidden = !q.every(function (w) { return txt.indexOf(w) >= 0; }); });
+  var MAT_COLS = [["", "All", "#fff"], ["white", "White", "#ffffff"], ["cream", "Cream", "#f1e6c8"], ["grey", "Grey", "#9a9da0"], ["black", "Black", "#22262a"], ["brown", "Brown", "#7b5233"], ["red", "Red", "#c0392b"], ["orange", "Orange", "#e08a2c"], ["yellow", "Yellow", "#e8c92f"], ["green", "Green", "#4f9a4b"], ["blue", "Blue", "#3f7fc4"], ["purple", "Purple", "#7d57b0"], ["pink", "Pink", "#d877a6"]];
+  /* colour family of a #rrggbb look colour */
+  function colFam(hex) { var m = /^#?([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})/i.exec(String(hex || "")); if (!m) return ""; var r = parseInt(m[1], 16) / 255, g = parseInt(m[2], 16) / 255, b = parseInt(m[3], 16) / 255, mx = Math.max(r, g, b), mn = Math.min(r, g, b), l = (mx + mn) / 2, d = mx - mn, sat = d === 0 ? 0 : d / (1 - Math.abs(2 * l - 1)), h = 0;
+    if (d > 0) { h = mx === r ? ((g - b) / d) % 6 : mx === g ? (b - r) / d + 2 : (r - g) / d + 4; h = (h * 60 + 360) % 360; }
+    if (sat < 0.12 || d < 0.05) return l > 0.86 ? "white" : l < 0.22 ? "black" : "grey";
+    if (l > 0.8 && sat < 0.7 && h >= 20 && h <= 75) return "cream";
+    if (h < 15 || h >= 345) return l < 0.3 && sat < 0.5 ? "brown" : "red"; if (h < 45) return l < 0.5 ? "brown" : "orange"; if (h < 70) return l < 0.38 ? "brown" : "yellow"; if (h < 165) return "green"; if (h < 260) return "blue"; if (h < 300) return "purple"; return "pink"; }
+  function matFilter(C) { var q = String(C.matQ || "").trim().toLowerCase().split(/\s+/).filter(Boolean), lib = C.root.querySelector(".v3-pop .mat-lib"), fam = C.matCol || ""; if (!lib) return;
+    lib.querySelectorAll("[data-matpick]").forEach(function (b) { var k = b.dataset.matpick, L = B.LOOKS[k], txt = (k + " " + (L ? L.n : "")).toLowerCase(); b.hidden = !q.every(function (w) { return txt.indexOf(w) >= 0; }) || !!(fam && L && colFam(L.c) !== fam); });
+    C.root.querySelectorAll(".v3-pop [data-matcol]").forEach(function (b) { b.setAttribute("aria-pressed", String((b.dataset.matcol || "") === fam)); b.style.outline = (b.dataset.matcol || "") === fam ? "2px solid #0f3f62" : "none"; });
     lib.querySelectorAll(".mat-cat").forEach(function (c) { c.hidden = !c.querySelector("[data-matpick]:not([hidden])"); }); }
   function matFavs() { try { var a = JSON.parse(localStorage.getItem("ep_matfav") || "[]"); return Array.isArray(a) ? a : []; } catch (e) { return []; } }
   function matFavToggle(k) { var a = matFavs(), i = a.indexOf(k); if (i >= 0) a.splice(i, 1); else a.unshift(k); try { localStorage.setItem("ep_matfav", JSON.stringify(a.slice(0, 40))); } catch (e) {} return i < 0; }
@@ -328,6 +336,7 @@
       return "<h4>🪣 Paint materials</h4><p class='muted small' style='margin:0'>" + (pl ? "<b>" + esc(pl.n) + "</b> — now click walls, floors, slabs, roofs, columns… in the 3D view. A wall is painted on the side you are looking at." : "1. Pick a material below. 2. Click the elements in the 3D view.") + "</p>" +
         "<label class='small' style='display:flex;flex-direction:row;gap:6px;align-items:center'><input type='checkbox' style='width:auto;flex:none;margin:0' data-v3paintall='1'" + (C.v3paintAll ? " checked" : "") + "> Paint all elements of the same kind (e.g. all outer walls)</label>" +
         "<input class='in small' type='search' data-matq='1' placeholder='Search materials — e.g. teak, granite, blue, ACP, putty…' aria-label='Search materials' value='" + esc(C.matQ || "") + "'>" +
+        "<div class='row' style='gap:4px;flex-wrap:wrap;margin:4px 0' role='group' aria-label='Colour'>" + MAT_COLS.map(function (c) { return "<button type='button' data-matcol='" + c[0] + "' title='" + c[1] + "' aria-label='" + c[1] + "' aria-pressed='" + ((C.matCol || "") === c[0]) + "' style='" + (c[0] ? "width:22px;height:22px;border-radius:50%;border:1px solid #8a8f94;background:" + c[2] + ";padding:0" : "border:1px solid #8a8f94;border-radius:11px;padding:0 8px;height:22px;font-size:12px;background:#fff") + "'>" + (c[0] ? "" : "All") + "</button>"; }).join("") + "</div>" +
         "<div style='max-height:46vh;min-height:90px;overflow:auto;margin:0 -6px;flex:1 1 auto'>" + matLibHtml(C.v3paint || null) + "</div>" +
         "<div class='row' style='gap:6px;justify-content:flex-end'>" + (C.v3paint && B.LOOKS[C.v3paint] ? "<button type='button' class='btn ghost sm' data-matfav='1' title='Keep this material at the top of the list on this device'>" + (matFavs().indexOf(C.v3paint) >= 0 ? "★ Remove from favourites" : "☆ Add to favourites") + "</button>" : "") + "<button type='button' class='btn ghost sm' data-v3paintclr='1' title='Click elements to give them back the building default material'>Eraser (back to default)</button><button type='button' class='btn sec sm' data-v3pop='paint'>Done</button></div><p class='muted small' style='margin:0'>Looks only — quantities and SOR items do not change. Ctrl+Z undoes a paint.</p>";
     }
@@ -467,6 +476,7 @@
       if (ds.bimlookreset) { setBim(ed, function (x) { x.looks = {}; }, "3D materials"); CAD.ui.renderPanels(); return; }
       if (ds.bimlookopen) { showMatLib(ed, C, ds.bimlookopen, t); return; }
       if (ds.matfav && C.v3paint) { var on = matFavToggle(C.v3paint); U.toast(on ? "Added to favourites" : "Removed from favourites"); showPop(ed, C); return; }
+      if (ds.matcol != null && t.closest && t.closest(".v3-pop")) { C.matCol = ds.matcol; matFilter(C); return; }
       if (ds.matpick && C.v3pop === "paint" && t.closest && t.closest(".v3-pop")) { C.v3paint = ds.matpick; C.v3paintClr = false; showPop(ed, C); paintCursor(C); return; }
       if (ds.v3paintclr) { C.v3paintClr = !C.v3paintClr; if (C.v3paintClr) C.v3paint = null; showPop(ed, C); paintCursor(C); U.toast(C.v3paintClr ? "Eraser: click elements to give them the default material" : "Eraser off"); return; }
       if (ds.matpick) { applyMatPick(ed, C, ds.matpick); return; }

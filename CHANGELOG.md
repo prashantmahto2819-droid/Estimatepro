@@ -3,6 +3,11 @@
 This file is for the people maintaining the app. It is not published with the site (see `.assetsignore`).
 The text users see is `EP_NOTES` in `js/version.js`.
 
+## 2026.11.21-z6
+- `site.js`: CONTOURS (Bowyer–Watson `delaunay`, `B.spotPoints`; spot texts now carry `spot` and `sp`; layer C-TOPO-CONT); AREASTATEMENT asks permitted coverage / FAR and writes OK / EXCEEDS.
+- `runs.js`: services `drain_sw_100/150/200` (CPWD 19.1.1–3), `drain_rcc_150/250/300/450` (19.6.2–5), `wire_15/25/40/60` (E&M 1.14.1–4).
+- `ui-bim.js`: `colFam` + colour chips (`data-matcol`, `C.matCol`) in the Paint popup.
+
 ## 2026.11.21-z5
 - `site.js`: SETBACK (`B.insetPoly`, layer C-SETBACK, per-side distances), AREASTATEMENT (`B.areaStatement`: per level floor slab → slab over → rooms; coverage and FAR against the largest C-PROP polygon); ramp `kerb` (mesh + rcc / shuttering rows).
 - `views2d.js`: schedules Columns, Beams, Walls, Sheets (`SCH_KINDS`). `plot.js`: `opts.raw` + `CAD.plotPdfPages` (multi-page); plot dialog "All sheets" → one PDF.

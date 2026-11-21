@@ -114,9 +114,32 @@
     siteLayers(ed); var N = scaleOf(ed.doc.d), lines = ["AREA STATEMENT"]; if (S.plot) lines.push("Plot area: " + S.plot.toFixed(2) + " sqm (" + (S.plot * 10.7639).toFixed(0) + " sqft)");
     S.rows.forEach(function (r) { lines.push(r.name + ": " + r.area.toFixed(2) + " sqm" + (r.from === "rooms" ? " (carpet area of rooms)" : r.from === "slab" ? " (from the slab over it)" : "")); });
     lines.push("Total built-up area: " + S.built.toFixed(2) + " sqm (" + (S.built * 10.7639).toFixed(0) + " sqft)"); if (S.plot) { lines.push("Ground coverage: " + S.cov.toFixed(1) + " %"); lines.push("FAR / FSI: " + S.far.toFixed(2)); }
+    if (S.plot) { var pc = String((await ed.getText("Permitted ground coverage in % (Enter to skip the check)", { def: ed.permCov || "" })) || "").trim(), pf = String((await ed.getText("Permitted FAR / FSI (Enter to skip)", { def: ed.permFar || "" })) || "").trim(), c1 = parseFloat(pc), f1 = parseFloat(pf); ed.permCov = pc; ed.permFar = pf;
+      if (c1 > 0) lines.push("Permitted coverage " + c1 + " % - " + (S.cov <= c1 + 1e-6 ? "OK (" + (c1 - S.cov).toFixed(1) + " % to spare)" : "EXCEEDS by " + (S.cov - c1).toFixed(1) + " % (" + ((S.cov - c1) / 100 * S.plot).toFixed(2) + " sqm)"));
+      if (f1 > 0) lines.push("Permitted FAR " + f1 + " - " + (S.far <= f1 + 1e-6 ? "OK (" + ((f1 - S.far) * S.plot).toFixed(2) + " sqm more can be built)" : "EXCEEDS by " + ((S.far - f1) * S.plot).toFixed(2) + " sqm")); }
     ed.say(lines.slice(1).join("  ·  ")); var p = await ed.getPoint("Click where to write the area statement (Enter to skip)", { opt: true }); if (!p) return;
     ed.doc.add({ t: "text", p: [p[0], p[1]], s: lines.join("\n"), h: 2.5 * N, rot: 0, al: "l", layer: "C-PROP-TXT" });
     ed.say("Area statement written." + (S.plot ? "" : " Draw the plot boundary to get ground coverage and FAR.") + " Each level is taken from its floor slab (or, where none is drawn, from the slab over it, or from its rooms) — check balconies, projections and exempt areas against your building rules.");
+  });
+  /* ---------- contours from spot levels ---------- */
+  function delaunay(P) { var n = P.length, mnx = Infinity, mny = Infinity, mxx = -Infinity, mxy = -Infinity; P.forEach(function (p) { mnx = Math.min(mnx, p[0]); mny = Math.min(mny, p[1]); mxx = Math.max(mxx, p[0]); mxy = Math.max(mxy, p[1]); });
+    var dm = Math.max(mxx - mnx, mxy - mny, 1) * 20, cx = (mnx + mxx) / 2, cy = (mny + mxy) / 2, V = P.concat([[cx - dm, cy - dm], [cx + dm, cy - dm], [cx, cy + dm]]), T = [[n, n + 1, n + 2]];
+    var circ = function (t) { var a = V[t[0]], b = V[t[1]], c = V[t[2]], d = 2 * (a[0] * (b[1] - c[1]) + b[0] * (c[1] - a[1]) + c[0] * (a[1] - b[1])); if (Math.abs(d) < 1e-12) return null; var ux = ((a[0] * a[0] + a[1] * a[1]) * (b[1] - c[1]) + (b[0] * b[0] + b[1] * b[1]) * (c[1] - a[1]) + (c[0] * c[0] + c[1] * c[1]) * (a[1] - b[1])) / d, uy = ((a[0] * a[0] + a[1] * a[1]) * (c[0] - b[0]) + (b[0] * b[0] + b[1] * b[1]) * (a[0] - c[0]) + (c[0] * c[0] + c[1] * c[1]) * (b[0] - a[0])) / d; return [ux, uy, (a[0] - ux) * (a[0] - ux) + (a[1] - uy) * (a[1] - uy)]; };
+    for (var i = 0; i < n; i++) { var p = V[i], bad = [], keep = []; T.forEach(function (t) { var c = circ(t); if (c && (p[0] - c[0]) * (p[0] - c[0]) + (p[1] - c[1]) * (p[1] - c[1]) < c[2] * (1 + 1e-12)) bad.push(t); else keep.push(t); });
+      var E = {}; bad.forEach(function (t) { [[t[0], t[1]], [t[1], t[2]], [t[2], t[0]]].forEach(function (e) { var k = Math.min(e[0], e[1]) + "_" + Math.max(e[0], e[1]); E[k] = E[k] ? null : e; }); });
+      Object.keys(E).forEach(function (k) { if (E[k]) keep.push([E[k][0], E[k][1], i]); }); T = keep; }
+    return T.filter(function (t) { return t[0] < n && t[1] < n && t[2] < n; }); }
+  B.spotPoints = function (ed) { var N = scaleOf(ed.doc.d), out = []; ed.doc.d.ents.forEach(function (e) { if (e.layer !== "C-TOPO" || e.t !== "text") return; var v = e.spot != null ? +e.spot : parseFloat(String(e.s).replace(/\s/g, "")); if (!isFinite(v)) return; var p = e.sp || [e.p[0] - 1.8 * N, e.p[1] + 1.2 * N]; out.push([p[0], p[1], v]); }); return out; };
+  cmd("CONTOURS", ["CONTOUR", "LEVELLINES"], async function (ed) {
+    var P = B.spotPoints(ed); if (P.length < 3) throw new Error("Mark at least three spot levels first (Site & services → Spot level) — more points give truer contours.");
+    var lo = Math.min.apply(null, P.map(function (p) { return p[2]; })), hi = Math.max.apply(null, P.map(function (p) { return p[2]; })); if (hi - lo < 1e-6) throw new Error("All the spot levels are the same — the ground is flat, there are no contours to draw.");
+    var sug = (hi - lo) > 5 ? 1 : (hi - lo) > 2 ? 0.5 : (hi - lo) > 0.8 ? 0.25 : 0.1, iv = await ed.getNum("Contour interval in metres (levels run from " + lo.toFixed(2) + " to " + hi.toFixed(2) + ")", { def: ed.contIv || sug }); if (!(iv > 0)) return; ed.contIv = iv; if ((hi - lo) / iv > 400) throw new Error("That interval gives too many contours — use a larger one.");
+    siteLayers(ed); var Ls = ed.doc.d.layers; if (!Ls["C-TOPO-CONT"]) { var Lc = CAD.clone(Ls); Lc["C-TOPO-CONT"] = { color: 30, lw: 0.18, lt: "CONTINUOUS", on: true, lock: false, frz: false }; ed.doc.set("layers", Lc); }
+    var T = delaunay(P), N = scaleOf(ed.doc.d), cnt = 0, lab = {}; ed.doc.begin("Contours"); ed.doc.d.ents.filter(function (e) { return e.layer === "C-TOPO-CONT"; }).forEach(function (e) { ed.doc.del(e.id); });
+    for (var z = Math.ceil((lo + 1e-9) / iv) * iv; z < hi - 1e-9; z += iv) { z = Math.round(z * 1e6) / 1e6; T.forEach(function (t) { var q = []; [[0, 1], [1, 2], [2, 0]].forEach(function (e) { var a = P[t[e[0]]], b = P[t[e[1]]]; if ((a[2] - z) * (b[2] - z) < 0 || (a[2] === z && b[2] !== z)) { var f = (z - a[2]) / (b[2] - a[2]); q.push([a[0] + (b[0] - a[0]) * f, a[1] + (b[1] - a[1]) * f]); } });
+        if (q.length >= 2 && G.dist(q[0], q[1]) > 1) { ed.doc.add({ t: "line", a: q[0], b: q[1], layer: "C-TOPO-CONT" }); cnt++; var key = z.toFixed(3); if (!lab[key] || G.dist(q[0], q[1]) > lab[key].d) lab[key] = { d: G.dist(q[0], q[1]), p: G.mul(G.add(q[0], q[1]), 0.5), r: Math.atan2(q[1][1] - q[0][1], q[1][0] - q[0][0]) * 180 / Math.PI }; } }); }
+    Object.keys(lab).forEach(function (k) { var L = lab[k], r = L.r; if (r > 90 || r <= -90) r += 180; ed.doc.add({ t: "text", p: L.p, s: (+k).toFixed(2), h: 2 * N, rot: r, al: "c", layer: "C-TOPO-CONT" }); });
+    ed.doc.commit(); ed.say(Object.keys(lab).length + " contour level(s) drawn at " + iv + " m from " + P.length + " spot levels. They are straight between the points — add spot levels where the ground changes to make them truer. Run Contours again after adding points.");
   });
   /* camera path: a polyline on layer A-CAMPATH; 3D → Tour walks along it at eye height */
   cmd("CAMPATH", ["CAMERAPATH", "WALKPATH", "TOURPATH"], async function (ed) {
@@ -138,7 +161,7 @@
     while (true) { var p = await ed.getPoint("Click the point (Enter to finish)", { opt: true }); if (p == null) break;
       var s = await ed.getText("Level at this point in metres (like 0.45 or -0.30)", { def: String(v) }); var x = parseFloat(s == null || s === "" ? v : s); if (!isFinite(x)) { ed.say("Type the level as a number."); continue; } v = ed.spotLvl = x;
       var r = 1.2 * N; ed.doc.begin("Spot level"); ed.doc.add({ t: "line", a: [p[0] - r, p[1] - r], b: [p[0] + r, p[1] + r], layer: "C-TOPO" }); ed.doc.add({ t: "line", a: [p[0] - r, p[1] + r], b: [p[0] + r, p[1] - r], layer: "C-TOPO" });
-      ed.doc.add({ t: "text", p: [p[0] + 1.8 * N, p[1] - 1.2 * N], s: (x >= 0 ? "+" : "-") + Math.abs(x).toFixed(3), h: 2.5 * N, rot: 0, al: "l", layer: "C-TOPO" }); ed.doc.commit(); cnt++; }
+      ed.doc.add({ t: "text", p: [p[0] + 1.8 * N, p[1] - 1.2 * N], s: (x >= 0 ? "+" : "-") + Math.abs(x).toFixed(3), h: 2.5 * N, rot: 0, al: "l", layer: "C-TOPO", spot: x, sp: [p[0], p[1]] }); ed.doc.commit(); cnt++; }
     if (cnt) ed.say(cnt + " spot level(s) marked.");
   });
 })();
