@@ -67,6 +67,9 @@
   add("led_pink", { n: "LED — pink", c: "#ff8fc8", p: PT.plain, g: 0.2 });
 
   Object.keys(B.LOOKS).forEach(function (k) { if (/^led_/.test(k) || k === "lamp") B.LOOKS[k].p = PT.emit; });   /* light sources glow: the shader never shades them darker than their colour */
+  /* colours a light fitting can be set to: [id, name, glow look, rgb of the light it throws] */
+  B.LCOLS = [["", "Warm white", "led_warm", [1, 0.9, 0.72]], ["cool", "Cool white", "led_cool", [0.92, 0.96, 1]], ["day", "Daylight", "led_daylight", [1, 1, 1]], ["amber", "Amber", "led_amber", [1, 0.72, 0.36]], ["blue", "Blue", "led_blue", [0.4, 0.66, 1]], ["green", "Green", "led_green", [0.5, 1, 0.58]], ["pink", "Pink", "led_pink", [1, 0.5, 0.76]]];
+  B.lightRGB = function (lookId) { var r = B.LCOLS.filter(function (c) { return c[2] === lookId; })[0]; return r ? r[3] : [1, 0.9, 0.72]; };
   /* ---------- cement-plaster and façade decoration ---------- */
   var PD = "Plaster & façade decoration", W = "plaster_pop_white", Gc = "plaster_grc";
   B.CAT_FILL = Object.assign(B.CAT_FILL || {}, (function () { var o = {}; o[PD] = "rgba(200,190,170,.16)"; return o; })());
@@ -209,4 +212,40 @@
   tap("tap_rain_shower_square", "Ceiling rain shower 300 × 300", 300, 300, 160, { m: "ceiling" }, [["r", 0, 0, 300, 300]], [["c", 0, 0, 14, 12, 160, CH], ["b", 0, 0, 300, 300, 0, 12, CH]]);
   tap("tap_gold_basin_mixer", "Basin mixer — gold / rose-gold finish", 60, 150, 180, { z: 850 }, [["c", 0, 0, 25]], [["c", 0, 0, 24, 0, 130, "steel_gold_pvd", 20], ["b", 0, 55, 26, 130, 110, 132, "steel_gold_pvd"], ["b", 0, 0, 12, 60, 150, 162, "steel_gold_pvd"], ["c", 0, 0, 10, 130, 150, "steel_gold_pvd"]]);
   tap("tap_black_basin_mixer", "Basin mixer — matt black", 60, 150, 180, { z: 850 }, [["c", 0, 0, 25]], [["c", 0, 0, 24, 0, 130, "steel_matt_black", 20], ["b", 0, 55, 26, 130, 110, 132, "steel_matt_black"], ["b", 0, 0, 12, 60, 150, 162, "steel_matt_black"], ["c", 0, 0, 10, 130, 150, "steel_matt_black"]]);
+
+  /* ---------- arches and round pieces: shapes in the vertical plane, pushed through a depth ---------- */
+  var VV = B.AH.V;
+  /* a convex outline [[x, z]…] in the item's front plane, from depth y0 to y1 */
+  function vpoly(M, X, z0, P, y0, y1, col, noEdge) {
+    var s = X.s, f = P.map(function (q) { return VV(X([q[0], y1]), z0 + q[1] * s); }), b = P.map(function (q) { return VV(X([q[0], y0]), z0 + q[1] * s); }), n = P.length;
+    for (var i = 1; i < n - 1; i++) { M.tri(f[0], f[i], f[i + 1], col); M.tri(b[0], b[i + 1], b[i], col); }
+    for (var k = 0; k < n; k++) { var j = (k + 1) % n; M.quad(b[k], b[j], f[j], f[k], col); }
+    if (!noEdge && M.edge) for (var e2 = 0; e2 < n; e2++) M.edge(f[e2], f[(e2 + 1) % n]);
+  }
+  /* ring sector: centre (cx, zc), radii r0 < r1, angles a0 → a1 (radians, 0 = +x, π/2 = up) */
+  function arcBand(M, X, z0, cx, zc, r0, r1, a0, a1, y0, y1, col, seg) { seg = seg || 20; for (var i = 0; i < seg; i++) { var t0 = a0 + (a1 - a0) * i / seg, t1 = a0 + (a1 - a0) * (i + 1) / seg; vpoly(M, X, z0, [[cx + r0 * Math.cos(t0), zc + r0 * Math.sin(t0)], [cx + r1 * Math.cos(t0), zc + r1 * Math.sin(t0)], [cx + r1 * Math.cos(t1), zc + r1 * Math.sin(t1)], [cx + r0 * Math.cos(t1), zc + r0 * Math.sin(t1)]], y0, y1, col, true); }
+    if (M.edge) { var s = X.s; [r0, r1].forEach(function (r) { for (var k = 0; k < seg; k++) { var u0 = a0 + (a1 - a0) * k / seg, u1 = a0 + (a1 - a0) * (k + 1) / seg; M.edge(VV(X([cx + r * Math.cos(u0), y1]), z0 + (zc + r * Math.sin(u0)) * s), VV(X([cx + r * Math.cos(u1), y1]), z0 + (zc + r * Math.sin(u1)) * s)); } }); } }
+  /* the two corner pieces between an arc (radius r, rise from zc) and the flat line z = zt above it, over the width −hw … hw */
+  function spandrel(M, X, z0, hw, zc, rx, rz, zt, y0, y1, col, seg) { seg = seg || 20; for (var i = 0; i < seg; i++) { var t0 = Math.PI * i / seg, t1 = Math.PI * (i + 1) / seg, x0 = rx * Math.cos(t0), x1 = rx * Math.cos(t1); vpoly(M, X, z0, [[x0, zc + rz * Math.sin(t0)], [x0, zt], [x1, zt], [x1, zc + rz * Math.sin(t1)]], y0, y1, col, true); }
+    if (hw > rx) { vpoly(M, X, z0, [[rx, zc], [hw, zc], [hw, zt], [rx, zt]], y0, y1, col, true); vpoly(M, X, z0, [[-hw, zc], [-rx, zc], [-rx, zt], [-hw, zt]], y0, y1, col, true); } }
+  function withMesh(id, fn) { var d = A[id]; if (!d) return; var m0 = d.mesh; d.mesh = function (M, X, z0, LK, H) { m0.apply(this, arguments); fn(M, X, z0, LK, H); }; }
+  [900, 1200, 1500, 1800].forEach(function (w) { var r = w / 2, id = "pd_arch_surround_" + w;
+    pd(id, "Arch surround (semi-circle) with keystone — for " + w + " opening", w + 300, 70, r + 150, { m: "wall", z: 2100 }, [["l", -r - 150, 60, r + 150, 60]], [["b", -r - 75, 30, 150, 60, -40, 0, Gc], ["b", r + 75, 30, 150, 60, -40, 0, Gc], ["b", 0, 40, 130, 80, r - 20, r + 150, Gc]]);
+    withMesh(id, function (M, X, z0, LK) { arcBand(M, X, z0, 0, 0, r, r + 130, 0, Math.PI, 0, 55, LK(Gc), 24); arcBand(M, X, z0, 0, 0, r + 130, r + 150, 0, Math.PI, 0, 70, LK(Gc), 24); }); });
+  [900, 1000, 1200, 1500].forEach(function (w) { var r = w / 2, id = "pd_arch_infill_" + w;
+    pd(id, "Arch infill — makes a " + w + " opening round-headed (fits in the wall)", w, 230, r, { m: "wall", z: 2100 - r }, [["l", -r, 0, r, 0]], []);
+    withMesh(id, function (M, X, z0, LK) { spandrel(M, X, z0, r, 0, r, r, r, -230, 0, LK("plaster"), 20); }); });
+  pd("pd_arch_segmental_1200", "Segmental (flat) arch infill — 1200 opening, 300 rise", 1200, 230, 300, { m: "wall", z: 1800 }, [["l", -600, 0, 600, 0]], []);
+  withMesh("pd_arch_segmental_1200", function (M, X, z0, LK) { spandrel(M, X, z0, 600, 0, 600, 300, 300, -230, 0, LK("plaster"), 20); });
+  pd("pd_arch_fanlight_1200", "Fan-light glass with sunburst bars — for a 1200 arch", 1200, 50, 600, { m: "wall", z: 2100 }, [["l", -600, 25, 600, 25]], [["b", 0, 25, 1200, 40, 0, 30, "wood_teak"]]);
+  withMesh("pd_arch_fanlight_1200", function (M, X, z0, LK) { var gl2 = LK("glass_clear"), wd = LK("wood_teak"); for (var i = 0; i < 16; i++) { var t0 = Math.PI * i / 16, t1 = Math.PI * (i + 1) / 16; vpoly(M, X, z0, [[0, 30], [560 * Math.cos(t0), 30 + 560 * Math.sin(t0)], [560 * Math.cos(t1), 30 + 560 * Math.sin(t1)]], 22, 28, gl2, true); }
+    arcBand(M, X, z0, 0, 30, 555, 600, 0, Math.PI, 5, 45, wd, 24); arcBand(M, X, z0, 0, 30, 0, 110, 0, Math.PI, 8, 42, wd, 10); [1, 2, 3, 4, 5].forEach(function (k) { var t = Math.PI * k / 6, c = Math.cos(t), sn = Math.sin(t), nx = -sn * 14, nz = c * 14; vpoly(M, X, z0, [[110 * c + nx, 30 + 110 * sn + nz], [110 * c - nx, 30 + 110 * sn - nz], [556 * c - nx, 30 + 556 * sn - nz], [556 * c + nx, 30 + 556 * sn + nz]], 10, 40, wd, true); }); });
+  pd("pd_round_window_900", "Round window surround Ø900 (bull's-eye)", 1140, 60, 1140, { m: "wall", z: 1800 }, [["l", -570, 50, 570, 50]], []);
+  withMesh("pd_round_window_900", function (M, X, z0, LK) { arcBand(M, X, z0, 0, 570, 450, 570, 0, Math.PI * 2, 0, 55, LK(Gc), 32); arcBand(M, X, z0, 0, 570, 0, 450, 0, Math.PI * 2, 10, 18, LK("glass_clear"), 24); });
+  pd("pd_niche_arched_600", "Wall niche frame with arched top 600 × 1200", 760, 60, 1280, { m: "wall", z: 900 }, [["l", -380, 50, 380, 50]], [["b", -340, 25, 80, 50, 0, 900, Gc], ["b", 340, 25, 80, 50, 0, 900, Gc], ["b", 0, 40, 800, 80, -50, 0, Gc], ["b", 0, 4, 600, 8, 0, 900, "paint_ivory"]]);
+  withMesh("pd_niche_arched_600", function (M, X, z0, LK) { arcBand(M, X, z0, 0, 900, 300, 380, 0, Math.PI, 0, 50, LK(Gc), 20); arcBand(M, X, z0, 0, 900, 0, 300, 0, Math.PI, 0, 8, LK("paint_ivory"), 16); });
+  pd("pd_arcade_bay_3m", "Arcade bay — two piers with a round arch, 3 m wide × 3.3 m", 3000, 300, 3300, {}, [["r", -1350, 0, 300, 300], ["r", 1350, 0, 300, 300]], [["b", -1350, 0, 300, 300, 0, 1800, W], ["b", 1350, 0, 300, 300, 0, 1800, W], ["b", -1350, 0, 360, 360, 0, 150, W], ["b", 1350, 0, 360, 360, 0, 150, W], ["b", -1350, 0, 360, 360, 1720, 1800, W], ["b", 1350, 0, 360, 360, 1720, 1800, W], ["b", 0, 0, 3000, 340, 3220, 3300, W]]);
+  withMesh("pd_arcade_bay_3m", function (M, X, z0, LK) { spandrel(M, X, z0, 1500, 1800, 1200, 1200, 3220, -150, 150, LK(W), 24); arcBand(M, X, z0, 0, 1800, 1200, 1290, 0, Math.PI, -165, 165, LK(W), 24); });
+  pd("pd_arch_gate_3m", "Entrance arch (gateway) 3 m clear × 4 m high", 3900, 450, 4000, {}, [["r", -1725, 0, 450, 450], ["r", 1725, 0, 450, 450]], [["b", -1725, 0, 450, 450, 0, 2380, Gc], ["b", 1725, 0, 450, 450, 0, 2380, Gc], ["b", -1725, 0, 520, 520, 0, 200, Gc], ["b", 1725, 0, 520, 520, 0, 200, Gc], ["b", 0, 0, 3900, 500, 3880, 4000, Gc]]);
+  withMesh("pd_arch_gate_3m", function (M, X, z0, LK) { spandrel(M, X, z0, 1950, 2380, 1500, 1500, 3880, -225, 225, LK(Gc), 24); arcBand(M, X, z0, 0, 2380, 1500, 1620, 0, Math.PI, -245, 245, LK("sandstone_dholpur"), 24); });
 })();

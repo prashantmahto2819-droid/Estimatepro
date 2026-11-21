@@ -3,6 +3,10 @@
 This file is for the people maintaining the app. It is not published with the site (see `.assetsignore`).
 The text users see is `EP_NOTES` in `js/version.js`.
 
+## 2026.11.21-d
+- Arches (`assets8.js`): helpers `vpoly` (convex outline in the item's vertical plane pushed through a depth), `arcBand`, `spandrel`, `withMesh(id, fn)` (adds geometry to an `mk` item). 14 items `pd_arch_*`, `pd_round_window_900`, `pd_niche_arched_600`, `pd_arcade_bay_3m`, `pd_arch_gate_3m`. The infill pieces sit in the wall thickness (230) under the head of a rectangular opening; the wall itself is not cut to an arch.
+- Lights: `B.LCOLS`, `B.lightRGB`; asset props `lcol`, `lpow` (0 = off); light entries are `[x, y, z, strength, rgb]`; shader `uPLc[16]`. Runs and room ceilings pass the colour of their LED look.
+
 ## 2026.11.21-c
 - Fitted units (`fam: "u"` in `B.RUNS`, `unitMesh` in `runs.js`): 13 kinds built from `rows` ([bottom, top, type]: sh, gl, dr, mx, sl, op), shutter count = round(length / mw). Entity extras: `dp`, `handle` (`B.RUN_HANDLES`), `look` = shutters, `look2` = carcass, `lookT` = top, `mirror`, `led`. Qty: front area (`wardrobe`, `tv_unit`, `bookshelf`, `shoe_rack`) or running length (`kitchen_unit`) + `kitchen_counter` area + TV back panel as `wall_panel`. Command CABINET (WARDROBE, KITCHEN, TVUNIT, CUPBOARD, ALMIRAH). At an L corner the two legs simply overlap.
 

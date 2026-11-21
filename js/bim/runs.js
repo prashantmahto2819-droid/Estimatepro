@@ -131,7 +131,7 @@
     if (D.fam === "p") {
       D.pr.forEach(function (r) { var a = offsetPath(p, r[0], e.closed, side), b = offsetPath(p, r[1], e.closed, side), n = p.length, cnt = e.closed && n > 2 ? n : n - 1;
         for (var i = 0; i < cnt; i++) { var j = (i + 1) % n; H.prism(M, [a[i], a[j], b[j], b[i]], z0 + r[2], z0 + r[3], r[4] === "led" ? led : r[4] ? B.look(r[4]) : own); } });
-      if (D.led && H.lights) { var Lt = runLen(e), nL = Math.max(1, Math.min(8, Math.round(Lt / 1500))), acc = 0, sg = segsOf(p, e.closed), tot = Lt / nL, need = tot / 2; sg.forEach(function (s) { var l = G.dist(s[0], s[1]); while (need <= acc + l && l > 0) { var t = (need - acc) / l, q = [s[0][0] + (s[1][0] - s[0][0]) * t, s[0][1] + (s[1][1] - s[0][1]) * t]; H.lights.push([q[0] / 1000, q[1] / 1000, (z0 + 20) / 1000, 0.6]); need += tot; } acc += l; }); }
+      if (D.led && H.lights) { var Lt = runLen(e), nL = Math.max(1, Math.min(8, Math.round(Lt / 1500))), acc = 0, sg = segsOf(p, e.closed), tot = Lt / nL, need = tot / 2; sg.forEach(function (s) { var l = G.dist(s[0], s[1]); while (need <= acc + l && l > 0) { var t = (need - acc) / l, q = [s[0][0] + (s[1][0] - s[0][0]) * t, s[0][1] + (s[1][1] - s[0][1]) * t]; H.lights.push([q[0] / 1000, q[1] / 1000, (z0 + 20) / 1000, 0.6, B.lightRGB ? B.lightRGB(ledLookOf(e)) : null]); need += tot; } acc += l; }); }
       return;
     }
     if (D.fam === "u") { unitMesh(M, e, D, H, p, z0, side, own, led); return; }
@@ -154,7 +154,7 @@
         if (joint) for (var jx = 1; jx < nx; jx++) strip(jx * cw - Math.max(gv, 16) / 2, jx * cw + Math.max(gv, 16) / 2, D.dp - 5, D.dp + 2, zb0, zt1, led);
       }
       if (top) strip(0, len, 2, D.dp + (D.back || 0) + 3, z1 - 30, z1, led); if (bot) strip(0, len, 2, D.dp + (D.back || 0) + 3, z0, z0 + 30, led);
-      if (mode && H.lights) { var nl = Math.max(1, Math.min(4, Math.round(len / 2000))); for (var k = 0; k < nl; k++) { var q = at(len * (k + 0.5) / nl, D.dp + 150); H.lights.push([q[0] / 1000, q[1] / 1000, (top && !bot ? z1 - 100 : bot && !top ? z0 + 150 : (z0 + z1) / 2) / 1000, 0.55]); } }
+      if (mode && H.lights) { var nl = Math.max(1, Math.min(4, Math.round(len / 2000))); for (var k = 0; k < nl; k++) { var q = at(len * (k + 0.5) / nl, D.dp + 150); H.lights.push([q[0] / 1000, q[1] / 1000, (top && !bot ? z1 - 100 : bot && !top ? z0 + 150 : (z0 + z1) / 2) / 1000, 0.55, B.lightRGB ? B.lightRGB(ledLookOf(e)) : null]); } }
     });
   }
   B.EXT.run = {
@@ -198,7 +198,7 @@
     else H.prism(M, C.P, zf, zf + 12, look, null, null, true);
     var sp = ceilSpots(e, C), cyl = B.AH && B.AH.cyl, V = B.AH && B.AH.V, wh = B.look("paint_pure_white");
     sp.forEach(function (p) { var zs = inPoly(p, C.In) && des !== "island" ? zf + (des === "double" && C.In2 && inPoly(p, C.In2) ? drop : des === "double" ? drop * 0.5 : des === "border" ? 0 : drop) : zf; if (des === "border" && inPoly(p, C.In)) return; H.box(M, p, 90, 90, 0, zs - 4, zs, wh); H.box(M, p, 56, 56, 0, zs - 6, zs - 4, led); });
-    if (H.lights) { var bb = B.polyBox(C.P), n = Math.max(1, Math.min(4, Math.round(polyArea(C.P) / 9e6))); for (var i = 0; i < n; i++) H.lights.push([(bb[0] + (bb[2] - bb[0]) * (i + 0.5) / n) / 1000, (bb[1] + bb[3]) / 2000, (zf - 150) / 1000, 0.9]); }
+    if (H.lights) { var bb = B.polyBox(C.P), n = Math.max(1, Math.min(4, Math.round(polyArea(C.P) / 9e6))); for (var i = 0; i < n; i++) H.lights.push([(bb[0] + (bb[2] - bb[0]) * (i + 0.5) / n) / 1000, (bb[1] + bb[3]) / 2000, (zf - 150) / 1000, 0.9, B.lightRGB ? B.lightRGB(B.LOOKS[e.cled] ? e.cled : "led_warm") : null]); }
   };
   var qty0 = B.qty; B.qty = function (doc, e) { var r = qty0.apply(this, arguments); if (e && e.t === "room" && e.ceil && e.cdes && r && r.length) { var info = B.ceilInfo(e), z = r[0].z; if (info.led > 0) r = r.concat([{ k: "led_strip", dim: "L", v: info.led, label: "LED strip / profile light — ceiling of " + (e.name || "room"), f: (info.led / 1000).toFixed(2) + " m run", z: z }]); if (info.spots) r = r.concat([{ k: "light_point", dim: "N", v: info.spots, label: "Spot light in false ceiling — " + (e.name || "room"), f: info.spots + " no.", z: z }]); } return r; };
 
