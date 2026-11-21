@@ -1,6 +1,6 @@
 # Estimate Pro — pending work (kept with the code; not published)
 
-Last updated at version 2026.11.21-z24.
+Last updated at version 2026.11.21-z25.
 
 ## A. Waiting for the owner
 1. Server work: (-z21) module switches and a shared library of blocks and hatch patterns are built — the owner has to run `server/shared.sql` once in Supabase, then check that a switched-off module disappears for a normal user. Still open: shared 3D models / cut-outs / material pictures (large files — need Supabase Storage), WhatsApp update messages with real pictures attached (needs a sending gateway; links to the pictures are already added).
@@ -45,7 +45,7 @@ Last updated at version 2026.11.21-z24.
 6. (-z10: vehicles turn round and come back.) (-z18: walkers bob with each step.) (-z20: wheels that turn, walkers sway.) (-z22: DRIVEPATH — a vehicle follows its own route.) Still open: vehicles that slow at corners / stop at gates, limbs that move (needs animated models).
 7. (-z2: CAMPATH + Tour walks the path; Record makes the video.) (-z3: speed, eye height, MP4 first.) Still open: look-at targets, stairs between levels, doors that open on the way.
 8. (done in -z17: cut faces hatched, cut-away parts throw no shadow.) (-z22: colour of the cut faces.) Still open: a cut line on plan for the 3D section.
-9. (done in -t: ✥ Move drags placed objects along the floor, ⟲ ⟳ turn by 15°.) (-z5: ▲ ▼ raise / lower, ⧉ copy.) (-z11: doors / windows / openings slide along their wall.) (-z12: walls move square to themselves, joined walls stretch.) (-z13: rooms, slabs and roofs follow the wall.) (-z22: snaps to wall faces within 90 mm.) (-z24: slanting walls and corners.) Still open: snap to other furniture.
+9. (done in -t: ✥ Move drags placed objects along the floor, ⟲ ⟳ turn by 15°.) (-z5: ▲ ▼ raise / lower, ⧉ copy.) (-z11: doors / windows / openings slide along their wall.) (-z12: walls move square to themselves, joined walls stretch.) (-z13: rooms, slabs and roofs follow the wall.) (-z22: snaps to wall faces within 90 mm.) (-z24: slanting walls and corners.) (-z25: other furniture standing square.) Still open: furniture standing at an angle.
 10. Slanting outlines with inside corners (hip), gable roofs on slanting outlines, (-y: DOME and VAULT roof elements.) (-z2: smooth shading.) (-z5: cone, drum wall.) (-z14: ring beam.) (-z15: pyramid on a many-sided base.)
 
 11. Materials: (done in -y: 386 looks — paint shade card, putty / primer / distemper, enamel, textures, tiles, granite, marble, wood, laminate, metal, glass, ACP; any material of a library item can be swapped in Properties.) Still open: picture-based (photo) materials built in for all users (needs the files above), bump / roughness maps, (-p: search box in Paint) (-r: favourites) (-z6: colour chips) brand shade codes.

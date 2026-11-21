@@ -3,6 +3,9 @@
 This file is for the people maintaining the app. It is not published with the site (see `.assetsignore`).
 The text users see is `EP_NOTES` in `js/version.js`.
 
+## 2026.11.21-z25
+- `ui-bim.js` `wallFaces`: the four sides of the plan bounding box of other assets, 3D models and columns on the level (standing square, 150 mm to 6 m, at most 60 pieces, cut-outs left out) are added as snap faces (`obj`); the message says which kind it met. Harness: a sofa dropped 60 mm from another closes to 0.
+
 ## 2026.11.21-z24
 - `ui-bim.js`: `wallFaces` now keeps every wall face (start, unit vector, normal, length) and the plan points of the moved object; `snapMv` projects the points on each face normal and closes a gap of up to 90 mm, then once more on a face not parallel to the first (corner). Works at any wall angle.
 - `runs.js` mesh: a drain with manholes draws the top slab (chamber + 230 mm, 80 below to 60 above the level) and a dark cover at each `B.manholes` point.
