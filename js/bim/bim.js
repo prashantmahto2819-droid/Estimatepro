@@ -71,7 +71,7 @@
   B.wallPoly = function (doc, w) { var cc = doc.c ? doc.c(w) : {}; if (!cc.wp) cc.wp = wallPoly(w, walls(doc, w.lvl)); return cc.wp; };
   /* openings in a wall: [{ e, s0, s1 (mm along the centre line), z0, z1 (above wall base) }] */
   /* wall left standing in the two top corners of an arched opening (mm²): rectangle − half ellipse over the rise */
-  B.archSp = function (o) { if (!o || !o.head) return 0; var r = o.head === "arch" ? o.w / 2 : o.head === "seg" ? o.w * 0.2 : 0; if (!r || r > o.h - 300) return 0; return o.w * r * (1 - Math.PI / 4); };
+  B.archSp = function (o) { if (!o || !o.head) return 0; var r = o.head === "arch" ? o.w / 2 : o.head === "seg" ? o.w * 0.2 : o.head === "point" ? o.w * 0.866 : 0; if (!r || r > o.h - 300) return 0; return o.head === "point" ? 0.2518 * o.w * o.w : o.w * r * (1 - Math.PI / 4); };
   B.openings = function (doc, w) {
     return doc.d.ents.filter(function (o) { return (o.t === "door" || o.t === "window" || o.t === "opening") && o.host === w.id; }).map(function (o) {
       var z0 = o.t === "door" ? 0 : (o.sill != null ? o.sill : 900); return { e: o, s0: o.at - o.w / 2, s1: o.at + o.w / 2, z0: z0, z1: z0 + o.h };

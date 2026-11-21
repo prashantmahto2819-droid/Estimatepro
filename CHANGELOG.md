@@ -3,6 +3,11 @@
 This file is for the people maintaining the app. It is not published with the site (see `.assetsignore`).
 The text users see is `EP_NOTES` in `js/version.js`.
 
+## 2026.11.21-z7
+- `site.js`: CUTFILL (`B.cutFill`: prisms over the Delaunay triangles, mixed triangles subdivided 5 levels); height check in AREASTATEMENT.
+- `runs.js`: drain runs add `excavation` / `backfill` rows (trench = pipe + 600 wide, depth = |z|; `trench: false` switches it off); unit kind `kitchen_appl_bay` (row type `ap`; only the counter is measured).
+- Head `point` (equilateral pointed arch): `B.archSp` 0.2518 w², mesh profile, Properties, schedule text.
+
 ## 2026.11.21-z6
 - `site.js`: CONTOURS (Bowyer–Watson `delaunay`, `B.spotPoints`; spot texts now carry `spot` and `sp`; layer C-TOPO-CONT); AREASTATEMENT asks permitted coverage / FAR and writes OK / EXCEEDS.
 - `runs.js`: services `drain_sw_100/150/200` (CPWD 19.1.1–3), `drain_rcc_150/250/300/450` (19.6.2–5), `wire_15/25/40/60` (E&M 1.14.1–4).

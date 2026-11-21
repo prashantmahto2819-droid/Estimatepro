@@ -116,6 +116,8 @@
     lines.push("Total built-up area: " + S.built.toFixed(2) + " sqm (" + (S.built * 10.7639).toFixed(0) + " sqft)"); if (S.plot) { lines.push("Ground coverage: " + S.cov.toFixed(1) + " %"); lines.push("FAR / FSI: " + S.far.toFixed(2)); }
     if (S.plot) { var pc = String((await ed.getText("Permitted ground coverage in % (Enter to skip the check)", { def: ed.permCov || "" })) || "").trim(), pf = String((await ed.getText("Permitted FAR / FSI (Enter to skip)", { def: ed.permFar || "" })) || "").trim(), c1 = parseFloat(pc), f1 = parseFloat(pf); ed.permCov = pc; ed.permFar = pf;
       if (c1 > 0) lines.push("Permitted coverage " + c1 + " % - " + (S.cov <= c1 + 1e-6 ? "OK (" + (c1 - S.cov).toFixed(1) + " % to spare)" : "EXCEEDS by " + (S.cov - c1).toFixed(1) + " % (" + ((S.cov - c1) / 100 * S.plot).toFixed(2) + " sqm)"));
+      var bsH = B.ensure(ed.doc.d), topL = bsH.levels.filter(function (L) { return S.rows.some(function (r) { return r.name === L.name; }); }).reduce(function (t, L) { return Math.max(t, (L.elev + L.h) / 1000); }, 0), ph = String((await ed.getText("Permitted building height in metres (Enter to skip)", { def: ed.permH || "" })) || "").trim(), h1 = parseFloat(ph); ed.permH = ph;
+      if (topL > 0) lines.push("Building height (top of the highest floor drawn): " + topL.toFixed(2) + " m" + (h1 > 0 ? " - permitted " + h1 + " m - " + (topL <= h1 + 1e-6 ? "OK" : "EXCEEDS by " + (topL - h1).toFixed(2) + " m") : ""));
       if (f1 > 0) lines.push("Permitted FAR " + f1 + " - " + (S.far <= f1 + 1e-6 ? "OK (" + ((f1 - S.far) * S.plot).toFixed(2) + " sqm more can be built)" : "EXCEEDS by " + ((S.far - f1) * S.plot).toFixed(2) + " sqm")); }
     ed.say(lines.slice(1).join("  ·  ")); var p = await ed.getPoint("Click where to write the area statement (Enter to skip)", { opt: true }); if (!p) return;
     ed.doc.add({ t: "text", p: [p[0], p[1]], s: lines.join("\n"), h: 2.5 * N, rot: 0, al: "l", layer: "C-PROP-TXT" });
@@ -129,7 +131,7 @@
       var E = {}; bad.forEach(function (t) { [[t[0], t[1]], [t[1], t[2]], [t[2], t[0]]].forEach(function (e) { var k = Math.min(e[0], e[1]) + "_" + Math.max(e[0], e[1]); E[k] = E[k] ? null : e; }); });
       Object.keys(E).forEach(function (k) { if (E[k]) keep.push([E[k][0], E[k][1], i]); }); T = keep; }
     return T.filter(function (t) { return t[0] < n && t[1] < n && t[2] < n; }); }
-  B.spotPoints = function (ed) { var N = scaleOf(ed.doc.d), out = []; ed.doc.d.ents.forEach(function (e) { if (e.layer !== "C-TOPO" || e.t !== "text") return; var v = e.spot != null ? +e.spot : parseFloat(String(e.s).replace(/\s/g, "")); if (!isFinite(v)) return; var p = e.sp || [e.p[0] - 1.8 * N, e.p[1] + 1.2 * N]; out.push([p[0], p[1], v]); }); return out; };
+  B.spotPoints = function (ed) { var N = scaleOf(ed.doc.d), out = []; ed.doc.d.ents.forEach(function (e) { if (e.layer !== "C-TOPO" || e.t !== "text" || /[a-z]/i.test(String(e.s))) return; var v = e.spot != null ? +e.spot : parseFloat(String(e.s).replace(/\s/g, "")); if (!isFinite(v)) return; var p = e.sp || [e.p[0] - 1.8 * N, e.p[1] + 1.2 * N]; out.push([p[0], p[1], v]); }); return out; };
   cmd("CONTOURS", ["CONTOUR", "LEVELLINES"], async function (ed) {
     var P = B.spotPoints(ed); if (P.length < 3) throw new Error("Mark at least three spot levels first (Site & services → Spot level) — more points give truer contours.");
     var lo = Math.min.apply(null, P.map(function (p) { return p[2]; })), hi = Math.max.apply(null, P.map(function (p) { return p[2]; })); if (hi - lo < 1e-6) throw new Error("All the spot levels are the same — the ground is flat, there are no contours to draw.");
@@ -140,6 +142,20 @@
         if (q.length >= 2 && G.dist(q[0], q[1]) > 1) { ed.doc.add({ t: "line", a: q[0], b: q[1], layer: "C-TOPO-CONT" }); cnt++; var key = z.toFixed(3); if (!lab[key] || G.dist(q[0], q[1]) > lab[key].d) lab[key] = { d: G.dist(q[0], q[1]), p: G.mul(G.add(q[0], q[1]), 0.5), r: Math.atan2(q[1][1] - q[0][1], q[1][0] - q[0][0]) * 180 / Math.PI }; } }); }
     Object.keys(lab).forEach(function (k) { var L = lab[k], r = L.r; if (r > 90 || r <= -90) r += 180; ed.doc.add({ t: "text", p: L.p, s: (+k).toFixed(2), h: 2 * N, rot: r, al: "c", layer: "C-TOPO-CONT" }); });
     ed.doc.commit(); ed.say(Object.keys(lab).length + " contour level(s) drawn at " + iv + " m from " + P.length + " spot levels. They are straight between the points — add spot levels where the ground changes to make them truer. Run Contours again after adding points.");
+  });
+  /* ---------- cut and fill to a formation level, from the spot levels ---------- */
+  B.cutFill = function (P, T, form) { var cut = 0, fill = 0, area = 0;
+    var tri = function (a, b, c, dep) { var A = Math.abs((b[0] - a[0]) * (c[1] - a[1]) - (c[0] - a[0]) * (b[1] - a[1])) / 2, d1 = a[2] - form, d2 = b[2] - form, d3 = c[2] - form;
+      if ((d1 >= 0 && d2 >= 0 && d3 >= 0) || (d1 <= 0 && d2 <= 0 && d3 <= 0) || dep >= 5) { var v = A * (d1 + d2 + d3) / 3; if (v > 0) cut += v; else fill -= v; return; }
+      var ab = [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2, (a[2] + b[2]) / 2], bc = [(b[0] + c[0]) / 2, (b[1] + c[1]) / 2, (b[2] + c[2]) / 2], ca = [(c[0] + a[0]) / 2, (c[1] + a[1]) / 2, (c[2] + a[2]) / 2]; tri(a, ab, ca, dep + 1); tri(ab, b, bc, dep + 1); tri(ca, bc, c, dep + 1); tri(ab, bc, ca, dep + 1); };
+    T.forEach(function (t) { var a = P[t[0]], b = P[t[1]], c = P[t[2]]; area += Math.abs((b[0] - a[0]) * (c[1] - a[1]) - (c[0] - a[0]) * (b[1] - a[1])) / 2; tri(a, b, c, 0); });
+    return { cut: cut / 1e6, fill: fill / 1e6, area: area / 1e6 }; };   /* x, y in mm and levels in m → m³ and m² */
+  cmd("CUTFILL", ["CUTANDFILL", "SITELEVELLING", "LEVELLING"], async function (ed) {
+    var P = B.spotPoints(ed); if (P.length < 3) throw new Error("Mark at least three spot levels first (Site & services → Spot level).");
+    var mean = P.reduce(function (t, p) { return t + p[2]; }, 0) / P.length, f = await ed.getNum("Formation level in metres — the level the ground is to be finished at (the average of your spot levels is " + mean.toFixed(2) + ")", { def: ed.formLvl == null ? +mean.toFixed(2) : ed.formLvl }); if (!isFinite(f)) return; ed.formLvl = f;
+    var R = B.cutFill(P, delaunay(P), f), N = scaleOf(ed.doc.d), txt = "SITE LEVELLING to " + (f >= 0 ? "+" : "") + f.toFixed(3) + " m\nArea covered by the spot levels: " + R.area.toFixed(2) + " sqm\nCutting: " + R.cut.toFixed(2) + " cum\nFilling: " + R.fill.toFixed(2) + " cum\nBalance: " + (R.cut >= R.fill ? (R.cut - R.fill).toFixed(2) + " cum surplus earth" : (R.fill - R.cut).toFixed(2) + " cum earth to bring");
+    ed.say(txt.split("\n").slice(1).join("  ·  ")); var p = await ed.getPoint("Click where to write the result (Enter to skip)", { opt: true }); if (!p) return; siteLayers(ed);
+    ed.doc.add({ t: "text", p: [p[0], p[1]], s: txt, h: 2.5 * N, rot: 0, al: "l", layer: "C-TOPO" }); ed.say("Written. The volumes are in bank measure for the area inside the outermost spot levels, with straight slopes between the points — add points for a truer figure, and take the quantities to the estimate under your earthwork items.");
   });
   /* camera path: a polyline on layer A-CAMPATH; 3D → Tour walks along it at eye height */
   cmd("CAMPATH", ["CAMERAPATH", "WALKPATH", "TOURPATH"], async function (ed) {

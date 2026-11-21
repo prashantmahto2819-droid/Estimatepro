@@ -78,11 +78,11 @@
     var A = G.sub(pl.p, G.mul(u, o.w / 2)), Bp = G.add(pl.p, G.mul(u, o.w / 2)), fd = o.t === "door" ? 100 : 60;
     /* round or flat-arched head: the opening is cut square up to the crown; the corners above the springing are filled
        with the wall's own faces, and a door / window gets a glazed fan-light with an arched frame */
-    var rise = o.head === "arch" ? o.w / 2 : o.head === "seg" ? o.w * 0.2 : 0; if (rise > o.h - 300) rise = 0;
+    var rise = o.head === "arch" ? o.w / 2 : o.head === "seg" ? o.w * 0.2 : o.head === "point" ? o.w * 0.866 : 0; if (rise > o.h - 300) rise = 0;
     if (rise) {
       var zTop = zt, hw = o.w / 2, wv = pl.w, xs = wv.ext ? B.extSide(doc, wv) : -1, lkI = B.lookFor(d, "wall_int", wv.lookI, wv.colI), lkO = wv.ext ? B.lookFor(d, "wall_ext", wv.lookO, wv.colO) : lkI, fcs = [xs === 0 ? lkO : lkI, xs === 1 ? lkO : lkI]; zt = zTop - rise;
       var pt3 = function (t, y, z) { return v3(G.add(G.add(pl.p, G.mul(u, t)), G.mul(n, y)), z0 + z); }, vq = function (P4, y0, y1, col, alpha) { var f = P4.map(function (q) { return pt3(q[0], y1, q[1]); }), b = P4.map(function (q) { return pt3(q[0], y0, q[1]); }), k = P4.length; for (var i = 1; i < k - 1; i++) { M.tri(f[0], f[i], f[i + 1], col, alpha); M.tri(b[0], b[i + 1], b[i], col, alpha); } for (var j = 0; j < k; j++) { var j2 = (j + 1) % k; M.quad(b[j], b[j2], f[j2], f[j], col, alpha); } };
-      var SG = 18, arcPt = function (i, r, rz) { var a = Math.PI * i / SG; return [r * Math.cos(a), zt + rz * Math.sin(a)]; };
+      var SG = 18, arcPt = o.head === "point" ? function (i, r) { var x = r * Math.cos(Math.PI * i / SG), ax = Math.abs(x) + r; return [x, zt + Math.sqrt(Math.max(0, 4 * r * r - ax * ax))]; } : function (i, r, rz) { var a = Math.PI * i / SG; return [r * Math.cos(a), zt + rz * Math.sin(a)]; };
       for (var si = 0; si < SG; si++) { var p0 = arcPt(si, hw, rise), p1 = arcPt(si + 1, hw, rise), quad = [[p0[0], p0[1]], [p0[0], zTop], [p1[0], zTop], [p1[0], p1[1]]]; vq(quad, 0, th / 2, fcs[0]); vq(quad, -th / 2, 0, fcs[1]); M.edge(pt3(p0[0], th / 2, p0[1]), pt3(p1[0], th / 2, p1[1])); M.edge(pt3(p0[0], -th / 2, p0[1]), pt3(p1[0], -th / 2, p1[1])); }
       if (o.t !== "opening") { var fm = o.t === "door" ? byMat(d, "door_frame", null, o.lookF, o.colF) : byMat(d, "win_frame", o.mat || "al", o.look, o.col), gls = B.lookFor(d, "glass"), fdp = (o.t === "door" ? 100 : 60) / 2, kk = (hw - 50) / hw;
         for (var ai = 0; ai < SG; ai++) { var o0 = arcPt(ai, hw, rise), o1 = arcPt(ai + 1, hw, rise), i0 = [o0[0] * kk, zt + (o0[1] - zt) * kk], i1 = [o1[0] * kk, zt + (o1[1] - zt) * kk]; vq([i0, o0, o1, i1], -fdp, fdp, fm); vq([[0, zt], i0, i1], -4, 4, gls, gls.a); }
