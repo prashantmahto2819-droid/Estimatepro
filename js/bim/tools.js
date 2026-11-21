@@ -366,7 +366,7 @@
   });
   /* ---------- LANDSCAPE area: corners, or click inside a closed boundary ---------- */
   cmd("LANDAREA", ["LAND", "LAWN", "PAVING"], async function (ed) {
-    ensureBim(ed); var kind = ed.landPick || (await ed.getKw("Area type", ["Lawn", "Paver", "Gravel", "Bed", "PCC"], ed.landK || "Lawn")); ed.landPick = null; ed.landK = kind; kind = kind.toLowerCase();
+    ensureBim(ed); var kind = ed.landPick || (await ed.getKw("Area type", ["Lawn", "Paver", "Gravel", "Bed", "PCC", "Water"], ed.landK || "Lawn")); ed.landPick = null; ed.landK = kind; kind = kind.toLowerCase();
     var first = await ed.getPoint("First corner, or Inside to pick a closed boundary", { kw: ["Inside"] }), pts = [];
     if (first === "Inside") { var q = await ed.getPoint("Click inside a closed boundary"), bd = CAD.boundaryAt(ed.doc, q, ed.isolated); if (!bd) throw new Error("No closed boundary there"); pts = ccw(G.loopPts(bd.outer)); }
     else {

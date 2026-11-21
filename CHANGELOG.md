@@ -3,6 +3,9 @@
 This file is for the people maintaining the app. It is not published with the site (see `.assetsignore`).
 The text users see is `EP_NOTES` in `js/version.js`.
 
+## 2026.11.21-z8
+- Pattern 17 `water` (`B.PT.water`): fbm ripples tilt the normal; reflection as strong as glass. Looks `water`, `water_green`, `water_deep`; land kind `water` (no quantity rows); LANDAREA offers Water.
+
 ## 2026.11.21-z7
 - `site.js`: CUTFILL (`B.cutFill`: prisms over the Delaunay triangles, mixed triangles subdivided 5 levels); height check in AREASTATEMENT.
 - `runs.js`: drain runs add `excavation` / `backfill` rows (trench = pipe + 600 wide, depth = |z|; `trench: false` switches it off); unit kind `kitchen_appl_bay` (row type `ap`; only the counter is measured).

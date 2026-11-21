@@ -282,13 +282,13 @@
       if (H.lights && (def.cat === "Lighting" || /light|lamp|chandelier|bulb|lantern/i.test(def.n || "")) && !/switch|point wiring/i.test(def.n || "")) { var cL = xf(e)([0, 0]), sL = e.sc || 1, hL = (def.h || 100) * sL, up = def.mount === "ceiling" || def.mount === "top"; H.lights.push([cL[0] * 0.001, cL[1] * 0.001, (up ? zM - 120 : zM + hL * 0.9) * 0.001, (hL > 2500 ? 3.2 : 1) * (e.lpow == null || e.lpow === "" ? 1 : Math.max(0, Math.min(4, +e.lpow))), LC ? LC[3] : null]); if (+e.lpow === 0 && e.lpow !== "" && e.lpow != null) H.lights.pop(); } }
   };
   /* ---------- landscape areas ---------- */
-  var LAND = { lawn: ["Lawn (grassing)", "grass", "rgba(90,150,70,.35)"], paver: ["Paver blocks", "paver", "rgba(150,140,128,.4)"], gravel: ["Gravel / ballast", "gravel", "rgba(170,160,145,.35)"], bed: ["Planting bed (shrubbery)", "soil", "rgba(120,95,70,.35)"], pcc: ["PCC paving 1:4:8", "concrete", "rgba(170,170,170,.35)"] };
+  var LAND = { lawn: ["Lawn (grassing)", "grass", "rgba(90,150,70,.35)"], paver: ["Paver blocks", "paver", "rgba(150,140,128,.4)"], gravel: ["Gravel / ballast", "gravel", "rgba(170,160,145,.35)"], bed: ["Planting bed (shrubbery)", "soil", "rgba(120,95,70,.35)"], pcc: ["PCC paving 1:4:8", "concrete", "rgba(170,170,170,.35)"], water: ["Water surface — pool / pond / tank (for the view)", "water", "rgba(60,140,190,.4)"] };
   B.LAND = LAND;
   B.EXT.land = {
     plan: function (doc, e) { var k = LAND[e.kind] || LAND.lawn; return { segs: G.polySegs(e.pts, true), fill: [{ pts: e.pts, col: k[2] }], dashed: [] }; },
     labels: function (doc, e, h) { var bb = B.polyBox(e.pts), k = LAND[e.kind] || LAND.lawn; return [{ p: [(bb[0] + bb[2]) / 2, (bb[1] + bb[3]) / 2], s: k[0] + "\n" + (B.area(e.pts) / 1e6).toFixed(2) + " m²", h: h, al: "cm" }]; },
     xform: function (e, M) { var o = JSON.parse(JSON.stringify(e)); o.pts = e.pts.map(function (p) { return G.mApply(M, p); }); return o; },
-    qty: function (doc, e) { var k = LAND[e.kind] || LAND.lawn; return [{ k: "land_" + (e.kind || "lawn"), dim: "A", v: B.area(e.pts), label: k[0], f: "plan area", z: e.lvl ? B.below(doc.d, e.lvl) : "super" }]; },
+    qty: function (doc, e) { var k = LAND[e.kind] || LAND.lawn; if (e.kind === "water") return []; return [{ k: "land_" + (e.kind || "lawn"), dim: "A", v: B.area(e.pts), label: k[0], f: "plan area", z: e.lvl ? B.below(doc.d, e.lvl) : "super" }]; },
     mesh: function (M, doc, e, H) { var k = LAND[e.kind] || LAND.lawn, L = B.level(doc.d, e.lvl), z = (L ? L.elev : 0) + (e.z || 0); H.prism(M, e.pts, z - 30, z + 15, B.look(e.look && B.LOOKS[e.look] ? e.look : k[1], e.col), null, 1, true); }
   };
 

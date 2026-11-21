@@ -176,6 +176,10 @@ void main(){
     col=mix(col*0.65,col,b);
   }else if(pi==15){/* soil */
     col*=0.75+0.4*fbm(uv*5.0);
+  }else if(pi==17){/* water: soft ripples that also tilt the surface, so the reflected sky breaks up */
+    float w1=fbm(uv*2.2+vec2(0.0,1.7)), w2=fbm(uv*5.1+vec2(3.1,0.4));
+    col*=0.82+0.22*w1+0.1*w2;
+    if(N.z>0.5) N=normalize(N+vec3((w1-0.5)*0.22,(w2-0.5)*0.22,0.0));
   }
 
   if(pi>=20){ vec3 t; if(pi==20) t=texture(uTx0,uv).rgb; else if(pi==21) t=texture(uTx1,uv).rgb; else if(pi==22) t=texture(uTx2,uv).rgb; else if(pi==23) t=texture(uTx3,uv).rgb; else t=texture(uTx4,uv).rgb; col=t; }
@@ -205,11 +209,12 @@ void main(){
   if(pi==16 && uStyle<0.5) col*=max(lit,vec3(1.2)); else col*=lit;   /* 16 = light-giving surface (LED, lamp): never darker than its own colour */
 
   /* reflection of the sky on glass and polished surfaces: stronger at glancing angles */
-  if(uStyle<0.5 && (pi==12 || gloss>0.25)){
+  if(uStyle<0.5 && (pi==12 || pi==17 || gloss>0.25)){
     vec3 Vr=normalize(uEye-vP); float nv=max(dot(Vr,N),0.0); vec3 R=reflect(-Vr,N);
     vec3 env=R.z>0.0 ? mix(uHor,uSky,pow(clamp(R.z,0.0,1.0),0.45)) : mix(uHor,uGnd,clamp(-R.z*3.0,0.0,1.0))*0.8;
     float fr=0.04+0.96*pow(1.0-nv,5.0);
-    col=mix(col,env,clamp(fr*(pi==12?0.9:gloss*0.55),0.0,pi==12?0.7:0.4));
+    if(pi==17) fr=0.12+0.88*pow(1.0-nv,3.0);
+    col=mix(col,env,clamp(fr*(pi==12||pi==17?0.9:gloss*0.55),0.0,pi==12||pi==17?0.75:0.4));
   }
 
   /* selection highlight */
