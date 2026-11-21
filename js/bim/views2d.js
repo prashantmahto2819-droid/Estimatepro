@@ -7,7 +7,7 @@
   "use strict";
   var EP = window.EP, CAD = EP.cad, G = EP.geom, B = EP.bim; if (!B || !CAD) return;
   var DIRS = B.VIEW_DIRS = { Front: [0, 1], Back: [0, -1], Right: [-1, 0], Left: [1, 0] }, ST = 14;
-  var LAYERS = { "A-ELEV": { color: 7, lw: 0.18, lt: "CONTINUOUS" }, "A-ELEV-CUT": { color: 7, lw: 0.5, lt: "CONTINUOUS" }, "A-ELEV-GL": { color: 7, lw: 0.7, lt: "CONTINUOUS" }, "A-ELEV-LVL": { color: 8, lw: 0.13, lt: "DASHDOT" }, "A-ELEV-TXT": { color: 7, lw: 0.18, lt: "CONTINUOUS" }, "A-SECT-MARK": { color: 1, lw: 0.35, lt: "DASHDOT" }, "A-SHEET": { color: 5, lw: 0.35, lt: "CONTINUOUS" } };
+  var LAYERS = { "A-ELEV": { color: 7, lw: 0.18, lt: "CONTINUOUS" }, "A-ELEV-CUT": { color: 7, lw: 0.5, lt: "CONTINUOUS" }, "A-ELEV-FILL": { color: 9, lw: 0.13, lt: "CONTINUOUS" }, "A-ELEV-GL": { color: 7, lw: 0.7, lt: "CONTINUOUS" }, "A-ELEV-LVL": { color: 8, lw: 0.13, lt: "DASHDOT" }, "A-ELEV-TXT": { color: 7, lw: 0.18, lt: "CONTINUOUS" }, "A-SECT-MARK": { color: 1, lw: 0.35, lt: "DASHDOT" }, "A-SHEET": { color: 5, lw: 0.35, lt: "CONTINUOUS" } };
 
   B.viewLines = function (doc, o) {
     o = o || {}; var d = doc.d, bs = B.ensure(d), dv = o.dir || [0, 1], ux = dv[1], uy = -dv[0], D0 = o.cut == null ? null : o.cut / 1000, sect = D0 != null;
@@ -19,13 +19,14 @@
       if (sect) {
         var P = [a, b, c], out = [], X = [];
         for (var i = 0; i < 3; i++) { var p = P[i], q = P[(i + 1) % 3], ip = p[2] >= D0, iq = q[2] >= D0; if (ip) out.push(p); if (ip !== iq) { var x = lerp(p, q); out.push(x); X.push(x); } }
-        if (out.length < 3) return; if (X.length === 2 && solid) cuts.push([X[0][0], X[0][1], X[1][0], X[1][1]]);
+        if (out.length < 3) return; if (X.length === 2 && solid) cuts.push([X[0][0], X[0][1], X[1][0], X[1][1], curG]);
         for (var k = 1; k < out.length - 1; k++) push(out[0], out[k], out[k + 1], solid);
       } else push(a, b, c, solid);
     }
     function push(a, b, c, solid) { tris.push(a[0], a[1], a[2], b[0], b[1], b[2], c[0], c[1], c[2], solid ? 1 : 0); [a, b, c].forEach(function (p) { if (p[0] < bb[0]) bb[0] = p[0]; if (p[1] < bb[1]) bb[1] = p[1]; if (p[0] > bb[2]) bb[2] = p[0]; if (p[1] > bb[3]) bb[3] = p[1]; }); }
-    sc.groups.forEach(function (g) {
-      var e = doc.get(g.id), v = g.v; if (!e || !v || !v.length) return;
+    var curG = 0;
+    sc.groups.forEach(function (g, gi) {
+      var e = doc.get(g.id), v = g.v; if (!e || !v || !v.length) return; curG = gi;
       if (e.t === "asset") { var def = B.ASSET_LIB && B.ASSET_LIB[e.kind]; if (def && (def.deco || def.cut)) return; }
       var nT = v.length / (3 * ST), sil = nT <= 60000 ? {} : null;
       for (var t = 0; t < nT; t++) {
@@ -69,14 +70,24 @@
       }
     });
     cuts.forEach(function (c) { out(c[0], c[1], c[2], c[3], "cut"); });
+    /* cut faces: chain each object's cut segments into closed outlines (mm), for the grey fill of cut parts */
+    var fills = [], byG = {}; cuts.forEach(function (c) { (byG[c[4]] = byG[c[4]] || []).push(c); });
+    Object.keys(byG).forEach(function (gk) {
+      var segs = byG[gk].map(function (c) { return { a: [Math.round(c[0] * 1000), Math.round(c[1] * 1000)], b: [Math.round(c[2] * 1000), Math.round(c[3] * 1000)], u: false }; }).filter(function (q) { return q.a[0] !== q.b[0] || q.a[1] !== q.b[1]; }), at = {}, key = function (p) { return p[0] + "," + p[1]; };
+      if (segs.length > 4000) return; segs.forEach(function (q, i) { (at[key(q.a)] = at[key(q.a)] || []).push(i); (at[key(q.b)] = at[key(q.b)] || []).push(i); });
+      segs.forEach(function (q0) { if (q0.u) return; q0.u = true; var loop = [q0.a, q0.b], end = q0.b, guard = 0;
+        while (guard++ < 5000) { if (end[0] === loop[0][0] && end[1] === loop[0][1]) break; var nx = (at[key(end)] || []).filter(function (i) { return !segs[i].u; })[0]; if (nx == null) { loop = null; break; } var q = segs[nx]; q.u = true; end = q.a[0] === end[0] && q.a[1] === end[1] ? q.b : q.a; loop.push(end); }
+        if (!loop || loop.length < 4) return; loop.pop(); var ar = 0; for (var i = 0; i < loop.length; i++) { var j = (i + 1) % loop.length; ar += loop[i][0] * loop[j][1] - loop[j][0] * loop[i][1]; } if (Math.abs(ar) / 2 < 400) return; fills.push(loop); });
+    });
     var ext = [Infinity, Infinity, -Infinity, -Infinity]; lines.forEach(function (L) { G.ext(ext, L.a); G.ext(ext, L.b); });
     if (!isFinite(ext[0])) return null;
-    return { lines: lines, ext: ext, ngl: ngl, levels: bs.levels.map(function (l) { return { name: l.name, elev: l.elev }; }), tris: tris.length / 10 };
+    return { lines: lines, fills: fills, ext: ext, ngl: ngl, levels: bs.levels.map(function (l) { return { name: l.name, elev: l.elev }; }), tris: tris.length / 10 };
   };
 
   /* block content for a view: the lines, ground line, level marks and the title under it; bb = everything, in block coordinates */
   B.viewBlock = function (res, title, N) {
     var ents = [], x0 = res.ext[0], x1 = res.ext[2], th = 2.5 * N, tw = function (s, h) { return s.length * h * 0.58; }, bb = res.ext.slice();
+    (res.fills || []).forEach(function (lp) { ents.push({ t: "hatch", pat: "SOLID", sc: 1, ang: 0, loops: [lp.map(function (q) { return [q[0], q[1], 0]; })], layer: "A-ELEV-FILL" }); });
     res.lines.forEach(function (L) { ents.push({ t: "line", a: L.a, b: L.b, layer: L.k === "cut" ? "A-ELEV-CUT" : "A-ELEV" }); });
     ents.push({ t: "line", a: [x0 - 8 * N, res.ngl], b: [x1 + 8 * N, res.ngl], layer: "A-ELEV-GL" }); G.ext(bb, [x1 + 8 * N, res.ngl]); G.ext(bb, [x0 - 8 * N, res.ngl]);
     var top = res.ext[3];

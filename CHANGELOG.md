@@ -3,6 +3,10 @@
 This file is for the people maintaining the app. It is not published with the site (see `.assetsignore`).
 The text users see is `EP_NOTES` in `js/version.js`.
 
+## 2026.11.21-n
+- Sections: `B.viewLines` chains each object's cut segments into closed outlines (`fills`); `B.viewBlock` adds them as SOLID hatches on layer A-ELEV-FILL (grey on screen, black in a monochrome plot). Open chains and outlines under 400 mm² are dropped.
+- Test sweep (no code change needed): 1,710 cases — every run / cladding / unit kind on straight, L, Z, closed, very short and tiny-size paths, both sides, every LED mode; 576 door combinations (12 designs × 3 heads × 4 leaf kinds × 4 handles); windows and openings with each head; 4 room shapes × 5 ceiling designs × 4 spot options; every sized-furniture item in each design at 3 sizes; all new library pieces plain and stretched. Each was meshed, measured and drawn on plan: no exception, no NaN, no empty mesh.
+
 ## 2026.11.21-m
 - `templates.json`: 6 new Non-SOR items with analysis (362 in all) — POP / gypsum cornice (m_mfc), stepped / tray ceiling extra per metre of step (m_mfc), cement plaster band, GRC cornice, ready-made decorative piece (m_mtp), kitchen chimney (m_mmk). `r` was computed with `EP.nsCalc` in the app. Market lines are indicative.
 - New quantity rows / keys: `run_cornice_ext` (external cornice run), `ceil_step` (length of ceiling step = cove length), `chimney` (kitchen). `B.NSMAP` covers `run_cornice`, `run_cornice_ext`, `run_band`, `plaster_decor`, `ceil_step`, `chimney`.

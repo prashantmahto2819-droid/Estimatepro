@@ -1,6 +1,6 @@
 # Estimate Pro — pending work (kept with the code; not published)
 
-Last updated at version 2026.11.21-m.
+Last updated at version 2026.11.21-n.
 
 ## A. Waiting for the owner
 1. Connect the app's Supabase project (ref starts `eaygozhjsmohfcuiazfm`) to the build session. Then: admin dashboard switches (module on / off), WhatsApp update messages with real pictures, shared cut-out / model library for all users.
@@ -55,7 +55,7 @@ Last updated at version 2026.11.21-m.
 1. (done in -x: SHEET puts plan + elevations + sections in one frame at one scale and plots with the title block.) Still open: several sheets per drawing, views at different scales on one sheet, print sets, sheet in portrait.
 2. Real dimensions, ellipse and spline in DXF export; DWG is not possible in the browser.
 3. Curved walls, sloping slabs / ramps, split levels.
-4. (done in -x: ELEVATION, SECTION, VIEWSUPDATE.) Still open: fill (poché) of cut parts, automatic dimensions and material notes on elevations, door / window swing marks, outlines for library items that have no edges, views update on their own.
+4. (done in -x: ELEVATION, SECTION, VIEWSUPDATE.) (-n: cut parts are filled.) Still open: automatic dimensions and material notes on elevations, door / window swing marks, outlines for library items that have no edges, views update on their own.
 5. Door / window schedule and room finish schedule as tables on the sheet.
 6. Hatch patterns library, text styles, blocks library shared between drawings.
 7. Plumbing and electrical runs (pipes, conduits) with lengths in Σ Quantities.
