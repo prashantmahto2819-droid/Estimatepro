@@ -3,6 +3,10 @@
 This file is for the people maintaining the app. It is not published with the site (see `.assetsignore`).
 The text users see is `EP_NOTES` in `js/version.js`.
 
+## 2026.11.21-t
+- `view3d.js`: `rayAt`, `moveMode` with `onMoveStart / onMoveDrag / onMoveEnd` (drag on the horizontal plane through the point picked; 25 mm steps). `ui-bim.js`: `MOVABLE` types, live rebuild every 70 ms while dragging, one undo step; `rot3d` (⟲ ⟳ 15°).
+- `templates.json`: category `furn` in group `fin` — 33 NS items (supply + carriage + placing labour, DAR add-ons); rates are indicative mid-range 2026. `B.NSMAP` maps 37 library keys to them (unmapped keys 89 → 52).
+
 ## 2026.11.21-s
 - New `js/bim/site.js`: type `ramp` (`B.EXT.ramp`, `B.rampInfo`; qty as rcc_slab / shut_slab / steel_slab on the sloping length), commands RAMP, PLOTBOUNDARY (`B.parseBearing`, `B.fmtBearing`, `B.plotBoundary`; bearings measured from the sun's north; layers C-PROP, C-PROP-TXT), SPOTLEVEL (layer C-TOPO).
 - SHEET asks Landscape / Portrait; `layouts[0].land` is used by the plot dialog.

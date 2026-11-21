@@ -1349,10 +1349,16 @@ P.prototype.bind=function(){
   const cv=this.cv, self=this;
   let down=false, btn=0, lx=0, ly=0;
   let pinch0=0, touches=[], x0=0, y0=0, multi=false, mid0=null;
+  let drag=null;
 
   cv.addEventListener('pointerdown',function(e){
     cv.setPointerCapture(e.pointerId);
     down=true; btn=e.button; lx=e.clientX; ly=e.clientY; x0=lx; y0=ly; multi=false;
+    drag=null;
+    if(self.moveMode && !self.walk && !self.measure && e.button===0 && touches.length===0){
+      const r=cv.getBoundingClientRect(), X=e.clientX-r.left, Y=e.clientY-r.top, pid=self.pickAt(X,Y), el=pid>0&&self.byIdx?(self.byIdx[pid-1]||null):null, hp=el?self.hitPoint(X,Y,true):null;
+      if(el && hp && self.onMoveStart && self.onMoveStart(el,hp.p)){ drag={p:hp.p,moved:false}; self.sel=pid; self.dirty=true; }
+    }
     if(e.pointerType==='touch'){
       touches.push({id:e.pointerId,x:e.clientX,y:e.clientY});
       if(touches.length===2){
@@ -1365,6 +1371,12 @@ P.prototype.bind=function(){
 
   cv.addEventListener('pointermove',function(e){
     if(!down) return;
+    if(drag){
+      if(Math.abs(e.clientX-x0)+Math.abs(e.clientY-y0)<5 && !drag.moved) return;
+      const r=cv.getBoundingClientRect(), ry=self.rayAt(e.clientX-r.left,e.clientY-r.top); if(!ry || Math.abs(ry.d[2])<0.02) return;
+      const t=(drag.p[2]-ry.o[2])/ry.d[2]; if(!(t>0) || t>2000) return;
+      drag.moved=true; if(self.onMoveDrag) self.onMoveDrag(ry.o[0]+ry.d[0]*t-drag.p[0], ry.o[1]+ry.d[1]*t-drag.p[1]); return;
+    }
     if(e.pointerType==='touch'){
       const ti=touches.findIndex(t=>t.id===e.pointerId);
       if(ti>=0){touches[ti].x=e.clientX;touches[ti].y=e.clientY;}
@@ -1410,6 +1422,7 @@ P.prototype.bind=function(){
       pinch0=0; mid0=null;
       if(down) return;
     }else down=false;
+    if(drag){ const mvd=drag.moved; drag=null; if(self.onMoveEnd) self.onMoveEnd(mvd); if(mvd) return; }
     /* tap = pick (measured from where the pointer went down, so an orbit / pan / pinch never picks) */
     const dx=Math.abs(e.clientX-x0), dy=Math.abs(e.clientY-y0);
     if(dx<4&&dy<4&&btn===0&&!multi){
@@ -1425,6 +1438,7 @@ P.prototype.bind=function(){
   cv.addEventListener('pointercancel',function(e){
     touches=touches.filter(t=>t.id!==e.pointerId);
     down=touches.length>0; pinch0=0; mid0=null; multi=true;
+    if(drag){ drag=null; if(self.onMoveEnd) self.onMoveEnd(false,true); }
   });
 
   cv.tabIndex=0; self._keys=new Set();
@@ -1583,6 +1597,14 @@ function xfRow(p,m){ const o=[0,0,0,0]; for(let c=0;c<4;c++) o[c]=p[0]*m[c]+p[1]
 P.prototype.project=function(p){   /* model point (m) → CSS px, or null when behind the camera */
   const c=xfRow([p[0],p[1],p[2],1],this.mats().vp); if(c[3]<=1e-6) return null;
   return[(c[0]/c[3]*0.5+0.5)*this.cv.clientWidth,(0.5-c[1]/c[3]*0.5)*this.cv.clientHeight];
+};
+/* ray through a screen point: {o, d} in world metres */
+P.prototype.rayAt=function(x,y){
+  const m=this.mats(), iv=inv(m.vp); if(!iv) return null;
+  const nx=x/this.cv.clientWidth*2-1, ny=1-y/this.cv.clientHeight*2;
+  const a=xfRow([nx,ny,-1,1],iv), b=xfRow([nx,ny,1,1],iv);
+  const o=[a[0]/a[3],a[1]/a[3],a[2]/a[3]], e=[b[0]/b[3],b[1]/b[3],b[2]/b[3]];
+  let d=[e[0]-o[0],e[1]-o[1],e[2]-o[2]]; const dl=Math.hypot(d[0],d[1],d[2])||1; return {o:o,d:[d[0]/dl,d[1]/dl,d[2]/dl]};
 };
 P.prototype.hitPoint=function(x,y,noSnap){
   const m=this.mats(), iv=inv(m.vp); if(!iv) return null;

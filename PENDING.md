@@ -29,6 +29,7 @@ Last updated at version 2026.11.21-q.
    What to send in the chat, in this order (10–20 files at a time, name each file by what it is, e.g. `wc-wall-hung.glb`, `tile-600x600-beige.jpg`):
    1) sanitary ware and taps (GLB), 2) furniture — beds, sofas, wardrobes, TV units, doors (GLB), 3) decorative and garden lights (GLB), 4) cars, people, trees (GLB or PNG), 5) material pictures (JPG) with the real width of the area shown, 6) sky / site background (JPG). With each batch say the site it came from and the licence shown there.
 3. Confirm the indicative Non-SOR rates: fencing — precast RCC post ₹1,275 each, strut ₹1,000 each (-r).
+3b. Confirm / replace with quotations: 33 loose furniture and appliance rates (-t).
 3a. Decisions: the 30 quick rates that differ from their analysis (tipper, tanker…); whether 1:30 / 1:40 / 1:60 scales may be used on Design Studio sheets.
 4. Commercial plans (owner will describe).
 
@@ -41,7 +42,7 @@ Last updated at version 2026.11.21-q.
 6. Vehicles that turn at the end of the path, wheels that turn; people with a walking cycle.
 7. Camera path drawn on the plan for the video; MP4 export where the browser allows.
 8. Section box: hide the shadows of cut-away parts; section fill colour.
-9. Select / move / rotate objects directly in 3D.
+9. (done in -t: ✥ Move drags placed objects along the floor, ⟲ ⟳ turn by 15°.) Still open: move up / down, snap to walls, move walls and openings in 3D, copy in 3D.
 10. Slanting outlines with inside corners (hip), gable roofs on slanting outlines, curved roofs, domes as roof elements.
 
 11. Materials: (done in -y: 386 looks — paint shade card, putty / primer / distemper, enamel, textures, tiles, granite, marble, wood, laminate, metal, glass, ACP; any material of a library item can be swapped in Properties.) Still open: picture-based (photo) materials built in for all users (needs the files above), bump / roughness maps, (-p: search box in Paint) material favourites, search by colour, brand shade codes.
@@ -64,5 +65,5 @@ Last updated at version 2026.11.21-q.
 
 ## D. Other
 1. Design Studio sheets: views are small and some labels overlap.
-2. SOR mapping for the remaining library items.
+2. (-t: 37 furniture / appliance / garden keys take Non-SOR items.) Still open: 52 keys — fountains, partitions, temple pieces, grills, boundary walls and gates, electrical equipment (DG set, transformer, UPS), curtains.
 3. Deeper testing of screens that need a signed-in server session.
