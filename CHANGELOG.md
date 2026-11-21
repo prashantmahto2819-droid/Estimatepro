@@ -3,6 +3,9 @@
 This file is for the people maintaining the app. It is not published with the site (see `.assetsignore`).
 The text users see is `EP_NOTES` in `js/version.js`.
 
+## 2026.11.21-z3
+- CAMPATH: Speed / Height options → `bim.camSpeed`, `bim.camEye`; Tour uses both. Record: MP4 (avc1) tried before WebM. Record + Tour checked in the test browser: stops and saves at the end of the path.
+
 ## 2026.11.21-z2
 - `site.js`: CAMPATH — one polyline on layer A-CAMPATH (replaced each time). `ui-bim.js` Tour: if that polyline exists the camera walks along it in walk mode (`v.we`, `v.yaw`; eye 1.6 m above the current level, 1.4 m/s or `bim.camSpeed`, look-ahead 1.5 m, time-based turn smoothing); otherwise scenes / orbit as before.
 - `roofs2.js`: `smooth()` rewrites vertex normals of the dome / vault shells.

@@ -43,7 +43,7 @@ Last updated at version 2026.11.21-q.
 4. (done in -x: sky presets and an own background picture.) Still open: the picture does not light the model (no image-based lighting), (-r: sky saved per scene) ground materials by area.
 5. (-u: sky reflection on glass and polished surfaces.) Still open: reflections of the building itself, water surfaces, softer shadows.
 6. Vehicles that turn at the end of the path, wheels that turn; people with a walking cycle.
-7. (-z2: CAMPATH + Tour walks the path; Record makes the video.) Still open: speed and eye height in the dialog, look-at targets, stairs between levels, doors that open on the way, MP4 where the browser only gives WebM.
+7. (-z2: CAMPATH + Tour walks the path; Record makes the video.) (-z3: speed, eye height, MP4 first.) Still open: look-at targets, stairs between levels, doors that open on the way.
 8. Section box: hide the shadows of cut-away parts; section fill colour.
 9. (done in -t: ✥ Move drags placed objects along the floor, ⟲ ⟳ turn by 15°.) Still open: move up / down, snap to walls, move walls and openings in 3D, copy in 3D.
 10. Slanting outlines with inside corners (hip), gable roofs on slanting outlines, (-y: DOME and VAULT roof elements.) (-z2: smooth shading.) Still open: domes on a drum / ring beam in one step, conical and pyramid-on-polygon roofs.

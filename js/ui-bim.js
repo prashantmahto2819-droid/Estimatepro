@@ -230,12 +230,12 @@
         var tot = cum[cum.length - 1], spd = Math.max(0.3, +(bim(ed).camSpeed) || 1.4), LvC = B.level(ed.doc.d, bim(ed).cur), fz = ((LvC ? LvC.elev : 0) + (+(bim(ed).ngl) < 0 ? 0 : 0)) / 1000;
         if (tot > 0.5) {
           var at = function (d) { d = Math.max(0, Math.min(tot, d)); var k2 = 1; while (k2 < cum.length - 1 && cum[k2] < d) k2++; var f2 = (d - cum[k2 - 1]) / ((cum[k2] - cum[k2 - 1]) || 1); return [PP[k2 - 1][0] + (PP[k2][0] - PP[k2 - 1][0]) * f2, PP[k2 - 1][1] + (PP[k2][1] - PP[k2 - 1][1]) * f2]; };
-          var runW = C.v3tour = {}, Tw = performance.now(), a0 = at(0), a1 = at(1.5); v.spin = false; v.setWalk(true, fz, a0); C.v3tourWalk = true; v.yaw = Math.atan2(-(a1[0] - a0[0]), a1[1] - a0[1]); btn("tour", true);
+          var eyeW = Math.max(0.3, +(bim(ed).camEye) || 1.6), runW = C.v3tour = {}, Tw = performance.now(), a0 = at(0), a1 = at(1.5); v.spin = false; v.setWalk(true, fz, a0); v.we[2] = fz + eyeW; C.v3tourWalk = true; v.yaw = Math.atan2(-(a1[0] - a0[0]), a1[1] - a0[1]); btn("tour", true);
           say("Walking the camera path — " + tot.toFixed(1) + " m at " + spd + " m/s. Press Tour again to stop. Use ● Record with it to make a video.");
           (function stepW() {
             if (C.v3tour !== runW || !C.v3 || C.v3.dead) return;
             var dW = (performance.now() - Tw) / 1000 * spd, pW = at(dW), qW = at(dW + 1.5), ty = Math.hypot(qW[0] - pW[0], qW[1] - pW[1]) > 0.05 ? Math.atan2(-(qW[0] - pW[0]), qW[1] - pW[1]) : v.yaw, dy2 = ty - v.yaw; while (dy2 > Math.PI) dy2 -= 2 * Math.PI; while (dy2 < -Math.PI) dy2 += 2 * Math.PI;
-            v.we = [pW[0], pW[1], fz + 1.6]; var nowW = performance.now(), dtW = Math.min(0.2, (nowW - (runW.t || nowW)) / 1000); runW.t = nowW; v.yaw += dy2 * (1 - Math.exp(-dtW * 5)); v.wpitch = 0; v.dirty = true;
+            v.we = [pW[0], pW[1], fz + eyeW]; var nowW = performance.now(), dtW = Math.min(0.2, (nowW - (runW.t || nowW)) / 1000); runW.t = nowW; v.yaw += dy2 * (1 - Math.exp(-dtW * 5)); v.wpitch = 0; v.dirty = true;
             if (dW >= tot) { C.v3tour = null; C.v3tourWalk = false; v.setWalk(false); btn("tour", false); say("Tour finished."); if (C.v3rec && C.v3rec.auto) v3mode(ed, C, "rec"); return; }
             requestAnimationFrame(stepW);
           })();
@@ -260,7 +260,7 @@
     if (m === "rec") {
       if (C.v3rec) { var rc = C.v3rec; C.v3rec = null; btn("rec", false); try { rc.mr.stop(); } catch (e2) {} return; }
       var cv = root.querySelector(".v3-cv"); if (!cv.captureStream || !window.MediaRecorder) { U.toast("This browser cannot record the 3D view. Use Chrome or Edge."); return; }
-      var types = ["video/webm;codecs=vp9", "video/webm;codecs=vp8", "video/webm", "video/mp4"], mt = types.filter(function (x) { return MediaRecorder.isTypeSupported(x); })[0];
+      var types = ["video/mp4;codecs=avc1.42E01E", "video/mp4", "video/webm;codecs=vp9", "video/webm;codecs=vp8", "video/webm"], mt = types.filter(function (x) { return MediaRecorder.isTypeSupported(x); })[0];
       if (!mt) { U.toast("This browser cannot record video."); return; }
       var chunks = [], mr = new MediaRecorder(cv.captureStream(30), { mimeType: mt, videoBitsPerSecond: 8e6 });
       mr.ondataavailable = function (ev) { if (ev.data && ev.data.size) chunks.push(ev.data); };
