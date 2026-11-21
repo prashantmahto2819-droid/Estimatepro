@@ -3,6 +3,11 @@
 This file is for the people maintaining the app. It is not published with the site (see `.assetsignore`).
 The text users see is `EP_NOTES` in `js/version.js`.
 
+## 2026.11.21-z30
+- `bim.js` `stairGeom`: kind "lshape" — flight 1 along the going, last step a w × w landing (`lw`), flight 2 along the side normal with its width along the going; returns `L: true`. Steps now carry `lw` (landing width) instead of the mesh guessing it. `stairOutline`: bounding rectangle plus `hole` (six points) and `L0`; landing volume w × w × waist.
+- `mesh.js`: step polygons made counter-clockwise whatever the flight direction. `tools.js`: type Lshape; `cutWell` cuts the L-shaped hole and rails its inner edges; the "already cut" test uses the landing centre.
+- Harness: L stair in the corner of a 4.27 × 4.77 m room (3.5 × 3.5 m), hole of six points, two railing runs, handrails 2 × 2.928 m; in the 3.27 m room it says it does not fit. The dog-leg test of -z29 still passes.
+
 ## 2026.11.21-z29
 - `tools.js`: `cutWell(ed, e)` (shared by STAIR and STAIRWELL) cuts the hole and adds `railing` elements (`well` = stair id, h 1000) on the level whose elevation is the stair top: all sides of the opening except the arrival edge (dog-leg: the part of the start edge over the second flight; straight: the far end) and sides with a wall within 200 mm; re-running replaces them. New STAIRUP (aliases STAIRFLOORS, STAIRREPEAT): copies the stair to each higher level that has walls and no stair at that point, with `n` / `R` from that level's height, and cuts each opening.
 - `bim.js` `stairRails`: the first flight of a dog-leg ends at the landing; a flat rail joins the flights across the well. `ui-bim.js`: Landing length, Gap between the flights.

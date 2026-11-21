@@ -162,11 +162,21 @@
   /* stair: steps along dir from p; dog-leg turns back after a landing */
   function stairGeom(e) {
     var dir = (e.dir || 0) * Math.PI / 180, u = [Math.cos(dir), Math.sin(dir)], n = G.mul(G.perp(u), +e.side === -1 ? -1 : 1), w = e.w, T = e.T, R = e.R, N = e.n, steps = [], plan = [];
-    var flights = e.kind === "dogleg" ? [Math.ceil(N / 2), Math.floor(N / 2)] : [N], land = e.land || w, z = 0, origin = e.p;
+    var flights = e.kind === "dogleg" || e.kind === "lshape" ? [Math.ceil(N / 2), Math.floor(N / 2)] : [N], land = e.land || w, z = 0, origin = e.p;
+    if (e.kind === "lshape") {   /* first flight along the going, a square quarter landing, second flight turned to the side */
+      var L0 = (flights[0] - 1) * T, c0 = G.add(origin, G.mul(u, L0));
+      for (var i0 = 0; i0 < flights[0]; i0++) { var last0 = i0 === flights[0] - 1; steps.push({ a: G.add(origin, G.mul(u, i0 * T)), u: u, n: n, w: w, T: last0 ? w : T, z0: z, z1: z + R, last: last0, lw: last0 ? w : 0 }); z += R; if (!last0 || true) plan.push([G.add(origin, G.mul(u, i0 * T)), G.add(G.add(origin, G.mul(u, i0 * T)), G.mul(n, w))]); }
+      var o1 = G.add(c0, G.mul(n, w));
+      for (var i1 = 0; i1 < flights[1]; i1++) { var a1 = G.add(o1, G.mul(n, i1 * T)); steps.push({ a: a1, u: n, n: u, w: w, T: T, z0: z, z1: z + R, last: i1 === flights[1] - 1 }); z += R; plan.push([a1, G.add(a1, G.mul(u, w))]); }
+      var e1 = G.add(o1, G.mul(n, flights[1] * T)), far = G.add(origin, G.mul(u, L0 + w));
+      plan.push([origin, far], [far, G.add(far, G.mul(n, w))], [G.add(origin, G.mul(n, w)), G.add(c0, G.mul(n, w))], [o1, e1], [G.add(far, G.mul(n, w)), G.add(e1, G.mul(u, w))], [e1, G.add(e1, G.mul(u, w))]);
+      plan.push([G.add(origin, G.mul(n, w / 2)), G.add(G.add(c0, G.mul(u, w / 2)), G.mul(n, w / 2))], [G.add(G.add(c0, G.mul(u, w / 2)), G.mul(n, w / 2)), G.add(G.add(e1, G.mul(u, w / 2)), G.mul(n, -T))]);
+      return { steps: steps, plan: plan, flights: flights, L: true };
+    }
     flights.forEach(function (cnt, fi) {
       var treads = cnt - 1, o = fi === 0 ? origin : G.add(G.add(origin, G.mul(u, (flights[0] - 1) * T)), G.mul(n, w + (e.gap || 100))), dirU = fi === 0 ? u : G.mul(u, -1);
       if (fi === 1) o = G.add(G.add(origin, G.mul(u, (flights[0] - 1) * T)), G.mul(n, w + (e.gap || 100)));
-      for (var i = 0; i < cnt; i++) { var a = G.add(o, G.mul(dirU, i * T)); steps.push({ a: a, u: dirU, n: n, w: w, T: i < treads ? T : (fi === 0 && flights.length > 1 ? land : T), z0: z, z1: z + R, last: i === cnt - 1 }); z += R; }
+      for (var i = 0; i < cnt; i++) { var a = G.add(o, G.mul(dirU, i * T)); steps.push({ a: a, u: dirU, n: n, w: w, T: i < treads ? T : (fi === 0 && flights.length > 1 ? land : T), z0: z, z1: z + R, last: i === cnt - 1, lw: i === cnt - 1 && fi === 0 && flights.length > 1 ? 2 * w + (e.gap || 100) : 0 }); z += R; }
       for (var j = 0; j <= treads; j++) { var q = G.add(o, G.mul(dirU, j * T)); plan.push([q, G.add(q, G.mul(n, w))]); }
       plan.push([o, G.add(o, G.mul(dirU, treads * T))], [G.add(o, G.mul(n, w)), G.add(G.add(o, G.mul(n, w)), G.mul(dirU, treads * T))]);
     });
@@ -184,7 +194,7 @@
       if (mode === "in" || mode === "both") offs.push(inner); if (mode === "out" || mode === "both") offs.push(outer);
       var toLand = dog && fi === 0;   /* the last step of the first flight is the landing: the rail stops where the landing begins */
       offs.forEach(function (o) { var p0 = G.add(a.a, G.mul(a.n, o)), p1 = toLand ? G.add(b.a, G.mul(b.n, o)) : G.add(G.add(b.a, G.mul(b.u, e.T)), G.mul(b.n, o)), zE = toLand ? b.z1 : b.z1 + e.R; out.push({ p0: p0, z0: a.z1, p1: p1, z1: zE, u: a.u, n: toLand ? st.length - 1 : st.length, len: Math.hypot(G.dist(p0, p1), zE - a.z1) }); }); });
-    if (dog && (mode === "in" || mode === "both")) { var f0 = S.flights[0], Lb = S.steps[f0 - 1], F1 = S.steps[f0]; if (Lb && F1) { var qa = G.add(Lb.a, G.mul(Lb.n, e.w - 50)), qb = G.add(F1.a, G.mul(F1.n, 50)); out.push({ p0: qa, z0: Lb.z1, p1: qb, z1: Lb.z1, u: Lb.n, n: 1, flat: true, len: G.dist(qa, qb) }); } }   /* across the well at the landing */
+    if (dog && !S.L && (mode === "in" || mode === "both")) { var f0 = S.flights[0], Lb = S.steps[f0 - 1], F1 = S.steps[f0]; if (Lb && F1) { var qa = G.add(Lb.a, G.mul(Lb.n, e.w - 50)), qb = G.add(F1.a, G.mul(F1.n, 50)); out.push({ p0: qa, z0: Lb.z1, p1: qb, z1: Lb.z1, u: Lb.n, n: 1, flat: true, len: G.dist(qa, qb) }); } }   /* across the well at the landing */
     return out; };
   /* least clear height over the treads under the solid part of the slab above (null = open above everywhere) */
   B.stairHead = function (doc, e) { var Lv = B.level(doc.d, e.lvl), base = Lv ? Lv.elev : 0, top = base + e.n * e.R, S = stairGeom(e), min = null, low = 0;
@@ -192,7 +202,7 @@
     S.steps.forEach(function (st) { var c = G.add(G.add(st.a, G.mul(st.u, e.T / 2)), G.mul(st.n, e.w / 2)); slabs.forEach(function (s) { if (!G.inPoly(c, s.pts) || (s.holes || []).some(function (h) { return G.inPoly(c, h); })) return; var hd = top - (s.th || 125) - (base + st.z1); if (min == null || hd < min) min = hd; if (hd < 2100) low++; }); });
     return { min: min, low: low }; };
   /* the rectangle a stair covers on plan: start corner, along the going, across the flights */
-  B.stairOutline = function (e) { var S = stairGeom(e), dir = (e.dir || 0) * Math.PI / 180, u = [Math.cos(dir), Math.sin(dir)], n = G.mul(G.perp(u), +e.side === -1 ? -1 : 1), dog = S.flights.length > 1, len = dog ? (S.flights[0] - 1) * e.T + (e.land || e.w) : e.n * e.T, wd = dog ? 2 * e.w + (e.gap || 100) : e.w, p = e.p; return { len: len, wd: wd, u: u, n: n, pts: [p, G.add(p, G.mul(u, len)), G.add(G.add(p, G.mul(u, len)), G.mul(n, wd)), G.add(p, G.mul(n, wd))] }; };
+  B.stairOutline = function (e) { var S = stairGeom(e), dir = (e.dir || 0) * Math.PI / 180, u = [Math.cos(dir), Math.sin(dir)], n = G.mul(G.perp(u), +e.side === -1 ? -1 : 1), dog = S.flights.length > 1 && !S.L, len = S.L ? (S.flights[0] - 1) * e.T + e.w : dog ? (S.flights[0] - 1) * e.T + (e.land || e.w) : e.n * e.T, wd = S.L ? e.w + S.flights[1] * e.T : dog ? 2 * e.w + (e.gap || 100) : e.w, p = e.p, at = function (a, b) { return G.add(G.add(p, G.mul(u, a)), G.mul(n, b)); }, L0 = len - e.w; return { len: len, wd: wd, u: u, n: n, L: !!S.L, L0: L0, pts: [p, at(len, 0), at(len, wd), at(0, wd)], hole: S.L ? [p, at(len, 0), at(len, wd), at(L0, wd), at(L0, e.w), at(0, e.w)] : null }; };
   /* clear distances from the stair to the walls of its level: [behind the first step, beyond the far end, on the start side, on the other side] (null = no wall met within 20 m), and the walls it runs into */
   B.stairClear = function (doc, e) { var O = B.stairOutline(e), W = doc.d.ents.filter(function (w) { return w.t === "wall" && w.lvl === e.lvl; }).map(function (w) { return B.wallPoly(doc, w); }).filter(Boolean).map(function (P) { return [P.sL, P.eL, P.eR, P.sR]; });
     var ray = function (o, d) { var best = null; W.forEach(function (Q) { for (var i = 0; i < 4; i++) { var a = Q[i], b = Q[(i + 1) % 4], ex = b[0] - a[0], ey = b[1] - a[1], den = d[0] * ey - d[1] * ex; if (Math.abs(den) < 1e-9) continue; var t = ((a[0] - o[0]) * ey - (a[1] - o[1]) * ex) / den, k = ((a[0] - o[0]) * d[1] - (a[1] - o[1]) * d[0]) / den; if (t >= -1 && k >= 0 && k <= 1 && (best == null || t < best)) best = t; } }); return best != null && best < 20000 ? Math.max(0, best) : null; };
@@ -471,7 +481,7 @@
       return rows;
     }
     if (e.t === "stair") {
-      var S = stairGeom(e), steps = S.steps.length, run = (e.n - S.flights.length) * e.T, rise = e.n * e.R, incl = Math.hypot(run, rise), stepsV = steps * e.T * e.R / 2 * e.w, waist = incl * e.w * (e.wt || 150), landV = S.flights.length > 1 ? (2 * e.w + (e.gap || 100)) * (e.land || e.w) * (e.wt || 150) : 0;
+      var S = stairGeom(e), steps = S.steps.length, run = (e.n - S.flights.length) * e.T, rise = e.n * e.R, incl = Math.hypot(run, rise), stepsV = steps * e.T * e.R / 2 * e.w, waist = incl * e.w * (e.wt || 150), landV = S.L ? e.w * e.w * (e.wt || 150) : S.flights.length > 1 ? (2 * e.w + (e.gap || 100)) * (e.land || e.w) * (e.wt || 150) : 0;
       push("rcc_stair", "V", stepsV + waist + landV, "RCC staircase (waist slab + steps" + (landV ? " + landing" : "") + ")", e.n + " risers × " + e.R + " / treads " + e.T + ", width " + e.w);
       push("shut_stair", "A", incl * e.w + steps * e.R * e.w, "Shuttering — stairs", "");
       push("stair_finish", "A", steps * (e.T + e.R) * e.w, "Stair finish — treads + risers", "");
