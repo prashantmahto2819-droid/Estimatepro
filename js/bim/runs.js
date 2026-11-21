@@ -221,12 +221,18 @@
   var cmds = CAD.commands, AL = CAD.aliases;
   function cmd(name, al, fn) { cmds[name] = { fn: fn }; (al || []).forEach(function (a) { AL[a] = name; }); }
   function kwOf(fam) { var o = {}; Object.keys(RUNS).forEach(function (k) { if (RUNS[k].fam === fam) o[k.split("_").map(function (w) { return w[0].toUpperCase() + w.slice(1); }).join("")] = k; }); return o; }
+  /* points along the arc from a through m to c (without a itself), about one every 250 mm */
+  function arcPts(a, m, c) { var k = G.circle3(a, m, c); if (!k || k.r > G.dist(a, c) * 50) return [c]; var t1 = Math.atan2(a[1] - k.c[1], a[0] - k.c[0]), t2 = Math.atan2(m[1] - k.c[1], m[0] - k.c[0]), t3 = Math.atan2(c[1] - k.c[1], c[0] - k.c[0]), nz = function (x) { x %= Math.PI * 2; return x < 0 ? x + Math.PI * 2 : x; }, ccw = nz(t2 - t1) < nz(t3 - t1), sw = ccw ? nz(t3 - t1) : -nz(t1 - t3), n = Math.max(6, Math.min(64, Math.ceil(Math.abs(sw) * k.r / 250))), P = [];
+    for (var i = 1; i <= n; i++) { var t = t1 + sw * i / n; P.push(i === n ? [c[0], c[1]] : [k.c[0] + k.r * Math.cos(t), k.c[1] + k.r * Math.sin(t)]); } return P; }
   async function draw(ed, fam) {
     B.ensure(ed.doc.d); var KW = kwOf(fam), names = Object.keys(KW), memo = fam === "p" ? "runKind" : fam === "u" ? "unitKind" : "cladKind", cur = ed[memo] && RUNS[ed[memo]] && RUNS[ed[memo]].fam === fam ? ed[memo] : KW[names[0]];
     var kind = cur, side = ed.runSide === -1 ? -1 : 1, lvl = B.ensure(ed.doc.d).cur, pts = [], D = RUNS[kind];
     var head = function () { return RUNS[kind].n + " — start point"; };
     while (true) {
-      var p = await ed.getPoint(pts.length ? "Next point (Enter to finish)" : head(), { opt: pts.length > 0, base: pts.length ? pts[pts.length - 1] : null, kw: pts.length ? (pts.length > 2 ? ["Undo", "Close", "Flip"] : ["Undo", "Flip"]) : ["Type", "Flip"] });
+      var p = await ed.getPoint(pts.length ? "Next point (Enter to finish)" : head(), { opt: pts.length > 0, base: pts.length ? pts[pts.length - 1] : null, kw: pts.length ? (pts.length > 2 ? ["Arc", "Undo", "Close", "Flip"] : ["Arc", "Undo", "Flip"]) : ["Type", "Circle", "Flip"] });
+      if (p === "Circle") { var cc = await ed.getPoint("Centre of the circle"), rr = await ed.getDist("Radius", { base: cc, def: 1000 }); if (!(rr > 20)) continue; var cp = [], nn = Math.max(16, Math.min(72, Math.ceil(2 * Math.PI * rr / 250))); for (var ci = 0; ci < nn; ci++) cp.push([cc[0] + rr * Math.cos(2 * Math.PI * ci / nn), cc[1] + rr * Math.sin(2 * Math.PI * ci / nn)]);
+        ed.preview = null; ed.doc.add({ t: "run", kind: kind, pts: cp, closed: true, side: side, lvl: lvl }); ed[memo] = kind; ed.say(RUNS[kind].n + " added as a circle of radius " + Math.round(rr) + " mm. Use Flip side in Properties if it stands out the wrong way."); return; }
+      if (p === "Arc") { var from = pts[pts.length - 1], ae = await ed.getPoint("End point of the curve", { base: from }), am; ed.preview = (function (k, sd, base) { return function (w) { return [{ t: "run", kind: k, pts: base.concat(arcPts(from, w, ae)), side: sd, lvl: lvl }]; }; })(kind, side, pts.slice()); am = await ed.getPoint("A point on the curve"); pts = pts.concat(arcPts(from, am, ae)); (function (k, sd) { ed.preview = function (w) { return [{ t: "run", kind: k, pts: pts.concat([[w[0], w[1]]]), side: sd, lvl: lvl }]; }; })(kind, side); continue; }
       if (p === "Type") { var pick = await ed.getKw("Which one?", names, names.filter(function (n) { return KW[n] === kind; })[0]); kind = KW[pick] || kind; ed[memo] = kind; continue; }
       if (p === "Flip") { side = -side; ed.runSide = side; ed.say("It now stands out on the other side of the line."); }
       else if (p === "Undo") { if (pts.length) pts.pop(); }

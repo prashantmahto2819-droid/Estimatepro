@@ -3,6 +3,9 @@
 This file is for the people maintaining the app. It is not published with the site (see `.assetsignore`).
 The text users see is `EP_NOTES` in `js/version.js`.
 
+## 2026.11.21-j
+- RUN / CLADDING / CABINET: `Arc` (end point + a point on the curve → `arcPts`, a point about every 250 mm) after the first point, and `Circle` (centre + radius → closed run) at the start. Curves are polylines, so the mitred sweep makes them look round; on a curved unit each short piece is one shutter.
+
 ## 2026.11.21-i
 - `B.archSp(o)`: wall left in the top corners of an arched opening = w × rise × (1 − π/4). Used in the wall masonry and plaster deductions and in the door / window area; no lintel is counted over an arched opening.
 - Units: at an inside corner the next stretch starts one unit-depth along (no overlap). Kitchen base: `chimney` ("600" | "900") over the hob.
