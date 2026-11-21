@@ -57,6 +57,10 @@
     ["light", "Lights", /^led_|^lamp$/]
   ];
   function matCatOf(id) { for (var i = 0; i < MAT_CATS.length; i++) if (MAT_CATS[i][2].test(id)) return MAT_CATS[i]; return null; }
+  /* search box over the material grid: hide what does not match (name or id), and the groups left empty */
+  function matFilter(C) { var q = String(C.matQ || "").trim().toLowerCase().split(/\s+/).filter(Boolean), lib = C.root.querySelector(".v3-pop .mat-lib"); if (!lib) return;
+    lib.querySelectorAll("[data-matpick]").forEach(function (b) { var k = b.dataset.matpick, L = B.LOOKS[k], txt = (k + " " + (L ? L.n : "")).toLowerCase(); b.hidden = !q.every(function (w) { return txt.indexOf(w) >= 0; }); });
+    lib.querySelectorAll(".mat-cat").forEach(function (c) { c.hidden = !c.querySelector("[data-matpick]:not([hidden])"); }); }
   function matLibHtml(selectedId, forCat) {
     var h = "<div class='mat-lib'>";
     var grouped = {};
@@ -288,6 +292,7 @@
       var pl = C.v3paint && B.LOOKS[C.v3paint];
       return "<h4>🪣 Paint materials</h4><p class='muted small' style='margin:0'>" + (pl ? "<b>" + esc(pl.n) + "</b> — now click walls, floors, slabs, roofs, columns… in the 3D view. A wall is painted on the side you are looking at." : "1. Pick a material below. 2. Click the elements in the 3D view.") + "</p>" +
         "<label class='small' style='display:flex;flex-direction:row;gap:6px;align-items:center'><input type='checkbox' style='width:auto;flex:none;margin:0' data-v3paintall='1'" + (C.v3paintAll ? " checked" : "") + "> Paint all elements of the same kind (e.g. all outer walls)</label>" +
+        "<input class='in small' type='search' data-matq='1' placeholder='Search materials — e.g. teak, granite, blue, ACP, putty…' aria-label='Search materials' value='" + esc(C.matQ || "") + "'>" +
         "<div style='max-height:46vh;min-height:90px;overflow:auto;margin:0 -6px;flex:1 1 auto'>" + matLibHtml(C.v3paint || null) + "</div>" +
         "<div class='row' style='gap:6px;justify-content:flex-end'><button type='button' class='btn ghost sm' data-v3paintclr='1' title='Click elements to give them back the building default material'>Eraser (back to default)</button><button type='button' class='btn sec sm' data-v3pop='paint'>Done</button></div><p class='muted small' style='margin:0'>Looks only — quantities and SOR items do not change. Ctrl+Z undoes a paint.</p>";
     }
@@ -330,7 +335,7 @@
     ed.doc.commit(); if (ed.sel.size) { ed.sel.clear(); ed.emitSel(); } build3d(ed, C);
     if (list.length > 1) U.toast((C.v3paintClr ? "Default material on " : "Painted ") + list.length + " elements");
   }
-  function showPop(ed, C) { var h = C.root.querySelector(".v3-pop"); if (!h) return; if (!C.v3pop) { h.hidden = true; h.innerHTML = ""; return; } h.innerHTML = popHtml(ed, C); h.hidden = false; var bar = C.root.querySelector('.v3-bar'); if (bar) { h.style.top = (bar.offsetHeight + 12) + 'px'; h.style.maxHeight = 'calc(100% - ' + (bar.offsetHeight + 20) + 'px)'; h.style.overflowY = 'auto'; } }
+  function showPop(ed, C) { var h = C.root.querySelector(".v3-pop"); if (!h) return; if (!C.v3pop) { h.hidden = true; h.innerHTML = ""; return; } h.innerHTML = popHtml(ed, C); h.hidden = false; var bar = C.root.querySelector('.v3-bar'); if (bar) { h.style.top = (bar.offsetHeight + 12) + 'px'; h.style.maxHeight = 'calc(100% - ' + (bar.offsetHeight + 20) + 'px)'; h.style.overflowY = 'auto'; } if (C.v3pop === "paint" && C.matQ) matFilter(C); }
   function paintCursor(C) { var cv = C.v3 && C.v3.cv; if (cv) cv.style.cursor = C.v3pop === "paint" && (C.v3paint || C.v3paintClr) ? "crosshair" : ""; }
   function commitSun(ed, C, patch) { var lv = Object.assign({}, C.sunLive || {}, patch || {}); C.sunLive = null; setBim(ed, function (x) { x.sun = Object.assign({}, B.SUN0, x.sun || {}, lv); }, "Sun"); applySun(ed, C); }
   function renderDlg(ed, C) {
@@ -394,6 +399,7 @@
     });
     r.addEventListener("input", function (ev) {
       var t = ev.target, ds = t.dataset || {}; if (ds.v3cut) { C.v3cutPct = +t.value; applyCut(C); return; }
+      if (ds.matq) { C.matQ = t.value; matFilter(C); return; }
       if (ds.v3skyrot || ds.v3skyhz) { C.skyLive = Object.assign({}, C.skyLive || {}, ds.v3skyrot ? { rot: +t.value } : { hz: +t.value / 100 }); applySky(ed, C); return; }
       if (ds.v3time || ds.v3az || ds.v3el) { C.sunLive = Object.assign({}, C.sunLive || {}, ds.v3time ? { t: +t.value } : ds.v3az ? { az: +t.value } : { el: +t.value }); applySun(ed, C); var p = C.root.querySelector(".v3-pop"); if (p) { var tt = p.querySelector(".v3-tt"), s2 = p.querySelector(".v3-st"); if (tt && ds.v3time) tt.textContent = hhmm(+t.value); if (s2) s2.textContent = sunText(ed, C); } }
     });

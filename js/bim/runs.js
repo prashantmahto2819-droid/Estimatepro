@@ -150,8 +150,11 @@
       if ((D.under || e.led) && H.lights) { var q2 = at(len / 2, dp + 200); H.lights.push([q2[0] / 1000, q2[1] / 1000, (z0 + (D.under ? -100 : Hh + 150)) / 1000, 0.5]); }
     });
   }
+  /* a POP band with no height of its own hangs 100 mm below the false ceiling of the room it is drawn in */
+  function autoZ(doc, e, D) { if (!/^pop_/.test(e.kind) || !B.fceilH || !e.pts || !e.pts.length) return D.z; var p = e.pts[0], rm = doc.d.ents.filter(function (r) { return r.t === "room" && r.ceil && (!e.lvl || !r.lvl || r.lvl === e.lvl) && inPoly(p, r.pts); })[0]; if (!rm) return D.z; var drop = D.pr.reduce(function (m, r) { return Math.max(m, r[3]); }, 0); return B.fceilH(doc, rm) - drop; }
+  B.runAutoZ = autoZ;
   function mesh(M, doc, e, H) {
-    var D = def(e), L = B.level(doc.d, e.lvl), z0 = (L ? L.elev : 0) + (e.z == null ? D.z : e.z), side = +e.side === -1 ? -1 : 1, p = path(e); if (p.length < 2) return;
+    var D = def(e), L = B.level(doc.d, e.lvl), z0 = (L ? L.elev : 0) + (e.z == null ? autoZ(doc, e, D) : e.z), side = +e.side === -1 ? -1 : 1, p = path(e); if (p.length < 2) return;
     var own = B.look(e.look && B.LOOKS[e.look] ? e.look : D.look, e.col), led = B.look(ledLookOf(e));
     if (D.fam === "p") {
       D.pr.forEach(function (r) { var a = offsetPath(p, r[0], e.closed, side), b = offsetPath(p, r[1], e.closed, side), n = p.length, cnt = e.closed && n > 2 ? n : n - 1;

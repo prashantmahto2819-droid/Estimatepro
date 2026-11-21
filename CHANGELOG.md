@@ -3,6 +3,10 @@
 This file is for the people maintaining the app. It is not published with the site (see `.assetsignore`).
 The text users see is `EP_NOTES` in `js/version.js`.
 
+## 2026.11.21-p
+- Paint popup: search box (`data-matq`, `matFilter`) hides non-matching materials and empty groups in place; the text is kept in `C.matQ`.
+- POP runs (`pop_*`) with no height of their own: `autoZ` puts the underside (false-ceiling height − the band's drop) of the room that contains the run's first point; outside such a room the catalogue height stays.
+
 ## 2026.11.21-o
 - Runs: `pop_band`, `pop_band_led` (`led: 2` = two LED lines per metre), `pop_band_wide`, `pop_groove`, `pop_wood_rafter` — profiles centred on the drawn line (negative offsets), default underside 2600; key `ceil_step` (rafter: `wall_panel`). `B.runLedLen` multiplies by `D.led`.
 - Views: `B.viewBlock` draws the overall width under each view and the overall height at its right as plain lines and text (`dimL`); the title moves down to clear them.
