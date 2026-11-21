@@ -3,6 +3,9 @@
 This file is for the people maintaining the app. It is not published with the site (see `.assetsignore`).
 The text users see is `EP_NOTES` in `js/version.js`.
 
+## 2026.11.21-z17
+- Main shader `uSecFill`: when a cut or section box is on, back faces of opaque surfaces (not grass / water) are drawn as hatched cut material. Shadow pass: `uCutS` / `uBoxS` discard what is cut away, so it throws no shadow.
+
 ## 2026.11.21-z16
 - Light fittings and walls: `ui-bim.js` `wallMask` paints walls (less `opening` elements) and columns of up to four storeys into a 512 px canvas (2 × 2 tiles); `view3d.js` `setWallMask` (texture unit 8) and `wmSee` in the main shader march from the fragment to each fitting in plan (steps shorter than a wall, at most 48) and stop the light at a wall or when the storeys differ. Only run for lights whose share is above 0.012. `lightThru` (💡 Fast lights) switches it off.
 - Known limits: doors and windows block the light (no spill outside through glass), stair wells do not pass light between floors, more than four storeys → the upper ones are not checked.

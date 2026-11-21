@@ -44,7 +44,7 @@ Last updated at version 2026.11.21-q.
 5. (-u: sky reflection on glass and polished surfaces.) (-z8: water surfaces with ripples.) Still open: reflections of the building itself, moving water, softer shadows.
 6. (-z10: vehicles turn round and come back.) Still open: vehicles following a drawn path, wheels that turn; people with a walking cycle.
 7. (-z2: CAMPATH + Tour walks the path; Record makes the video.) (-z3: speed, eye height, MP4 first.) Still open: look-at targets, stairs between levels, doors that open on the way.
-8. Section box: hide the shadows of cut-away parts; section fill colour.
+8. (done in -z17: cut faces hatched, cut-away parts throw no shadow.) Still open: choose the fill colour, a cut line on plan for the 3D section.
 9. (done in -t: ✥ Move drags placed objects along the floor, ⟲ ⟳ turn by 15°.) (-z5: ▲ ▼ raise / lower, ⧉ copy.) (-z11: doors / windows / openings slide along their wall.) (-z12: walls move square to themselves, joined walls stretch.) (-z13: rooms, slabs and roofs follow the wall.) Still open: snap to walls.
 10. Slanting outlines with inside corners (hip), gable roofs on slanting outlines, (-y: DOME and VAULT roof elements.) (-z2: smooth shading.) (-z5: cone, drum wall.) (-z14: ring beam.) (-z15: pyramid on a many-sided base.)
 

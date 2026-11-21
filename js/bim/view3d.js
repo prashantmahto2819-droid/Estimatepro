@@ -49,7 +49,7 @@ in vec4 vC;
 in float vI;
 in vec3 vM;
 uniform vec3 uSun,uEye,uSunCol,uSky,uGnd,uHor;
-uniform float uSel,uCut,uShadow,uSMs,uStyle,uFog,uAmb,uHead,uXr;
+uniform float uSel,uCut,uShadow,uSMs,uStyle,uFog,uAmb,uHead,uXr,uSecFill;
 uniform vec4 uBox;
 uniform vec4 uPL[32];   /* light fittings: xyz + strength */
 uniform vec3 uPLc[32];  /* colour of each fitting's light */
@@ -234,6 +234,9 @@ void main(){
     col=mix(col,env,clamp(fr*(pi==12||pi==17?0.9:gloss*0.55),0.0,pi==12||pi==17?0.75:0.4));
   }
 
+  /* section fill: where the cut opens a solid, its inside faces are seen — show them as hatched cut material */
+  if(!gl_FrontFacing && uSecFill>0.5 && alpha>0.9 && pi!=10 && pi!=17){ float hh=step(0.55,fract((vP.x+vP.y+vP.z)*7.0)); col=mix(vec3(0.20,0.19,0.19),vec3(0.46,0.42,0.40),hh)*(uStyle>1.5?1.6:1.0); }
+
   /* selection highlight */
   if(uSel>0.5 && abs(vI-uSel)<0.5) col=mix(col,vec3(0.2,0.6,1.0),0.35);
 
@@ -334,11 +337,15 @@ precision highp float;
 layout(location=0)in vec3 aP;
 uniform mat4 uVP;
 uniform vec3 uOff,uFlip;
-void main(){vec3 p=aP; if(uFlip.x>0.5) p.xy=2.0*uFlip.yz-p.xy; gl_Position=uVP*vec4(p+uOff,1.0);}`;
+out vec3 vW;
+void main(){vec3 p=aP; if(uFlip.x>0.5) p.xy=2.0*uFlip.yz-p.xy; vW=p+uOff; gl_Position=uVP*vec4(vW,1.0);}`;
 const SFS=`#version 300 es
 precision highp float;
+in vec3 vW;
+uniform float uCutS; uniform vec4 uBoxS;
 out vec4 fragColor;
-void main(){fragColor=vec4(gl_FragCoord.z,0,0,1);}`;
+void main(){ if(vW.z>uCutS||vW.x<uBoxS.x||vW.x>uBoxS.y||vW.y<uBoxS.z||vW.y>uBoxS.w) discard;   /* parts cut away throw no shadow */
+  fragColor=vec4(gl_FragCoord.z,0,0,1);}`;
 
 /* Pick shader */
 const PVS=`#version 300 es
@@ -1015,6 +1022,7 @@ P.prototype.render=function(pick){
     gl.depthFunc(gl.LESS);
     gl.useProgram(this.sp);
     gl.uniformMatrix4fv(this.sp.u.uVP,false,lvp);
+    if(!this._scLoc) this._scLoc={c:gl.getUniformLocation(this.sp,'uCutS'),b:gl.getUniformLocation(this.sp,'uBoxS')}; gl.uniform1f(this._scLoc.c,this.cut<1e7?this.cut:1e9); { const bS=this.box||[-1e9,1e9,-1e9,1e9]; gl.uniform4f(this._scLoc.b,bS[0],bS[1],bS[2],bS[3]); }
     if(this.vaoOpS){
       gl.bindVertexArray(this.vaoOpS);
       gl.drawArrays(gl.TRIANGLES,0,this.opN);
@@ -1079,6 +1087,7 @@ P.prototype.render=function(pick){
   gl.uniform3fv(u.uHor,lt.hor||[0.75,0.78,0.82]);
   gl.uniform1f(u.uSel,this.sel);
   gl.uniform1f(u.uCut,this.cut);
+  if(this._sfLoc===undefined) this._sfLoc=gl.getUniformLocation(this.mp,'uSecFill'); gl.uniform1f(this._sfLoc,(this.cut<1e7||this.box)&&this.secFill!==false&&!this.xray?1:0);
   gl.uniform4f(u.uBox,-1e9,1e9,-1e9,1e9); gl.uniform1f(u.uXr,1.0);   /* the ground is never cut or made see-through */
   gl.uniform1f(u.uShadow,this.shadows?1:0);
   gl.uniform1f(u.uSMs,this.smSize);
