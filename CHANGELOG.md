@@ -3,6 +3,10 @@
 This file is for the people maintaining the app. It is not published with the site (see `.assetsignore`).
 The text users see is `EP_NOTES` in `js/version.js`.
 
+## 2026.11.21-z26
+- `bim.js`: `B.grillOf(o)` — window `grill` ("v" upright bars at ~110, "h" level bars at ~120 with uprights at ~600, "sq" 150 grid, "box" 300 × 150); kind "grill" defaults to "v". Weight = bar length × 1.13 kg/m (12 mm square) + perimeter × 0.98 kg/m (25 × 5 flat). Quantity row `ms_grill` (CPWD 9.48.1, kg). This row is new for existing windows of kind "grill" too.
+- `mesh.js`: bars drawn from `B.grillOf`, 55 mm off the glass on the opening side (in the glass plane for kind "grill"). `ui-bim.js`: Properties → Safety grill.
+
 ## 2026.11.21-z25
 - `ui-bim.js` `wallFaces`: the four sides of the plan bounding box of other assets, 3D models and columns on the level (standing square, 150 mm to 6 m, at most 60 pieces, cut-outs left out) are added as snap faces (`obj`); the message says which kind it met. Harness: a sofa dropped 60 mm from another closes to 0.
 

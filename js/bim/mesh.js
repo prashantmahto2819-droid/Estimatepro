@@ -96,7 +96,9 @@
       boxAlong(M, A, Bp, fd, z0 + zb, z0 + zb + fw, mat);
       var ia = G.add(A, G.mul(u, fw)), ib = G.sub(Bp, G.mul(u, fw)), panes = o.kind === "louvre" ? 0 : (o.kind === "sliding" || o.kind === "casement2" ? 2 : 1);
       if (o.kind === "louvre") { for (var z = zb + fw + 60; z < zt - fw; z += 90) boxAlong(M, ia, ib, 70, z0 + z, z0 + z + 8, glass, Math.min(1, glass.a + 0.25)); }
-      else { boxAlong(M, ia, ib, 8, z0 + zb + fw, z0 + zt - fw, glass); if (panes === 2) box(M, pl.p, 40, fd * 0.8, Math.atan2(u[1], u[0]) * 180 / Math.PI, z0 + zb + fw, z0 + zt - fw, mat); if (o.kind === "grill") { for (var gx = -o.w / 2 + fw + 100; gx < o.w / 2 - fw - 50; gx += 110) box(M, G.add(pl.p, G.mul(u, gx)), 14, 14, 0, z0 + zb + fw, z0 + zt - fw, mat); boxAlong(M, ia, ib, 14, z0 + (zb + zt) / 2, z0 + (zb + zt) / 2 + 14, mat); } }
+      else { boxAlong(M, ia, ib, 8, z0 + zb + fw, z0 + zt - fw, glass); if (panes === 2) box(M, pl.p, 40, fd * 0.8, Math.atan2(u[1], u[0]) * 180 / Math.PI, z0 + zb + fw, z0 + zt - fw, mat); }
+      var gr = B.grillOf ? B.grillOf(o) : null; if (gr) { var gm = o.kind === "grill" ? mat : B.look("steel_matt_black"), go = G.mul(n, o.kind === "grill" ? 0 : (o.flip ? -1 : 1) * Math.min(55, th / 2 - 20)), gc = G.add(pl.p, go), ga = G.add(ia, go), gb = G.add(ib, go), ang = Math.atan2(u[1], u[0]) * 180 / Math.PI;   /* bars a little inside the glass, on the side the window opens to */
+        gr.xs.forEach(function (x) { box(M, G.add(gc, G.mul(u, x)), 12, 12, ang, z0 + zb + fw, z0 + zt - fw, gm); }); gr.zs.forEach(function (z) { boxAlong(M, ga, gb, 12, z0 + zb + fw + z - 6, z0 + zb + fw + z + 6, gm); }); }
       return;
     }
     if (o.t === "opening") return;

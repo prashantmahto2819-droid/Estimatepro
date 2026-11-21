@@ -71,6 +71,10 @@
   B.wallPoly = function (doc, w) { var cc = doc.c ? doc.c(w) : {}; if (!cc.wp) cc.wp = wallPoly(w, walls(doc, w.lvl)); return cc.wp; };
   /* openings in a wall: [{ e, s0, s1 (mm along the centre line), z0, z1 (above wall base) }] */
   /* wall left standing in the two top corners of an arched opening (mm²): rectangle − half ellipse over the rise */
+/* safety grill of a window: bars measured from the centre of the opening (xs) and from its sill (zs), and its weight in 12 mm square bars with a 25 × 5 flat all round */
+  B.grillOf = function (o) { var pat = o.grill || (o.kind === "grill" ? "v" : ""); if (!pat || pat === "none" || o.t !== "window") return null; var fw = 50, W = o.w - 2 * fw, Hh = o.h - 2 * fw, xs = [], zs = [], fill = function (arr, len, step, off) { var n = Math.max(1, Math.round(len / step)), st = len / n; for (var i = 1; i < n; i++) arr.push(off + i * st); }; if (W < 150 || Hh < 150) return null;
+    if (pat === "v") { fill(xs, W, 110, -W / 2); zs.push(Hh / 2); } else if (pat === "h") { fill(zs, Hh, 120, 0); fill(xs, W, 600, -W / 2); } else if (pat === "sq") { fill(xs, W, 150, -W / 2); fill(zs, Hh, 150, 0); } else { fill(xs, W, 300, -W / 2); fill(zs, Hh, 150, 0); }
+    var len = xs.length * Hh + zs.length * W; return { pat: pat, xs: xs, zs: zs, W: W, H: Hh, fw: fw, kg: len / 1000 * 1.13 + 2 * (W + Hh) / 1000 * 0.98 }; };
   B.archSp = function (o) { if (!o || !o.head) return 0; var r = o.head === "arch" ? o.w / 2 : o.head === "seg" ? o.w * 0.2 : o.head === "point" ? o.w * 0.866 : 0; if (!r || r > o.h - 300) return 0; return o.head === "point" ? 0.2518 * o.w * o.w : o.w * r * (1 - Math.PI / 4); };
   B.openings = function (doc, w) {
     return doc.d.ents.filter(function (o) { return (o.t === "door" || o.t === "window" || o.t === "opening") && o.host === w.id; }).map(function (o) {
@@ -398,6 +402,7 @@
     if (e.t === "door" || e.t === "window" || e.t === "opening") {
       if (e.t === "opening") return rows;
       push(e.t === "door" ? (e.mat === "steel" ? "door_steel" : e.mat === "pvc" ? "door_pvc" : e.mat === "al" ? "door_al" : "door_flush") : (e.mat === "upvc" ? "win_upvc" : "win_al"), "A", e.w * e.h - B.archSp(e), (e.t === "door" ? "Door shutter " : "Window ") + (e.preset || "") + " " + Math.round(e.w) + "×" + Math.round(e.h), m(e.w) + " × " + m(e.h));
+      var gr = e.t === "window" && B.grillOf ? B.grillOf(e) : null; if (gr) push("ms_grill", "M", gr.kg, "Steel grill of window " + (e.preset || "") + " " + Math.round(e.w) + "×" + Math.round(e.h) + " — " + ({ v: "upright bars", h: "level bars", sq: "square grid", box: "oblong grid" }[gr.pat] || "bars"), (gr.xs.length + gr.zs.length) + " bars of 12 mm square + flat all round (weight by length — check with the fabricator's drawing)");
       if (e.t === "door") push("door_frame", "L", 2 * e.h + e.w, "Door frame (running length) " + (e.preset || ""), "2 × " + m(e.h) + " + " + m(e.w));
       push(e.t === "door" ? "count_door" : "count_window", "N", 1, (e.t === "door" ? "Doors " : "Windows ") + (e.preset || ""), "1 no.");
       return rows;
