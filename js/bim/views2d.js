@@ -96,7 +96,12 @@
       ents.push({ t: "line", a: [xr - wv, l.elev], b: [x0 - 2 * N, l.elev], layer: "A-ELEV-LVL" }); ents.push({ t: "text", p: [xr - wv, l.elev + th * 0.4], s: s, h: th, rot: 0, al: "l", layer: "A-ELEV-TXT" }); G.ext(bb, [xr - wv, l.elev + th * 1.5]);
     });
     var glS = "GL  " + (res.ngl >= 0 ? "+" : "-") + (Math.abs(res.ngl) / 1000).toFixed(3), gw = tw(glS, th); ents.push({ t: "text", p: [x1 + 10 * N, res.ngl + th * 0.4], s: glS, h: th, rot: 0, al: "l", layer: "A-ELEV-TXT" }); G.ext(bb, [x1 + 10 * N + gw, res.ngl]);
-    var cx = (x0 + x1) / 2, ty = Math.min(res.ext[1], res.ngl) - 9 * N, H1 = 3.5 * N, wt = tw(title, H1);
+    /* overall size: width under the view, height at the right (drawn as plain lines and text, so they plot anywhere) */
+    var dimL = function (a, b, off, vert) { var s2 = ((vert ? b[1] - a[1] : b[0] - a[0]) / 1000).toFixed(2) + " m", tk = 1.2 * N, L2 = "A-ELEV-TXT";
+      if (vert) { var xx = a[0] + off; ents.push({ t: "line", a: [xx, a[1]], b: [xx, b[1]], layer: L2 }, { t: "line", a: [xx - tk, a[1] - tk], b: [xx + tk, a[1] + tk], layer: L2 }, { t: "line", a: [xx - tk, b[1] - tk], b: [xx + tk, b[1] + tk], layer: L2 }, { t: "line", a: [a[0] + 2 * N, a[1]], b: [xx + tk, a[1]], layer: L2 }, { t: "line", a: [a[0] + 2 * N, b[1]], b: [xx + tk, b[1]], layer: L2 }, { t: "text", p: [xx - 0.8 * N, (a[1] + b[1]) / 2 - tw(s2, th) / 2], s: s2, h: th, rot: 90, al: "l", layer: L2 }); G.ext(bb, [xx + 2 * N, b[1]]); }
+      else { var yy = a[1] - off; ents.push({ t: "line", a: [a[0], yy], b: [b[0], yy], layer: L2 }, { t: "line", a: [a[0] - tk, yy - tk], b: [a[0] + tk, yy + tk], layer: L2 }, { t: "line", a: [b[0] - tk, yy - tk], b: [b[0] + tk, yy + tk], layer: L2 }, { t: "line", a: [a[0], a[1] - 2 * N], b: [a[0], yy - tk], layer: L2 }, { t: "line", a: [b[0], a[1] - 2 * N], b: [b[0], yy - tk], layer: L2 }, { t: "text", p: [(a[0] + b[0]) / 2 - tw(s2, th) / 2, yy + 0.8 * N], s: s2, h: th, rot: 0, al: "l", layer: L2 }); } };
+    var yb = Math.min(res.ext[1], res.ngl); dimL([x0, yb], [x1, yb], 5 * N, false); if (top - res.ngl > 500) dimL([x1 + 26 * N, res.ngl], [x1 + 26 * N, top], 4 * N, true);
+    var cx = (x0 + x1) / 2, ty = yb - 16 * N, H1 = 3.5 * N, wt = tw(title, H1);
     ents.push({ t: "text", p: [cx - wt / 2, ty], s: title, h: H1, rot: 0, al: "l", layer: "A-ELEV-TXT" }); ents.push({ t: "line", a: [cx - wt / 2, ty - 1.5 * N], b: [cx + wt / 2, ty - 1.5 * N], layer: "A-ELEV-GL" });
     ents.push({ t: "text", p: [cx - tw("Scale 1 : " + N, th) / 2, ty - 6 * N], s: "Scale 1 : " + N, h: th, rot: 0, al: "l", layer: "A-ELEV-TXT" }); G.ext(bb, [cx - wt / 2, ty - 7 * N]); G.ext(bb, [cx + wt / 2, ty]);
     return { ents: ents, bb: bb };

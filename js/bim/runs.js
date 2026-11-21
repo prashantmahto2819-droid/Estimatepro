@@ -23,6 +23,11 @@
     plinth_band: { n: "Plinth band 450 (offset)", fam: "p", z: 0, look: Gc, key: "run_band", pr: [[0, 40, 0, 400], [0, 25, 400, 450]] },
     sill_band: { n: "Sill / coping band with drip 75", fam: "p", z: 825, look: Gc, key: "run_band", pr: [[0, 100, 0, 25], [0, 120, 25, 75]] },
     pelmet: { n: "Curtain pelmet / cove box 150 × 150", fam: "p", z: 2550, look: "gypsum_white", key: "false_ceiling", pr: [[130, 150, 0, 150], [0, 150, 138, 150], [100, 114, 110, 122, "led"]], led: 1 },
+    pop_band: { n: "POP / gypsum lowered band 300 wide (free shape on the ceiling)", fam: "p", z: 2600, look: "gypsum_white", key: "ceil_step", pr: [[-150, 150, 0, 12], [-150, -138, 12, 100], [138, 150, 12, 100]] },
+    pop_band_led: { n: "POP lowered band 300 wide with LED on both edges", fam: "p", z: 2600, look: "gypsum_white", key: "ceil_step", pr: [[-150, 150, 0, 12], [-150, -138, 12, 100], [138, 150, 12, 100], [-166, -152, 60, 74, "led"], [152, 166, 60, 74, "led"]], led: 2 },
+    pop_band_wide: { n: "POP lowered panel 600 wide with centre LED line", fam: "p", z: 2600, look: "gypsum_white", key: "ceil_step", pr: [[-300, -12, 0, 12], [12, 300, 0, 12], [-300, -288, 12, 100], [288, 300, 12, 100], [-12, 12, 4, 10, "led"]], led: 1 },
+    pop_groove: { n: "POP ceiling groove / shadow line 25 mm", fam: "p", z: 2695, look: "steel_matt_black", key: "ceil_step", pr: [[-12, 12, 0, 6]] },
+    pop_wood_rafter: { n: "Wooden rafter / beam on the ceiling 100 × 150", fam: "p", z: 2550, look: "wood_teak", key: "wall_panel", pr: [[-50, 50, 0, 150]] },
     led_strip: { n: "LED strip (surface)", fam: "p", z: 2700, look: "led_warm", key: "led_strip", pr: [[0, 10, 0, 14, "led"]], led: 1 },
     led_profile: { n: "LED profile light (aluminium channel)", fam: "p", z: 2400, look: "aluminium", key: "led_strip", pr: [[0, 22, 0, 4], [0, 22, 26, 30], [0, 6, 4, 26], [6, 24, 5, 25, "led"]], led: 1 },
     led_cove: { n: "Cove LED (hidden behind an upstand)", fam: "p", z: 2500, look: "gypsum_white", key: "led_strip", pr: [[0, 90, 0, 12], [78, 90, 12, 70], [20, 36, 12, 24, "led"]], led: 1 },
@@ -80,7 +85,7 @@
   function segsOf(p, closed) { var s = []; for (var i = 0; i + 1 < p.length; i++) s.push([p[i], p[i + 1]]); if (closed && p.length > 2) s.push([p[p.length - 1], p[0]]); return s; }
   function ledLookOf(e) { var D = def(e), id = e.ledLook || D.ledLook || (D.led && /^led_/.test(e.look || D.look) ? (e.look || D.look) : "led_warm"); return B.LOOKS[id] ? id : "led_warm"; }
   B.runLedLen = function (e) {
-    var D = def(e), L = runLen(e); if (D.fam === "p") return D.led ? L : 0; if (D.fam === "u") return 0;
+    var D = def(e), L = runLen(e); if (D.fam === "p") return D.led ? L * D.led : 0; if (D.fam === "u") return 0;
     var m = e.led || "", H = e.h || D.h, mw = e.mw || D.mw, n = 0; if (m === "top" || m === "bottom") n += L; if (m === "both" || m === "all") n += 2 * L;
     if (m === "joint" || m === "all") { var step = D.gen === "batten" ? Math.max(mw * 8, 600) : mw; segsOf(path(e), e.closed).forEach(function (s) { n += Math.max(0, Math.floor(G.dist(s[0], s[1]) / step)) * H; }); }
     return n;
