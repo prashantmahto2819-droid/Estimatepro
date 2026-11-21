@@ -33,6 +33,9 @@ Last updated at version 2026.11.21-q.
 3a. Decisions: the 30 quick rates that differ from their analysis (tipper, tanker…); whether 1:30 / 1:40 / 1:60 scales may be used on Design Studio sheets.
 4. Commercial plans (owner will describe).
 
+5. Device limits (-x): run `server/devices.sql` once in Supabase → SQL editor. Until then every user can sign in on any number of devices as before. Then set multi-device users in Users → devices.
+6. Windows application: plan in `desktop/PLAN.md`. Owner to decide — publisher name / code-signing certificate, bundled files or live site, offline grace days, Microsoft Store or direct download. Then: Tauri wrapper + GitHub Actions build on windows-latest.
+
 ## B. 3D Studio — to build (no server needed)
 1. (done in -u for one device: My 3D models.) (-v: texture colours baked per vertex.) Still open: true per-pixel textures, Draco files, a shared library for all users (needs the server), thumbnails, plan symbol from the model outline.
 2. (done in -t: fittings light the scene, Night view.) Still open: lights do not cast shadows and pass through walls; emissive glow on the fitting itself.

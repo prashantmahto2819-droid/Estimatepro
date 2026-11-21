@@ -3,6 +3,10 @@
 This file is for the people maintaining the app. It is not published with the site (see `.assetsignore`).
 The text users see is `EP_NOTES` in `js/version.js`.
 
+## 2026.11.21-x
+- New `js/ui-devices.js` + `server/devices.sql` (not published): `profiles.device_limit` (default 1), tables `user_devices`, `user_device_log`, rpc `device_check(p_dev, p_label, p_take)`, `device_remove`, `admin_device_limits`, `admin_set_device_limit`, `admin_devices`, `admin_device_remove`. Client: device id in localStorage `ep_dev`; check after sign-in (wraps `U.loadNotice`), every 4 min, on focus / online; a blocking dialog when the limit is reached (move here / ask for more / sign out); Users tab: wraps `U.phoneCell` with a devices select and an "in use" list. Does nothing until the SQL has been run (missing rpc → `S.dev.off`). SQL tested on PostgreSQL 16 with stand-in auth tables.
+- `desktop/PLAN.md`: plan for the Windows application.
+
 ## 2026.11.21-w
 - `hatch.js`: 18 more patterns (ANSI33–36, VERT, DASH, SQUARE, ANGLE, TILE, TILE2X1, HBONE, HONEY, TRIANG, STARS, INSUL, GRASS, WATER, PCC).
 - Fix: `site.js` aliases BOUNDARY / PLOT / RL removed — aliases win over command names in `Ed.exec`, so BOUNDARY and RL (railing) had been hijacked since -s. New aliases must be checked against `CAD.commands` and `CAD.aliases`.

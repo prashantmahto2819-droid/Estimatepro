@@ -6,3 +6,5 @@ wrangler.jsonc
 node_modules
 CHANGELOG.md
 PENDING.md
+server
+desktop
