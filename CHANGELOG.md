@@ -3,6 +3,10 @@
 This file is for the people maintaining the app. It is not published with the site (see `.assetsignore`).
 The text users see is `EP_NOTES` in `js/version.js`.
 
+## 2026.11.21-z33
+- Spiral: the last tread spans max(tread angle, 60°) as the top platform (`flat`, not railed with the flight; the opening's railing leaves the same 60° open). `mat` "steel" (default for new spirals): quantity `ms_stair` (kg = tread area × 6 mm × 7850 × 1.3 + post height × 19.5 kg/m → CPWD 10.25.2, map entry in `assets4.js`), treads drawn 12 mm thick in black steel; otherwise RCC as before.
+- Winders checked on the plan view (three wedge treads at the turn); picture in /updates.
+
 ## 2026.11.21-z32
 - `bim.js` `stairGeom`: L stair with `winder` "3" (seven risers or more) — `na` straight treads, three wedge treads round the inner corner (rays at 30° and 60°), `nb` treads on the second flight; returns `runs` (the straight flights, for the rails), `windRail` (outer rail over the winders, used for "out" / "both"), `L0`, `wdL`. `B.spiralTurn(e)`: height from a tread to the one a turn above (null when the spiral is a turn or less).
 - `tools.js`: type Lwinder; spiral warning with the angle that gives 2000 mm. `ui-bim.js`: "The turn is made on", "Height between turns".

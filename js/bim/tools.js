@@ -166,7 +166,7 @@
   cmd("STAIR", ["ST", "STAIRS"], async function (ed) {
     var b = ensureBim(ed), L = B.level(ed.doc.d, cur(ed)), kind = ed.stK || "Dogleg", w = ed.stW || 1000, T = ed.stT || 250, side = ed.stSide || "Left", gap = ed.stGap || 0, rail = ed.stRail || "Well", p, e = null;
     var n = Math.max(2, Math.round(L.h / 150)), R = L.h / n, mm = function (v) { return v == null ? "no wall" : Math.round(v) + " mm"; };
-    var mk = function (p0, dirDeg, sd) { return { t: "stair", p: p0, dir: dirDeg, w: w, n: n, R: R, T: T, wt: 150, kind: kind === "Lwinder" ? "lshape" : kind.toLowerCase(), winder: kind === "Lwinder" ? "3" : undefined, lvl: cur(ed), land: w, side: sd, rail: rail === "None" ? "" : rail === "Both" ? "both" : rail === "Outer" ? "out" : "in" }; };
+    var mk = function (p0, dirDeg, sd) { return { t: "stair", p: p0, dir: dirDeg, w: w, n: n, R: R, T: T, wt: 150, kind: kind === "Lwinder" ? "lshape" : kind.toLowerCase(), winder: kind === "Lwinder" ? "3" : undefined, mat: kind === "Spiral" ? "steel" : undefined, lvl: cur(ed), land: w, side: sd, rail: rail === "None" ? "" : rail === "Both" ? "both" : rail === "Outer" ? "out" : "in" }; };
     while (true) {
       p = await ed.getPoint("Start of the first step (bottom corner) — " + kind + ", width " + Math.round(w) + ", tread " + Math.round(T) + ", " + n + " risers of " + R.toFixed(0) + " mm, flights to the " + side.toLowerCase() + " of the going. Corner = fit it into a corner of a room", { kw: ["Corner", "Type", "Width", "Tread", "Side", "Gap", "Railing"] });
       if (p === "Railing") { rail = ed.stRail = await ed.getKw("Railing on which side of the flights? (now: " + rail + ")", ["Well", "Outer", "Both", "None"], rail); continue; }

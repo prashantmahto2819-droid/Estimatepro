@@ -194,12 +194,13 @@
     }
     if (e.kind === "spiral") {   /* treads round a centre post; e.p is the corner of the square it stands in */
       var Ro = w + 75, ri = 75, cS = G.add(G.add(origin, G.mul(u, Ro)), G.mul(n, Ro)), sa = Math.max(15, Math.min(45, +e.sa || 30)) * Math.PI / 180, rot = (u[0] * n[1] - u[1] * n[0]) >= 0 ? 1 : -1, th0 = Math.atan2(-n[1], -n[0]), pt = function (r, th) { return [cS[0] + r * Math.cos(th), cS[1] + r * Math.sin(th)]; };
-      for (var si = 0; si < N; si++) { var t0 = th0 + rot * si * sa, t1 = t0 + rot * sa, tm = (t0 + t1) / 2, poly = [pt(ri, t0), pt(Ro, t0), pt(Ro / Math.cos(sa / 2) * 0.999, tm), pt(Ro, t1), pt(ri, t1)]; poly[2] = pt(Ro, tm);
-        steps.push({ poly: poly, c: pt(Ro * 0.6, tm), a: pt(Ro - 50, t0), b: pt(Ro - 50, t1), u: [-Math.sin(tm) * rot, Math.cos(tm) * rot], n: [Math.cos(tm), Math.sin(tm)], w: w, T: Ro * 0.67 * sa, z0: z, z1: z + R, last: si === N - 1, thin: 60 }); z += R; plan.push([pt(ri, t0), pt(Ro, t0)]); }
-      plan.push([pt(ri, th0 + rot * N * sa), pt(Ro, th0 + rot * N * sa)]);
+      var topA = Math.max(sa, Math.PI / 3);   /* the last tread is the platform at floor level: at least 60° wide */
+      for (var si = 0; si < N; si++) { var lastS = si === N - 1, t0 = th0 + rot * si * sa, t1 = t0 + rot * (lastS ? topA : sa), tm = (t0 + t1) / 2, poly = [pt(ri, t0), pt(Ro, t0), pt(Ro, t0 + (t1 - t0) / 4), pt(Ro, tm), pt(Ro, t0 + (t1 - t0) * 3 / 4), pt(Ro, t1), pt(ri, t1)];
+        steps.push({ poly: poly, c: pt(Ro * 0.6, tm), a: pt(Ro - 50, t0), b: pt(Ro - 50, t1), u: [-Math.sin(tm) * rot, Math.cos(tm) * rot], n: [Math.cos(tm), Math.sin(tm)], w: w, T: Ro * 0.67 * sa, z0: z, z1: z + R, last: lastS, thin: 60, flat: lastS }); z += R; plan.push([pt(ri, t0), pt(Ro, t0)]); }
+      var thE = th0 + rot * ((N - 1) * sa + topA); plan.push([pt(ri, thE), pt(Ro, thE)]);
       var ring = []; for (var ci = 0; ci <= 24; ci++) ring.push(pt(Ro, ci * Math.PI / 12)); for (ci = 0; ci < 24; ci++) plan.push([ring[ci], ring[ci + 1]]); for (ci = 0; ci < 8; ci++) plan.push([pt(ri, ci * Math.PI / 4), pt(ri, (ci + 1) * Math.PI / 4)]);
       var postP = []; for (ci = 0; ci < 12; ci++) postP.push(pt(ri, ci * Math.PI / 6));
-      return { steps: steps, plan: plan, flights: [N], S: true, c: cS, Ro: Ro, thEnd: th0 + rot * N * sa, rot: rot, post: { pts: postP, h: N * R + 1000 } };
+      return { steps: steps, plan: plan, flights: [N], S: true, c: cS, Ro: Ro, thEnd: thE, rot: rot, topA: topA, post: { pts: postP, h: N * R + 1000 } };
     }
     flights.forEach(function (cnt, fi) {
       var treads = cnt - 1, o = fi === 0 ? origin : G.add(G.add(origin, G.mul(u, (flights[0] - 1) * T)), G.mul(n, w + (e.gap || 100))), dirU = fi === 0 ? u : G.mul(u, -1);
@@ -217,7 +218,7 @@
   B.stairGeom = stairGeom;
   /* railing lines of a stair: for each flight and each railed edge, the start and end on plan with the tread heights there; `gapBar` joins the two flights across the well at the landing */
   B.stairRails = function (e) { var mode = e.rail == null ? "" : e.rail; if (!mode || mode === "none") return []; var S = stairGeom(e), out = [], k0 = 0, multi = S.flights.length > 1;
-    if (S.S) { S.steps.forEach(function (st) { out.push({ p0: st.a, z0: st.z1, p1: st.b, z1: st.z1 + e.R, u: st.u, n: 1, len: Math.hypot(G.dist(st.a, st.b), e.R) }); }); return out; }   /* a spiral is railed on its outer edge */
+    if (S.S) { S.steps.forEach(function (st) { if (st.flat) return; out.push({ p0: st.a, z0: st.z1, p1: st.b, z1: st.z1 + e.R, u: st.u, n: 1, len: Math.hypot(G.dist(st.a, st.b), e.R) }); }); return out; }   /* the platform at the top is railed with the opening */   /* a spiral is railed on its outer edge */
     S.flights.forEach(function (cnt, fi) { var st = S.runs ? S.runs[fi] : S.steps.slice(k0, k0 + cnt); k0 += cnt; if (!st.length) return; var a = st[0], b = st[st.length - 1], offs = [];
       /* the first flight has the well on its far edge, the later flights on their near edge */
       var inner = fi === 0 ? e.w - 50 : 50, outer = fi === 0 ? 50 : e.w - 50; if (!multi) { inner = e.w - 50; outer = 50; }
@@ -520,7 +521,10 @@
       return rows;
     }
     if (e.t === "stair") {
-      if (e.kind === "spiral") { var Sp = stairGeom(e), ta = Sp.steps.length * (Math.PI * Sp.Ro * Sp.Ro) * ((Math.max(15, Math.min(45, +e.sa || 30))) / 360), vS = ta * 60 + Math.PI * 75 * 75 * (e.n * e.R + 1000); push("rcc_stair", "V", vS, "Spiral staircase — " + e.n + " treads of 60 mm and the centre post (priced as RCC; a steel spiral is priced from the fabricator's quotation)", e.n + " treads, outer radius " + m(Sp.Ro)); push("stair_finish", "A", ta, "Stair finish — treads", ""); var RLs = B.stairRails(e); if (RLs.length) push("railing", "L", RLs.reduce(function (t, r) { return t + r.len; }, 0), "Spiral stair railing on the outer edge", ""); return rows; }
+      if (e.kind === "spiral") { var Sp = stairGeom(e), saD = Math.max(15, Math.min(45, +e.sa || 30)), ring = Math.PI * (Sp.Ro * Sp.Ro - 75 * 75), ta = ring * ((Sp.steps.length - 1) * saD + Sp.topA * 180 / Math.PI) / 360, postH = e.n * e.R + 1000;
+        if (e.mat === "steel") { var kg = ta / 1e6 * 0.006 * 7850 * 1.3 + postH / 1000 * 19.5; push("ms_stair", "M", kg, "Steel spiral staircase — " + e.n + " treads in 6 mm chequered plate with stiffeners, and a 150 mm pipe post", (ta / 1e6).toFixed(2) + " m² of treads × 6 mm × 7850 × 1.3 + post " + m(postH) + " m × 19.5 kg/m (approximate weight — check with the fabricator's drawing)"); }
+        else { push("rcc_stair", "V", ta * 60 + Math.PI * 75 * 75 * postH, "Spiral staircase — " + e.n + " treads of 60 mm and the centre post (precast / cast RCC)", e.n + " treads, outer radius " + m(Sp.Ro)); push("stair_finish", "A", ta, "Stair finish — treads", ""); }
+        var RLs = B.stairRails(e); if (RLs.length) push("railing", "L", RLs.reduce(function (t, r) { return t + r.len; }, 0), "Spiral stair railing on the outer edge", ""); return rows; }
       var S = stairGeom(e), steps = S.steps.length, run = (e.n - S.flights.length) * e.T, rise = e.n * e.R, incl = Math.hypot(run, rise), stepsV = steps * e.T * e.R / 2 * e.w, waist = incl * e.w * (e.wt || 150), landV = S.U ? 2 * e.w * e.w * (e.wt || 150) : S.L ? e.w * e.w * (e.wt || 150) : S.flights.length > 1 ? (2 * e.w + (e.gap || 100)) * (e.land || e.w) * (e.wt || 150) : 0;
       push("rcc_stair", "V", stepsV + waist + landV, "RCC staircase (waist slab + steps" + (landV ? " + landing" : "") + ")", e.n + " risers × " + e.R + " / treads " + e.T + ", width " + e.w);
       push("shut_stair", "A", incl * e.w + steps * e.R * e.w, "Shuttering — stairs", "");
