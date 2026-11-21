@@ -79,9 +79,15 @@
         while (guard++ < 5000) { if (end[0] === loop[0][0] && end[1] === loop[0][1]) break; var nx = (at[key(end)] || []).filter(function (i) { return !segs[i].u; })[0]; if (nx == null) { loop = null; break; } var q = segs[nx]; q.u = true; end = q.a[0] === end[0] && q.a[1] === end[1] ? q.b : q.a; loop.push(end); }
         if (!loop || loop.length < 4) return; loop.pop(); var ar = 0; for (var i = 0; i < loop.length; i++) { var j = (i + 1) % loop.length; ar += loop[i][0] * loop[j][1] - loop[j][0] * loop[i][1]; } if (Math.abs(ar) / 2 < 400) return; fills.push(loop); });
     });
+    /* size tags for the doors and windows that face this view and are not hidden behind something */
+    var tags = [];
+    if (!sect) doc.d.ents.forEach(function (o) { if (o.t !== "door" && o.t !== "window") return; var pl = B.place(doc, o); if (!pl) return; if (Math.abs(pl.u[0] * dv[0] + pl.u[1] * dv[1]) > 0.2) return;
+      var Lw = B.level(doc.d, pl.w.lvl), zb2 = (Lw ? Lw.elev : 0) + (pl.w.base || 0) + (o.t === "door" ? 0 : (o.sill != null ? o.sill : 900)), cU = (pl.p[0] * ux + pl.p[1] * uy) / 1000, cV = (zb2 + o.h / 2) / 1000, cD = (pl.p[0] * dv[0] + pl.p[1] * dv[1]) / 1000 - pl.w.th / 2000;
+      var px = Math.floor((cU - u0) / s), py = Math.floor((cV - v0) / s); if (px < 0 || py < 0 || px >= W || py >= H) return; if (cD > far(px, py) + pl.w.th / 1000 + 0.05) return; if (zb2 < ngl - 1 && zb2 + o.h < ngl) return;
+      tags.push({ u: Math.round(cU * 1000), v: Math.round(zb2 + o.h), s: (o.t === "door" ? "D " : "W ") + Math.round(o.w) + " × " + Math.round(o.h) }); });
     var ext = [Infinity, Infinity, -Infinity, -Infinity]; lines.forEach(function (L) { G.ext(ext, L.a); G.ext(ext, L.b); });
     if (!isFinite(ext[0])) return null;
-    return { lines: lines, fills: fills, ext: ext, ngl: ngl, levels: bs.levels.map(function (l) { return { name: l.name, elev: l.elev }; }), tris: tris.length / 10 };
+    return { lines: lines, fills: fills, tags: tags, ext: ext, ngl: ngl, levels: bs.levels.map(function (l) { return { name: l.name, elev: l.elev }; }), tris: tris.length / 10 };
   };
 
   /* block content for a view: the lines, ground line, level marks and the title under it; bb = everything, in block coordinates */
@@ -98,9 +104,12 @@
     var glS = "GL  " + (res.ngl >= 0 ? "+" : "-") + (Math.abs(res.ngl) / 1000).toFixed(3), gw = tw(glS, th); ents.push({ t: "text", p: [x1 + 10 * N, res.ngl + th * 0.4], s: glS, h: th, rot: 0, al: "l", layer: "A-ELEV-TXT" }); G.ext(bb, [x1 + 10 * N + gw, res.ngl]);
     /* overall size: width under the view, height at the right (drawn as plain lines and text, so they plot anywhere) */
     var dimL = function (a, b, off, vert) { var s2 = ((vert ? b[1] - a[1] : b[0] - a[0]) / 1000).toFixed(2) + " m", tk = 1.2 * N, L2 = "A-ELEV-TXT";
-      if (vert) { var xx = a[0] + off; ents.push({ t: "line", a: [xx, a[1]], b: [xx, b[1]], layer: L2 }, { t: "line", a: [xx - tk, a[1] - tk], b: [xx + tk, a[1] + tk], layer: L2 }, { t: "line", a: [xx - tk, b[1] - tk], b: [xx + tk, b[1] + tk], layer: L2 }, { t: "line", a: [a[0] + 2 * N, a[1]], b: [xx + tk, a[1]], layer: L2 }, { t: "line", a: [a[0] + 2 * N, b[1]], b: [xx + tk, b[1]], layer: L2 }, { t: "text", p: [xx - 0.8 * N, (a[1] + b[1]) / 2 - tw(s2, th) / 2], s: s2, h: th, rot: 90, al: "l", layer: L2 }); G.ext(bb, [xx + 2 * N, b[1]]); }
+      if (vert) { var xx = a[0] + off; ents.push({ t: "line", a: [xx, a[1]], b: [xx, b[1]], layer: L2 }, { t: "line", a: [xx - tk, a[1] - tk], b: [xx + tk, a[1] + tk], layer: L2 }, { t: "line", a: [xx - tk, b[1] - tk], b: [xx + tk, b[1] + tk], layer: L2 }, { t: "line", a: [a[0] + 2 * N, a[1]], b: [xx + tk, a[1]], layer: L2 }, { t: "line", a: [a[0] + 2 * N, b[1]], b: [xx + tk, b[1]], layer: L2 }, (b[1] - a[1] < tw(s2, th) + N ? { t: "text", p: [xx - 1.5 * N - tw(s2, th), (a[1] + b[1]) / 2 - th / 2], s: s2, h: th, rot: 0, al: "l", layer: L2 } : { t: "text", p: [xx - 0.8 * N, (a[1] + b[1]) / 2 - tw(s2, th) / 2], s: s2, h: th, rot: 90, al: "l", layer: L2 })); G.ext(bb, [xx + 2 * N, b[1]]); }
       else { var yy = a[1] - off; ents.push({ t: "line", a: [a[0], yy], b: [b[0], yy], layer: L2 }, { t: "line", a: [a[0] - tk, yy - tk], b: [a[0] + tk, yy + tk], layer: L2 }, { t: "line", a: [b[0] - tk, yy - tk], b: [b[0] + tk, yy + tk], layer: L2 }, { t: "line", a: [a[0], a[1] - 2 * N], b: [a[0], yy - tk], layer: L2 }, { t: "line", a: [b[0], a[1] - 2 * N], b: [b[0], yy - tk], layer: L2 }, { t: "text", p: [(a[0] + b[0]) / 2 - tw(s2, th) / 2, yy + 0.8 * N], s: s2, h: th, rot: 0, al: "l", layer: L2 }); } };
-    var yb = Math.min(res.ext[1], res.ngl); dimL([x0, yb], [x1, yb], 5 * N, false); if (top - res.ngl > 500) dimL([x1 + 26 * N, res.ngl], [x1 + 26 * N, top], 4 * N, true);
+    var yb = Math.min(res.ext[1], res.ngl), chain = [res.ngl].concat(res.levels.map(function (l) { return l.elev; }).filter(function (z) { return z > res.ngl + 200 && z < top - 200; })).concat([top]).sort(function (p, q) { return p - q; });
+    dimL([x0, yb], [x1, yb], 5 * N, false);
+    if (top - res.ngl > 500) { if (chain.length > 2) { for (var ci = 0; ci + 1 < chain.length; ci++) dimL([x1 + 36 * N, chain[ci]], [x1 + 36 * N, chain[ci + 1]], 4 * N, true); dimL([x1 + 42 * N, res.ngl], [x1 + 42 * N, top], 4 * N, true); } else dimL([x1 + 26 * N, res.ngl], [x1 + 26 * N, top], 4 * N, true); }
+    (res.tags || []).forEach(function (t) { var h2 = 1.8 * N; ents.push({ t: "text", p: [t.u - tw(t.s, h2) / 2, t.v + 0.9 * N], s: t.s, h: h2, rot: 0, al: "l", layer: "A-ELEV-TXT" }); });
     var cx = (x0 + x1) / 2, ty = yb - 16 * N, H1 = 3.5 * N, wt = tw(title, H1);
     ents.push({ t: "text", p: [cx - wt / 2, ty], s: title, h: H1, rot: 0, al: "l", layer: "A-ELEV-TXT" }); ents.push({ t: "line", a: [cx - wt / 2, ty - 1.5 * N], b: [cx + wt / 2, ty - 1.5 * N], layer: "A-ELEV-GL" });
     ents.push({ t: "text", p: [cx - tw("Scale 1 : " + N, th) / 2, ty - 6 * N], s: "Scale 1 : " + N, h: th, rot: 0, al: "l", layer: "A-ELEV-TXT" }); G.ext(bb, [cx - wt / 2, ty - 7 * N]); G.ext(bb, [cx + wt / 2, ty]);

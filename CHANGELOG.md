@@ -3,6 +3,9 @@
 This file is for the people maintaining the app. It is not published with the site (see `.assetsignore`).
 The text users see is `EP_NOTES` in `js/version.js`.
 
+## 2026.11.21-q
+- Elevations: `B.viewLines` returns `tags` — "D w × h" / "W w × h" for doors and windows on walls square to the view whose centre passes the depth buffer; written above the opening. Height: a chain GL → each level → top, with the overall height outside it; a segment too short for upright text gets its text beside the line.
+
 ## 2026.11.21-p
 - Paint popup: search box (`data-matq`, `matFilter`) hides non-matching materials and empty groups in place; the text is kept in `C.matQ`.
 - POP runs (`pop_*`) with no height of their own: `autoZ` puts the underside (false-ceiling height − the band's drop) of the room that contains the run's first point; outside such a room the catalogue height stays.
