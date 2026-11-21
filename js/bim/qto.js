@@ -62,6 +62,8 @@
     pipe1_600: { c: [["mp25", "9.2 A"]] }, pipe1_1000: { c: [["mp25", "9.2 B"]] }, pipe1_1200: { c: [["mp25", "9.2 C"]] }, pipe1_1500: { c: [["mp25", "9.2 D"]] },
     pipe2_600: { c: [["mp25", "9.3 A"]] }, pipe2_1000: { c: [["mp25", "9.3 B"]] }, pipe2_1200: { c: [["mp25", "9.3 C"]] }, pipe2_1500: { c: [["mp25", "9.3 D"]] }
   }, B.MAP || {});
+  B.MAP.kitchen_counter = { c: [["cpwd23", "8.2.2.2"]], q: /kitchen platforms.*Granite stone slab of colour black.*over 0.50/i };
+  B.MAP.sink_opening = { c: [["cpwd23", "8.5"]], q: /opening of required size.*kitchen sink/i };
   function family(k) { if (B.MAP[k]) return k; if (/^rcc_/.test(k)) return "rcc"; if (/^steel_/.test(k)) return "steel"; return k; }
   B.family = family;
   B.resolve = function (d, key, zone) {
@@ -72,6 +74,18 @@
     if (m.q && EP.BOOKS) { var books = m.books || ["cpwd23", "cpwd", "mp25", "mp", "hort"]; for (var j = 0; j < books.length; j++) { var Bk = EP.BOOKS[books[j]]; if (!Bk) continue; var hit = Bk.list.filter(function (it) { return m.q.test(it.desc) && (zone !== "plinth" || !/above plinth/i.test(it.desc)) && (zone !== "super" || !/up ?to plinth/i.test(it.desc)); })[0]; if (hit) return { b: books[j], c: hit.code, guess: true }; } }
     return null;
   };
+  /* Non-SOR items with a ready rate analysis (templates.json) for model work that no SOR book covers:
+     key → pattern on the template's description. Used only when no SOR item resolves. */
+  B.NSMAP = Object.assign({ led_strip: /^Aluminium LED profile/i, wardrobe: /modular kitchen \/ wardrobe/i, bookshelf: /modular kitchen \/ wardrobe/i, shoe_rack: /modular kitchen \/ wardrobe/i, kitchen_unit: /^Modular kitchen base unit/i, kitchen_wall_unit: /^Modular kitchen wall unit/i, tv_unit: /^TV unit with fluted panel/i, study_table: /^Study \/ office table/i, tap_fitting: /^Single-lever basin mixer/i }, B.NSMAP || {});
+  B._ns = null; B._nsP = null;
+  B.loadTpl = function () {
+    if (B._ns) return Promise.resolve(B._ns); if (B._nsP) return B._nsP;
+    B._nsP = fetch("templates.json").then(function (r) { if (!r.ok) throw new Error("templates"); return r.json(); }).then(function (j) { var out = []; (function walk(o) { if (Array.isArray(o)) o.forEach(walk); else if (o && typeof o === "object") { if (typeof o.ns === "string") out.push(o); else Object.keys(o).forEach(function (k) { walk(o[k]); }); } })(j); B._ns = out; return out; }).catch(function () { B._nsP = null; return []; });
+    return B._nsP;
+  };
+  B.nsFor = function (key) { var re = B.NSMAP[key]; if (!re || !B._ns) return null; return B._ns.filter(function (t) { return re.test(t.ns); })[0] || null; };
+  B.nsRate = function (t) { if (!t) return null; var c = t.an && EP.nsCalc ? EP.nsCalc({ ns: t.an }) : null; return c && c.rate ? c.rate : (t.r != null ? +t.r : null); };
+  function nsQty(total, dim, u) { u = String(u || "").toLowerCase(); if (dim === "A" && /^(sqm|sq\.?m|m2|m²)$/.test(u)) return total / 1e6; if (dim === "L" && /^(rm|rmt|m|metre|meter|mtr)$/.test(u)) return total / 1000; if (dim === "N" && /^(nos?|each|no\.?|set)$/.test(u)) return total; return null; }
   /* schedule: rows grouped by key + zone → { key, zone, dim, total (model units), label, items: [element rows], sor, unit, qty (in SOR unit) } */
   B.schedule = function (doc) {
     var rows = B.allQty(doc), g = {}, order = [];
@@ -80,7 +94,8 @@
       var x = g[k], s = B.resolve(doc.d, x.key, x.zone), it = s && EP.item(s.b, s.c), unit = it ? it.unit : null, uid = unit && UN.fromSor(unit), q = null, err = null;
       if (it && uid) { try { q = x.dim === "M" ? UN.conv(x.total, "kg", uid) : UN.toSor(x.total, x.dim, uid); } catch (e) { err = e.message; } }
       else if (it) err = "unit " + unit + " cannot be measured from the model";
-      return Object.assign(x, { sor: s, item: it, unit: unit, qty: q, err: err, base: x.dim === "V" ? UN.conv(x.total, "mm3x", "m3") : x.dim === "A" ? UN.conv(x.total, "mm2", "m2") : x.dim === "L" ? x.total / 1000 : x.total, baseU: { V: "m³", A: "m²", L: "m", N: "nos", M: "kg" }[x.dim] });
+      var nsT = !it ? B.nsFor(x.key) : null; if (nsT) { unit = nsT.u; q = nsQty(x.total, x.dim, nsT.u); if (q == null) nsT = null; }
+      return Object.assign(x, { sor: s, item: it, ns: nsT || null, unit: unit, qty: q, err: err, base: x.dim === "V" ? UN.conv(x.total, "mm3x", "m3") : x.dim === "A" ? UN.conv(x.total, "mm2", "m2") : x.dim === "L" ? x.total / 1000 : x.total, baseU: { V: "m³", A: "m²", L: "m", N: "nos", M: "kg" }[x.dim] });
     });
   };
   /* write the schedule into an estimate part (adds items that are missing; replaces this model's earlier rows) */
@@ -89,8 +104,13 @@
     // remove rows of this model from every item first (they are re-created below)
     d.items.forEach(function (it) { if (it.meas) it.meas = it.meas.filter(function (m) { return !(m.src && m.src.bim === drawingId && (!opts.keys || opts.keys.indexOf(m.src.key + "|" + m.src.zone) >= 0)); }); });
     sched.forEach(function (x) {
-      if (!x.sor || x.qty == null || x.include === false) return;
+      if ((!x.sor && !x.ns) || x.qty == null || x.include === false) return;
       if (opts.keys && opts.keys.indexOf(x.key + "|" + x.zone) < 0) return;
+      if (!x.item && x.ns) {   /* Non-SOR item with its ready analysis */
+        var nt = x.ns, xi = d.items.filter(function (i) { return i.part === partId && i.b === "x" && i.x && i.x.desc === nt.ns; })[0];
+        if (!xi) { var xx = { desc: nt.ns, unit: nt.u, sor: nt.r != null ? String(nt.r) : "", an: "", src: nt.an ? "NS item — rate analysis attached" : "Indicative market rate 2026 — replace with quotation" }; if (nt.an) xx.ns = JSON.parse(JSON.stringify(nt.an)); xi = { id: EP.uid(), part: partId, b: "x", x: xx, q: "", rem: "", meas: [] }; d.items.push(xi); items++; }
+        xi.meas = xi.meas || []; x.rows.forEach(function (r) { var qq = nsQty(r.v, r.dim, nt.u); if (qq == null) return; xi.meas.push({ k: "+", d: r.label + (lvlName(r.lvl) ? " · " + lvlName(r.lvl) : "") + (r.f ? " (" + r.f + ")" : ""), n: "", q: String(+qq.toFixed(4)), src: { bim: drawingId, el: r.id, key: x.key, zone: x.zone, v: r.v, at: Date.now(), name: doc.d.name } }); n++; });
+        return; }
       var it = d.items.filter(function (i) { return i.part === partId && i.b === x.sor.b && i.c === x.sor.c; })[0];
       if (!it) { it = { id: EP.uid(), part: partId, b: x.sor.b, c: x.sor.c, q: "", meas: [] }; d.items.push(it); items++; }
       it.meas = it.meas || []; var uid = UN.fromSor(x.unit), uf = EP.unitFactor ? EP.unitFactor(x.unit) : 1;

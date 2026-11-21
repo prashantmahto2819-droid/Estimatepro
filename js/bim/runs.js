@@ -49,14 +49,14 @@
     wardrobe_slide: { n: "Wardrobe — sliding shutters", fam: "u", z: 0, h: 2400, dp: 650, mw: 900, pl: 80, rows: [[80, 2400, "sl"]], look: "laminate_oak", key: "wardrobe" },
     loft_only: { n: "Loft cabinet (above door / wardrobe)", fam: "u", z: 2100, h: 600, dp: 600, mw: 450, pl: 0, rows: [[0, 600, "sh"]], look: "laminate_oak", key: "wardrobe" },
     kitchen_base: { n: "Kitchen base units with counter", fam: "u", z: 0, h: 850, dp: 600, mw: 500, pl: 100, rows: [[100, 830, "mx"]], top: 20, look: "laminate_sage", key: "kitchen_unit", dim: "L" },
-    kitchen_wall: { n: "Kitchen wall units", fam: "u", z: 1450, h: 700, dp: 350, mw: 500, pl: 0, rows: [[0, 700, "sh"]], look: "laminate_sage", key: "kitchen_unit", dim: "L", under: 1 },
+    kitchen_wall: { n: "Kitchen wall units", fam: "u", z: 1450, h: 700, dp: 350, mw: 500, pl: 0, rows: [[0, 700, "sh"]], look: "laminate_sage", key: "kitchen_wall_unit", dim: "L", under: 1 },
     kitchen_tall: { n: "Kitchen tall unit (oven / pantry)", fam: "u", z: 0, h: 2150, dp: 600, mw: 600, pl: 100, rows: [[100, 800, "dr"], [800, 2150, "sh"]], look: "laminate_sage", key: "kitchen_unit", dim: "L" },
     kitchen_oven_tall: { n: "Kitchen tall unit with built-in oven and microwave", fam: "u", z: 0, h: 2150, dp: 600, mw: 600, pl: 100, rows: [[100, 700, "dr"], [700, 1300, "ov"], [1300, 1700, "ov"], [1700, 2150, "sh"]], look: "laminate_sage", key: "kitchen_unit", dim: "L" },
     kitchen_fridge_bay: { n: "Fridge bay — fridge with cabinet above and side panels", fam: "u", z: 0, h: 2150, dp: 650, mw: 900, pl: 0, rows: [[0, 1800, "fr"], [1820, 2150, "sh"]], look: "laminate_sage", key: "kitchen_unit", dim: "L" },
-    tv_unit: { n: "TV unit — console with back panel", fam: "u", z: 250, h: 400, dp: 400, mw: 600, pl: 0, rows: [[0, 400, "dr"]], back: 2100, look: "laminate_oak", key: "tv_unit" },
+    tv_unit: { n: "TV unit — console with back panel", fam: "u", z: 250, h: 400, dp: 400, mw: 600, pl: 0, rows: [[0, 400, "dr"]], back: 2100, look: "laminate_oak", key: "tv_unit", dim: "L" },
     crockery: { n: "Crockery unit — glass shutters above", fam: "u", z: 0, h: 2100, dp: 450, mw: 450, pl: 80, rows: [[80, 850, "sh"], [900, 2100, "gl"]], look: "laminate_oak", key: "wardrobe" },
     bookshelf: { n: "Book shelf / display — open", fam: "u", z: 0, h: 2100, dp: 300, mw: 600, pl: 80, rows: [[80, 2100, "op"]], look: "laminate_oak", key: "bookshelf" },
-    study_table: { n: "Study / work table with drawers", fam: "u", z: 0, h: 750, dp: 600, mw: 450, pl: 0, rows: [[450, 730, "dr"]], top: 20, legs: 1, look: "laminate_oak", key: "wardrobe" },
+    study_table: { n: "Study / work table with drawers", fam: "u", z: 0, h: 750, dp: 600, mw: 450, pl: 0, rows: [[450, 730, "dr"]], top: 20, legs: 1, look: "laminate_oak", key: "study_table", dim: "L" },
     vanity: { n: "Vanity / basin cabinet with top", fam: "u", z: 150, h: 650, dp: 500, mw: 450, pl: 0, rows: [[0, 630, "sh"]], top: 20, look: "laminate_charcoal", key: "wardrobe" },
     shoe_rack: { n: "Shoe cabinet", fam: "u", z: 0, h: 1000, dp: 350, mw: 450, pl: 80, rows: [[80, 1000, "sh"]], look: "laminate_oak", key: "shoe_rack" }
   });
@@ -186,8 +186,8 @@
     qty: function (doc, e) { var D = def(e), L = runLen(e), z = e.lvl ? B.below(doc.d, e.lvl) : "super", m = function (v) { return (v / 1000).toFixed(2); }, rows = [];
       if (e.noq === true) return rows;
       if (D.fam === "u") { var Hu = e.h || D.h, du = Math.max(150, e.dp || D.dp); if (D.dim === "L") rows.push({ k: D.key, dim: "L", v: L, label: D.n, f: m(L) + " m run", z: z }); else rows.push({ k: D.key, dim: "A", v: L * Hu, label: D.n, f: m(L) + " × " + m(Hu) + " (front)", z: z });
-        if (D.top && D.key === "kitchen_unit") rows.push({ k: "kitchen_counter", dim: "A", v: L * (du + 25), label: "Counter top — " + D.n, f: m(L) + " × " + m(du + 25), z: z });
-        if (D.back) rows.push({ k: "wall_panel", dim: "A", v: L * D.back, label: "TV back panel", f: m(L) + " × " + m(D.back), z: z }); return rows; }
+        if (D.top && D.key === "kitchen_unit") { rows.push({ k: "kitchen_counter", dim: "A", v: L * (du + 25), label: "Counter top — " + D.n, f: m(L) + " × " + m(du + 25), z: z }); if (e.sink) rows.push({ k: "sink_opening", dim: "N", v: 1, label: "Opening in the counter for the sink", f: "1 no.", z: z }); }
+        return rows; }
       if (D.fam === "p") { if (D.key !== "led_strip") rows.push({ k: D.key, dim: "L", v: L, label: D.n, f: m(L) + " m run", z: z }); }
       else { var Hh = e.h || D.h, Lv = B.level(doc.d, e.lvl), zr0 = (Lv ? Lv.elev : 0) + (e.z == null ? D.z : e.z), ded = 0; segsOf(path(e), e.closed).forEach(function (sg) { var ln = G.dist(sg[0], sg[1]); holesOn(doc, e, sg[0], sg[1]).forEach(function (h) { var w = Math.min(ln, h.d1) - Math.max(0, h.d0), hh = Math.min(zr0 + Hh, h.z1) - Math.max(zr0, h.z0); if (w > 0 && hh > 0) ded += w * hh; }); });
         rows.push({ k: D.key, dim: "A", v: Math.max(0, L * Hh - ded), label: D.n, f: m(L) + " × " + m(Hh) + (ded > 0 ? " − openings " + (ded / 1e6).toFixed(2) + " m²" : ""), z: z }); }

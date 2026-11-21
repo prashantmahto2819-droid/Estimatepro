@@ -3,6 +3,10 @@
 This file is for the people maintaining the app. It is not published with the site (see `.assetsignore`).
 The text users see is `EP_NOTES` in `js/version.js`.
 
+## 2026.11.21-l
+- Quantities → Non-SOR: `B.NSMAP` (key → pattern on a `templates.json` description), `B.loadTpl()`, `B.nsFor`, `B.nsRate`. `B.schedule` gives a row `ns` (template), `unit`, `qty` when no SOR item resolves and the template unit fits the measured dimension (sqm ↔ A, rm ↔ L, nos ↔ N). `B.sendToEstimate` writes such rows as a `b: "x"` item with the template's analysis (`x.ns`), re-using the item on a re-send. The Σ Quantities dialog loads the templates first and shows "Non-SOR item — ready rate analysis" with the analysed rate.
+- New keys: `kitchen_wall_unit`, `study_table`, `sink_opening`; `tv_unit` and `study_table` runs are measured by length; the TV back panel row was dropped (the template includes it). `B.MAP.kitchen_counter` → CPWD 2023 8.2.2.2, `sink_opening` → 8.5.
+
 ## 2026.11.21-k
 - Tutorial: tours `interior` (cladding, mouldings / LED, units, room ceiling, door designs, sized furniture, item materials, light colour, night / sky) and `sheets` (elevation, section, sheet, update, plot / credits). All their selectors were checked against the live ribbon.
 - Plan: an arched door / window / opening shows a dashed bow across the opening (`plan` in `bim.js`).
