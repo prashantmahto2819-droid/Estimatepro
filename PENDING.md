@@ -53,14 +53,14 @@ Last updated at version 2026.11.21-q.
 16. Estimate link for the new elements: (done in -l: rows with no SOR item take a Non-SOR item with its ready rate analysis — wardrobes, kitchen base / wall units, TV unit, study table, LED profile, taps; kitchen counter → CPWD 8.2.2.2, sink opening → CPWD 8.5.) (-m: six new Non-SOR templates with analysis — POP cornice ₹222/rm, stepped-ceiling extra ₹560/rm, plaster band ₹292/rm, GRC cornice ₹2,097/rm, decorative piece ₹1,773 each, kitchen chimney ₹22,000 each — and their rows in Σ Quantities. OWNER: these six rates are my indicative market figures; check them against local quotations and tell me what to change.) Still without an item: loose furniture (beds, sofas, dining), curtains, mirrors, whole decorative columns and arches (now priced as one 'decorative piece' each, which is too low for large pieces).
 
 ## C. CAD Studio — to build
-1. (done in -x: SHEET puts plan + elevations + sections in one frame at one scale and plots with the title block.) Still open: several sheets per drawing, views at different scales on one sheet, print sets, sheet in portrait.
+1. (done in -x: SHEET puts plan + elevations + sections in one frame at one scale and plots with the title block.) (-s: portrait.) Still open: several sheets per drawing, views at different scales on one sheet, print sets.
 2. Real dimensions, ellipse and spline in DXF export; DWG is not possible in the browser.
-3. Curved walls, sloping slabs / ramps, split levels.
+3. (curved walls done in -e; ramps / sloping slabs done in -s: RAMP.) Still open: split levels, slabs sloping two ways, ramp railings and kerbs.
 4. (done in -x: ELEVATION, SECTION, VIEWSUPDATE.) (-n: cut parts are filled.) Still open: (-o: overall width and height on every view) (-q: level-to-level chain and door / window size tags) material notes and opening positions on elevations, door / window swing marks, outlines for library items that have no edges, views update on their own.
 5. (done in -r: SCHEDULE — door / window and room finish tables.) Still open: finish schedule for walls, column / beam schedules.
 6. Hatch patterns library, text styles, blocks library shared between drawings.
-7. (done in -r: PIPE — CPVC, rain-water pipes, conduits, cable trays with lengths and SOR rates.) Still open: fittings count (bends, tees), wires in conduit, drainage with slopes.
-8. (done in -r: north point and scale bar.) Still open: contours / levels grid, plot boundary from bearings.
+7. (done in -r: PIPE — CPVC, rain-water pipes, conduits, cable trays with lengths and SOR rates.) Still open: wires in conduit, drainage with slopes. (Fittings are inside the SOR pipe / conduit rates.)
+8. (done in -r: north point and scale bar.) (-s: plot boundary from bearings, spot levels.) Still open: contours from spot levels, setback lines, ground coverage / FAR check.
 
 ## D. Other
 1. Design Studio sheets: views are small and some labels overlap.

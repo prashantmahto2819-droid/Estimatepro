@@ -3,6 +3,11 @@
 This file is for the people maintaining the app. It is not published with the site (see `.assetsignore`).
 The text users see is `EP_NOTES` in `js/version.js`.
 
+## 2026.11.21-s
+- New `js/bim/site.js`: type `ramp` (`B.EXT.ramp`, `B.rampInfo`; qty as rcc_slab / shut_slab / steel_slab on the sloping length), commands RAMP, PLOTBOUNDARY (`B.parseBearing`, `B.fmtBearing`, `B.plotBoundary`; bearings measured from the sun's north; layers C-PROP, C-PROP-TXT), SPOTLEVEL (layer C-TOPO).
+- SHEET asks Landscape / Portrait; `layouts[0].land` is used by the plot dialog.
+- Pipes: no separate fittings count — CPWD 18.8 / E&M conduit rates include fittings.
+
 ## 2026.11.21-r
 - `templates.json`: category `fence` in group `bld` (after `bwall`) — pits / blocks, RCC posts & struts (2 NS items with analysis: post 125×125×2400 ₹1,275, strut 100×100×2400 ₹1,000 — indicative), angle-iron posts, barbed wire (16.17.1, 16.18.1, 16.16, 16.53), chain link / welded mesh, gate.
 - `runs.js`: services runs (`grp:"s"`) — CPVC pipes, rain-water pipes, PVC / MS conduit, cable trays; command PIPE; mapped to CPWD 18.8.x / 12.41.x and E&M 1.21.x / 1.20.x / 4.1.x.

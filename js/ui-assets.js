@@ -65,6 +65,8 @@
   function matOpts() { if (MATOPTS && MATOPTS.n === Object.keys(B.LOOKS).length) return MATOPTS.l; var l = Object.keys(B.LOOKS).filter(function (k) { return !/^deco_|^car_|^foliage$|^bark$|^rebar_|^steel_member$/.test(k); }).map(function (k) { return [k, B.LOOKS[k].n]; }).sort(function (a, b) { return a[1] < b[1] ? -1 : 1; }); MATOPTS = { n: Object.keys(B.LOOKS).length, l: l }; return l; }
   var prevFields = CAD.HOOKS.fields;
   CAD.HOOKS.fields = function (e, ed) {
+    if (e.t === "ramp") { var bR = B.ensure(ed.doc.d), IR = B.rampInfo(e), LR = function (v) { return ed.fmt(v); };
+      return "<div class='cad-ph'>Ramp / sloping slab — 1 in " + (Math.round(IR.ratio * 10) / 10) + "</div>" + sel("Level", "lvl", e.lvl, bR.levels.map(function (l) { return [l.id, l.name]; })) + f("Width", "w", LR(e.w || 1500)) + f("Climbs (low end to high end)", "rise", LR(e.rise || 0)) + f("Thickness", "th", LR(e.th || 150)) + f("Low end above the floor", "z", LR(e.z || 0)) + sel("Material", "look", e.look || "", [["", "Building default (slab)"]].concat(matOpts())) + "<div class='muted small'>Length on the slope " + (IR.slope / 1000).toFixed(2) + " m. Concrete, shuttering and steel go to Σ Quantities as slab items.</div>"; }
     if (e.t !== "asset" && e.t !== "land" && e.t !== "model3d" && e.t !== "run") return prevFields ? prevFields(e, ed) : "";
     var b = B.ensure(ed.doc.d), lv = b.levels.map(function (l) { return [l.id, l.name]; }), Lm = function (v) { return v == null ? "" : ed.fmt(v); }, h = "";
     if (e.t === "asset") {
