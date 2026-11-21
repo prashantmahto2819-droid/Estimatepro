@@ -3,6 +3,10 @@
 This file is for the people maintaining the app. It is not published with the site (see `.assetsignore`).
 The text users see is `EP_NOTES` in `js/version.js`.
 
+## 2026.11.21-z11
+- `ui-bim.js`: hosted elements in Move mode — `mvEnt` changes `at` by the drag projected on the wall direction (25 mm steps, kept inside the wall).
+- `site.js`: ramp `rail` (posts at about 1.2 m, top and mid rail following the slope; `railing` row 2 × slope length).
+
 ## 2026.11.21-z10
 - Text entity `st` ("b", "i", "bi"): canvas font, PDF fonts F3 (Helvetica-Oblique) and F4 (Helvetica-BoldOblique) — image objects now start at 9; TEXT / MTEXT option Style (`ed.txtSt`); Properties select.
 - Movers: `uFlip` in the main and shadow vertex shaders; `_drawMovers` runs out and back (pivot = centre of the vehicle's own vertices).
