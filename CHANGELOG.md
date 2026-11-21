@@ -3,6 +3,10 @@
 This file is for the people maintaining the app. It is not published with the site (see `.assetsignore`).
 The text users see is `EP_NOTES` in `js/version.js`.
 
+## 2026.11.21-z21
+- New `server/shared.sql` (not published; owner to run): `shared_lib` (kind block / pat / material; read by all signed-in users, written through `shared_put` / `shared_del` by admins) and `ep_switches` (`admin_set_switch`, super admin only). Tested on PostgreSQL 16 with stand-in auth tables.
+- New `js/ui-shared.js`: BLOCKSHARE, HATCHSHARE; BLOCKLIB shows shared blocks beside the device's; shared patterns are registered when a drawing opens; Users tab → Modules panel (wraps `U.adminTop`); switched-off tabs are hidden for non-owners (elements with `data-tab` / `data-nav` / `data-go`) and `S.tab` is sent back to the last allowed tab. Does nothing until the SQL is run. **Not checked against the real navigation markup** (ui-core.js cannot be read in the build session) — confirm with the owner that a switched-off module really disappears.
+
 ## 2026.11.21-z20
 - `assets2.js`: part type `w` (`B.AH.wheel`): tyre + rim with spoke sectors, axle across the vehicle; vertices carry pattern 18 and their offsets from the axle in the size / gloss slots. `view3d.js`: `uWh` turns them in the vertex shader while a mover drives; the fragment shader treats pattern 18 as plain. Cars and the motorcycle use it.
 - Walking cut-outs sway (top of the quad shifts ±3.5 % of the height).

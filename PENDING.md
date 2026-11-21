@@ -3,7 +3,7 @@
 Last updated at version 2026.11.21-q.
 
 ## A. Waiting for the owner
-1. Connect the app's Supabase project (ref starts `eaygozhjsmohfcuiazfm`) to the build session. Then: admin dashboard switches (module on / off), WhatsApp update messages with real pictures, shared cut-out / model library for all users.
+1. Server work: (-z21) module switches and a shared library of blocks and hatch patterns are built — the owner has to run `server/shared.sql` once in Supabase, then check that a switched-off module disappears for a normal user. Still open: shared 3D models / cut-outs / material pictures (large files — need Supabase Storage), WhatsApp update messages with real pictures attached (needs a sending gateway; links to the pictures are already added).
 2. Files to supply (use only files with a licence that allows commercial use):
    - GLB models, a few of each kind, small files (ideally under 2–5 MB, not Draco-compressed). The owner can add them himself with Library → "＋ Add 3D models to my library (GLB)" (kept on that device); to ship them to every user they must come to the build session or the shared server library:
      - Vehicles: hatchback, sedan, SUV, pickup, bus, scooter, auto.
