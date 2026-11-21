@@ -85,6 +85,30 @@
         { el: "[data-cadtab='props']", text: "किसी भी चीज़ को चुनें → 'Properties' में उसका डिज़ाइन, नाप और मटेरियल बदलें।", en: "Select anything → change its design, sizes and material in 'Properties'." }
       ]
     },
+    interior: {
+      title: "इंटीरियर: क्लैडिंग, LED, अलमारी-किचन, सीलिंग", titleEn: "Interiors: cladding, LED, units, ceilings",
+      steps: [
+        { tab: "Building (BIM)", el: "[data-rgrp='Building (BIM)'] [data-cc='CLADDING']", text: "'Cladding (WPC / ACP)' — दीवार के साथ शुरू और अंत बिंदु क्लिक करें। 'Type' से WPC लूवर, ACP पैनल, HPL, पत्थर की पट्टी, फ़िन चुनें; घुमाव के लिए 'Arc'। दरवाज़े-खिड़की पर अपने-आप कटती है।", en: "'Cladding (WPC / ACP)' — click the start and end along a wall. 'Type' picks WPC louvres, ACP panels, HPL, stone strips, fins; 'Arc' for a curve. It is cut round doors and windows." },
+        { el: "[data-cadtab='props']", text: "क्लैडिंग चुनें → Properties: ऊँचाई, पैनल की चौड़ाई, मटेरियल और 'LED lights' (जोड़ों में, ऊपर, नीचे), LED का रंग।", en: "Select the cladding → Properties: height, panel width, material and 'LED lights' (joints, top, bottom), LED colour." },
+        { tab: "Building (BIM)", el: "[data-rgrp='Building (BIM)'] [data-cc='RUN']", text: "'Moulding / LED line' — कॉर्निस, प्लास्टर बैंड, स्कर्टिंग, LED स्ट्रिप, कोव LED, नियॉन। कोने अपने-आप जुड़ते हैं; 'Circle' से गोल।", en: "'Moulding / LED line' — cornice, plaster band, skirting, LED strip, cove LED, neon. Corners join by themselves; 'Circle' for a ring." },
+        { tab: "Building (BIM)", el: "[data-rgrp='Building (BIM)'] [data-cc='CABINET']", text: "'Wardrobe / kitchen / TV unit' — दीवार के साथ दो बिंदु; शटर और दराज़ लंबाई के हिसाब से बनते हैं। किचन में Properties से सिंक, हॉब, चिमनी।", en: "'Wardrobe / kitchen / TV unit' — two points along a wall; shutters and drawers are set out to the length. For a kitchen add sink, hob and chimney in Properties." },
+        { tab: "Building (BIM)", el: "[data-rgrp='Building (BIM)'] [data-cc='ROOM']", text: "कमरा चुनें → Properties → False ceiling: Yes → 'Ceiling design' (ट्रे, डबल स्टेप, आइलैंड) और 'Spot lights'।", en: "Select a room → Properties → False ceiling: Yes → 'Ceiling design' (tray, double step, island) and 'Spot lights'." },
+        { tab: "Building (BIM)", el: "[data-rgrp='Building (BIM)'] [data-cc='DOOR']", text: "दरवाज़ा / खिड़की चुनें → Properties: 12 डिज़ाइन, हैंडल, और 'Head (top) shape' से मेहराब।", en: "Select a door / window → Properties: 12 designs, handles, and 'Head (top) shape' for an arch." },
+        { el: "[data-cadtab='lib']", text: "Library → Furniture में 'any size' वाले आइटम: चौड़ाई लिखते ही सोफ़े में सीटें, बेड में तकिये, टेबल पर कुर्सियाँ बदल जाती हैं। 'Plaster & façade decoration' में कॉलम, मेहराब, कॉर्निस।", en: "Library → Furniture, items marked 'any size': type a width and the sofa gets more seats, the bed more pillows, the table more chairs. 'Plaster & façade decoration' has columns, arches, cornices." },
+        { el: "[data-cadtab='props']", text: "किसी भी आइटम पर 'Materials of this item' से लकड़ी / ग्लास / धातु बदलें; लाइट पर 'Light colour' और 'Brightness'।", en: "On any item use 'Materials of this item' to change wood / glass / metal; on a light, 'Light colour' and 'Brightness'." },
+        { el: "[data-cad='v3']", text: "3D → '🌙 Night' में LED और लाइटें चमकती हैं; '☀ Sun' में 'Sky and background' से आसमान या अपनी साइट फ़ोटो।", en: "3D → '🌙 Night' shows LEDs and lights glowing; '☀ Sun' → 'Sky and background' for a sky or your own site photo." }
+      ]
+    },
+    sheets: {
+      title: "एलिवेशन, सेक्शन और शीट", titleEn: "Elevations, sections and sheets",
+      steps: [
+        { tab: "Building (BIM)", el: "[data-rgrp='Building (BIM)'] [data-cc='ELEVATION']", text: "'Elevation' — Front / Back / Left / Right एलिवेशन मॉडल से अपने-आप, छिपी लाइनें हटाकर।", en: "'Elevation' — front / back / left / right elevations drawn from the model with hidden lines removed." },
+        { tab: "Building (BIM)", el: "[data-rgrp='Building (BIM)'] [data-cc='SECTION']", text: "'Section' — प्लान पर दो बिंदु क्लिक करें; कटे हिस्से मोटी लाइन में।", en: "'Section' — click two points on the plan; cut parts are in thick lines." },
+        { tab: "Building (BIM)", el: "[data-rgrp='Building (BIM)'] [data-cc='SHEET']", text: "'Sheet layout' — प्लान, एलिवेशन और सेक्शन एक शीट पर एक स्केल में।", en: "'Sheet layout' — plan, elevations and sections on one sheet at one scale." },
+        { tab: "Building (BIM)", el: "[data-rgrp='Building (BIM)'] [data-cc='VIEWSUPDATE']", text: "मॉडल बदलने के बाद 'Update views' दबाएँ।", en: "After changing the model press 'Update views'." },
+        { el: "[data-cad='menu']", text: "File ▾ → 'Plot PDF sheet' → What to plot: 'Sheet layout' → Make PDF। यहीं 'Credits for models and pictures' भी है।", en: "File ▾ → 'Plot PDF sheet' → What to plot: 'Sheet layout' → Make PDF. 'Credits for models and pictures' is here too." }
+      ]
+    },
     library: {
       title: "लाइब्रेरी, मटेरियल और मंदिर/ग्रिल", titleEn: "Library, materials, temple and grills",
       steps: [
@@ -174,6 +198,8 @@
       { key: "cad", icon: "📐", title: "CAD Studio — ड्रॉइंग", en: "Drawing basics", desc: "टैब और हिस्से, लाइन, रेक्टैंगल, बदलना, माप, एक्सपोर्ट। (पहले CAD Studio में एक ड्रॉइंग खोलें)" },
       { key: "bim", icon: "🏗️", title: "बिल्डिंग और मात्रा", en: "Building (BIM) & quantities", desc: "दीवार, दरवाज़ा, कॉलम, स्लैब, कमरा, मंज़िलें, 3D और Σ Quantities।" },
       { key: "finish", icon: "🏠", title: "छत, पैरापेट, रेलिंग", en: "Roof, parapet, railing", desc: "छत के प्रकार, पैरापेट के 10 डिज़ाइन, रेलिंग के 11 डिज़ाइन।" },
+      { key: "interior", icon: "🛋️", title: "इंटीरियर: क्लैडिंग, LED, यूनिट, सीलिंग", en: "Interiors: cladding, LED, units, ceilings", desc: "WPC / ACP क्लैडिंग, मोल्डिंग और LED लाइन, अलमारी-किचन-TV यूनिट, POP सीलिंग, दरवाज़ों के डिज़ाइन, नाप वाला फ़र्नीचर।" },
+      { key: "sheets", icon: "📄", title: "एलिवेशन, सेक्शन, शीट", en: "Elevations, sections, sheets", desc: "मॉडल से एलिवेशन और सेक्शन, एक शीट पर जमाना, PDF छापना।" },
       { key: "library", icon: "🪑", title: "लाइब्रेरी और मटेरियल", en: "Library & materials", desc: "फ़र्नीचर, लाइट, मंदिर, ग्रिल-गेट रखना; ऊँचाई चुनना; 3D में रंग और टाइल्स।" }
     ];
 

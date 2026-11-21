@@ -3,6 +3,11 @@
 This file is for the people maintaining the app. It is not published with the site (see `.assetsignore`).
 The text users see is `EP_NOTES` in `js/version.js`.
 
+## 2026.11.21-k
+- Tutorial: tours `interior` (cladding, mouldings / LED, units, room ceiling, door designs, sized furniture, item materials, light colour, night / sky) and `sheets` (elevation, section, sheet, update, plot / credits). All their selectors were checked against the live ribbon.
+- Plan: an arched door / window / opening shows a dashed bow across the opening (`plan` in `bim.js`).
+- Units: `kitchen_oven_tall` (row type `ov`) and `kitchen_fridge_bay` (row type `fr`).
+
 ## 2026.11.21-j
 - RUN / CLADDING / CABINET: `Arc` (end point + a point on the curve → `arcPts`, a point about every 250 mm) after the first point, and `Circle` (centre + radius → closed run) at the start. Curves are polylines, so the mitred sweep makes them look round; on a curved unit each short piece is one shutter.
 

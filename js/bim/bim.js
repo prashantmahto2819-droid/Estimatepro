@@ -106,6 +106,7 @@
     }
     if (e.t === "door" || e.t === "window" || e.t === "opening") {
       var pl = B.place(doc, e); if (!pl) return out; var u = pl.u, n = pl.n, th = pl.w.th, a0 = G.sub(pl.p, G.mul(u, e.w / 2)), b0 = G.add(pl.p, G.mul(u, e.w / 2));
+      if (B.archSp(e)) { var NA = 10, bul = th * 0.42, prevA = a0; for (var ia = 1; ia <= NA; ia++) { var ta = ia / NA, pa = G.add(G.add(a0, G.mul(u, e.w * ta)), G.mul(n, Math.sin(Math.PI * ta) * bul)); out.dashed.push({ k: "L", a: prevA, b: pa }); prevA = pa; } }   /* arched head: a dashed bow across the opening */
       if (e.t === "window") { [-0.5, -0.12, 0.12, 0.5].forEach(function (f) { L(G.add(a0, G.mul(n, th * f)), G.add(b0, G.mul(n, th * f))); }); if (e.sill != null && e.sill + e.h > (pl.w.h || 3000) - 1) {} return out; }
       if (e.t === "opening") { out.dashed.push({ k: "L", a: G.add(a0, G.mul(n, th / 2)), b: G.sub(b0, G.mul(n, th / 2)) }); out.dashed.push({ k: "L", a: G.sub(a0, G.mul(n, th / 2)), b: G.add(b0, G.mul(n, th / 2)) }); return out; }
       var side = e.flip ? -1 : 1, hinge = e.swing === "r" ? b0 : a0, other = e.swing === "r" ? a0 : b0, leafDir = G.mul(n, side), face = G.add(hinge, G.mul(n, side * th / 2)), leaves = e.kind === "double" ? 2 : 1;
