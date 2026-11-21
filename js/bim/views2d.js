@@ -223,12 +223,28 @@
     ed.doc.add({ t: "text", p: [p[0], p[1] - 4 * N], s: "Scale 1 : " + N, h: 2.5 * N, rot: 0, al: "l", layer: L }); ed.say("Scale bar for 1:" + N + " placed (" + (unit / 1000) + " m divisions).");
   });
 
+  /* sheets of the drawing: layouts whose frame still exists; the frame's present position wins (it may have been moved) */
+  B.sheets = function (ed) { var d = ed.doc.d, out = []; (d.layouts || []).forEach(function (l) { var fr = d.ents.filter(function (e) { return e.layer === "A-SHEET" && e.t === "pline" && (e.sheet === l.id || (!e.sheet && l.id === "S1")); })[0]; if (!fr && l.id !== "S1") return; var r = l.rect; if (fr) { var b = [Infinity, Infinity, -Infinity, -Infinity]; fr.pts.forEach(function (p) { G.ext(b, [p[0], p[1]]); }); r = b; } out.push(Object.assign({}, l, { rect: r })); }); return out; };
+  cmd("SHEETADD", ["ADDSHEET", "NEWSHEET", "SHEETFRAME"], async function (ed) {
+    ensureLayers(ed); var d = ed.doc.d, paper = await ed.getKw("Paper size of the new sheet", Object.keys(CAD.PAPER), ed.shPaper || (d.sheet && d.sheet.size) || "A3"); ed.shPaper = paper;
+    var ori = await ed.getKw("Sheet", ["Landscape", "Portrait"], ed.sheetOri || "Landscape"), land = ori !== "Portrait"; ed.sheetOri = ori;
+    var N = +(await ed.getNum("Scale 1 : ?  (50 for details, 100 for plans, 200 for site plans)", { def: ed.shScale || scaleOf(d) })); if (!(N >= 1)) throw new Error("The scale must be 1 or more."); ed.shScale = N;
+    var pp = land ? CAD.PAPER[paper] : [CAD.PAPER[paper][1], CAD.PAPER[paper][0]], w = (pp[0] - 20) * N, h = (pp[1] - 20 - 28) * N, fr = function (c) { return [[c[0] - w / 2, c[1] - h / 2, 0], [c[0] + w / 2, c[1] - h / 2, 0], [c[0] + w / 2, c[1] + h / 2, 0], [c[0] - w / 2, c[1] + h / 2, 0]]; };
+    ed.preview = function (q) { return [{ t: "pline", pts: fr(q), closed: true }]; };
+    var c = await ed.getPoint("Click the centre of the part this sheet shows (the frame is the printable area at 1:" + N + ")"); ed.preview = null; if (!c) return;
+    var title = await ed.getText("Title of this sheet (Enter to skip)", { def: "" }); title = String(title == null ? "" : title).trim();
+    var used = (ed.doc.d.layouts || []).map(function (l) { return l.id; }), k = 2; while (used.indexOf("S" + k) >= 0) k++; var id = "S" + k, P = fr(c), rect = [P[0][0], P[0][1], P[2][0], P[2][1]];
+    ed.doc.begin("Add sheet"); ed.doc.add({ t: "pline", pts: P, closed: true, layer: "A-SHEET", sheet: id });
+    ed.doc.add({ t: "text", sheet: id, p: [rect[0], rect[1] - 6 * N], s: "Sheet " + k + (title ? " - " + title : "") + " · " + paper + (land ? " landscape" : " portrait") + " · 1 : " + N, h: 3 * N, rot: 0, al: "l", layer: "A-SHEET" });
+    ed.doc.set("layouts", (ed.doc.d.layouts || []).concat([{ id: id, paper: paper, scale: N, land: land, rect: rect, title: title, number: "A-" + (k < 10 ? "0" : "") + k }])); ed.doc.commit();
+    ed.say("Sheet " + k + " added (" + paper + ", 1:" + N + "). Move the frame if needed — it prints where it stands. File ▾ → Plot PDF sheet lists every sheet and can print them all. Erase the frame to remove the sheet.");
+  });
   cmd("SHEET", ["LAYOUT", "SHT"], async function (ed) {
     if (!hasModel(ed)) throw new Error("Draw the building first — the sheet is put together from the plan and the 3D model.");
     var d = ed.doc.d, paper = await ed.getKw("Paper size", Object.keys(CAD.PAPER), (d.sheet && d.sheet.size) || "A3"), what = await ed.getKw("Views on the sheet", ["Standard", "AllElevations"], "Standard"); var ori = await ed.getKw("Sheet", ["Landscape", "Portrait"], ed.sheetOri || "Landscape"), land = ori !== "Portrait"; ed.sheetOri = ori;
     ensureLayers(ed); pruneSections(ed); d = ed.doc.d;
     var views = (what === "AllElevations" ? ["Front", "Right", "Back", "Left"] : ["Front", "Right"]).map(function (k) { return "EL-" + k; }), secs = ((B.ensure(d).sections) || []).map(function (s) { return "SEC-" + s.id; });
-    ed.doc.d.ents.filter(function (e) { return (e.t === "insert" && isViewBlock(e.block)) || e.layer === "A-SHEET"; }).forEach(function (e) { ed.doc.del(e.id); });
+    ed.doc.d.ents.filter(function (e) { return (e.t === "insert" && isViewBlock(e.block)) || (e.layer === "A-SHEET" && (!e.sheet || e.sheet === "S1")); }).forEach(function (e) { ed.doc.del(e.id); });
     var pb = planBox(ed); if (!pb) throw new Error("Nothing to put on a sheet.");
     var pp = land ? CAD.PAPER[paper] : [CAD.PAPER[paper][1], CAD.PAPER[paper][0]], aw = pp[0] - 20, ah = pp[1] - 20 - 28, cache = {}, STD = CAD.STD_SCALES.filter(function (s) { return s >= 20; }), pick = null;
     for (var si = 0; si < STD.length && !pick; si++) {
@@ -245,9 +261,9 @@
     }
     var N2 = pick.N, cx = (pick.T[0] + pick.T[2]) / 2, cy = (pick.T[1] + pick.T[3]) / 2, rect = [cx - aw * N2 / 2, cy - ah * N2 / 2, cx + aw * N2 / 2, cy + ah * N2 / 2];
     pick.place.forEach(function (q) { ed.doc.add({ t: "insert", block: q.n, p: q.p, sx: 1, sy: 1, rot: 0, layer: "A-ELEV" }); });
-    ed.doc.add({ t: "pline", pts: [[rect[0], rect[1], 0], [rect[2], rect[1], 0], [rect[2], rect[3], 0], [rect[0], rect[3], 0]], closed: true, layer: "A-SHEET" });
-    ed.doc.add({ t: "text", p: [rect[0], rect[1] - 6 * N2], s: "Sheet " + paper + (land ? " landscape" : " portrait") + " · 1 : " + N2 + "   —   File ▾ → Plot PDF sheet → What to plot: Sheet layout", h: 3 * N2, rot: 0, al: "l", layer: "A-SHEET" });
-    ed.doc.set("layouts", [{ id: "S1", paper: paper, scale: N2, land: land, rect: rect }]); ed.doc.set("sheet", Object.assign({}, d.sheet, { size: paper, scale: N2 }));
+    ed.doc.add({ t: "pline", pts: [[rect[0], rect[1], 0], [rect[2], rect[1], 0], [rect[2], rect[3], 0], [rect[0], rect[3], 0]], closed: true, layer: "A-SHEET", sheet: "S1" });
+    ed.doc.add({ sheet: "S1", t: "text", p: [rect[0], rect[1] - 6 * N2], s: "Sheet " + paper + (land ? " landscape" : " portrait") + " · 1 : " + N2 + "   —   File ▾ → Plot PDF sheet → What to plot: Sheet layout", h: 3 * N2, rot: 0, al: "l", layer: "A-SHEET" });
+    ed.doc.set("layouts", [{ id: "S1", paper: paper, scale: N2, land: land, rect: rect }].concat((d.layouts || []).filter(function (l) { return l.id !== "S1"; }))); ed.doc.set("sheet", Object.assign({}, d.sheet, { size: paper, scale: N2 }));
     ed.say("Sheet ready: plan" + (pick.place.length ? " + " + pick.place.length + " view(s)" : "") + " on " + paper + " at 1:" + N2 + ". Print it from File ▾ → Plot PDF sheet → Sheet layout."); if (ed.zoomExtents) ed.zoomExtents();
   });
 })();

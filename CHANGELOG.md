@@ -3,6 +3,10 @@
 This file is for the people maintaining the app. It is not published with the site (see `.assetsignore`).
 The text users see is `EP_NOTES` in `js/version.js`.
 
+## 2026.11.21-z4
+- `views2d.js`: SHEETADD (frame pline + label on A-SHEET tagged `sheet: "S<n>"`, entry in `d.layouts` with paper / scale / land / title / number); `B.sheets(ed)` returns the layouts whose frame exists, with the frame's present rectangle; SHEET keeps the other sheets and tags its own as S1.
+- Plot dialog: one option per sheet (`sheet:<id>`) and `sheet:*` = all sheets, one PDF each.
+
 ## 2026.11.21-z3
 - CAMPATH: Speed / Height options → `bim.camSpeed`, `bim.camEye`; Tour uses both. Record: MP4 (avc1) tried before WebM. Record + Tour checked in the test browser: stops and saves at the end of the path.
 
