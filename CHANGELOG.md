@@ -3,6 +3,10 @@
 This file is for the people maintaining the app. It is not published with the site (see `.assetsignore`).
 The text users see is `EP_NOTES` in `js/version.js`.
 
+## 2026.11.21-u
+- `assets.js` qty: key `sofa` is counted in seats (width, plus the return of an L, / 700 mm); the NS item is per seat (₹11,346 indicative).
+- `view3d.js` main shader: sky / horizon / ground reflection by Fresnel on glass (pattern 12) and on gloss > 0.25, Realistic style only.
+
 ## 2026.11.21-t
 - `view3d.js`: `rayAt`, `moveMode` with `onMoveStart / onMoveDrag / onMoveEnd` (drag on the horizontal plane through the point picked; 25 mm steps). `ui-bim.js`: `MOVABLE` types, live rebuild every 70 ms while dragging, one undo step; `rot3d` (⟲ ⟳ 15°).
 - `templates.json`: category `furn` in group `fin` — 33 NS items (supply + carriage + placing labour, DAR add-ons); rates are indicative mid-range 2026. `B.NSMAP` maps 37 library keys to them (unmapped keys 89 → 52).

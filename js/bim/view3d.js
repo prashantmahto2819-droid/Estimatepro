@@ -204,6 +204,14 @@ void main(){
 
   if(pi==16 && uStyle<0.5) col*=max(lit,vec3(1.2)); else col*=lit;   /* 16 = light-giving surface (LED, lamp): never darker than its own colour */
 
+  /* reflection of the sky on glass and polished surfaces: stronger at glancing angles */
+  if(uStyle<0.5 && (pi==12 || gloss>0.25)){
+    vec3 Vr=normalize(uEye-vP); float nv=max(dot(Vr,N),0.0); vec3 R=reflect(-Vr,N);
+    vec3 env=R.z>0.0 ? mix(uHor,uSky,pow(clamp(R.z,0.0,1.0),0.45)) : mix(uHor,uGnd,clamp(-R.z*3.0,0.0,1.0))*0.8;
+    float fr=0.04+0.96*pow(1.0-nv,5.0);
+    col=mix(col,env,clamp(fr*(pi==12?0.9:gloss*0.55),0.0,pi==12?0.7:0.4));
+  }
+
   /* selection highlight */
   if(uSel>0.5 && abs(vI-uSel)<0.5) col=mix(col,vec3(0.2,0.6,1.0),0.35);
 

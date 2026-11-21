@@ -38,7 +38,7 @@ Last updated at version 2026.11.21-q.
 2. (done in -t: fittings light the scene, Night view.) Still open: lights do not cast shadows and pass through walls; emissive glow on the fitting itself.
 3. (done in -w: up to 5 own material pictures per drawing.) Still open: rotate / offset the picture on a surface, more than 5, a device library of materials.
 4. (done in -x: sky presets and an own background picture.) Still open: the picture does not light the model (no image-based lighting), (-r: sky saved per scene) ground materials by area.
-5. Reflections on glass and water; softer shadows.
+5. (-u: sky reflection on glass and polished surfaces.) Still open: reflections of the building itself, water surfaces, softer shadows.
 6. Vehicles that turn at the end of the path, wheels that turn; people with a walking cycle.
 7. Camera path drawn on the plan for the video; MP4 export where the browser allows.
 8. Section box: hide the shadows of cut-away parts; section fill colour.
