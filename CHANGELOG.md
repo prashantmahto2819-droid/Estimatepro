@@ -3,6 +3,10 @@
 This file is for the people maintaining the app. It is not published with the site (see `.assetsignore`).
 The text users see is `EP_NOTES` in `js/version.js`.
 
+## 2026.11.21-i
+- `B.archSp(o)`: wall left in the top corners of an arched opening = w × rise × (1 − π/4). Used in the wall masonry and plaster deductions and in the door / window area; no lintel is counted over an arched opening.
+- Units: at an inside corner the next stretch starts one unit-depth along (no overlap). Kitchen base: `chimney` ("600" | "900") over the hob.
+
 ## 2026.11.21-h
 - Fix (viewer, `setScene`): an object with any transparent triangle was sent whole to the transparent pass, so its solid faces were drawn in sort order without depth and showed through each other (light triangles on cabinet fronts next to a glass shutter, mirror, hob or sink; the same for any library item that mixes glass and solid parts). Now split triangle by triangle: solid faces go to the opaque pass.
 - Sun shadow bias scales with the slope of the face to the sun and with the blur width. Near plane 0.04 × orbit distance (was 0.01), walk 0.12 m (was 0.05).

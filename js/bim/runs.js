@@ -98,7 +98,11 @@
       hk = B.look(e.handle === "gold" ? "steel_gold_pvd" : e.handle === "black" ? "steel_matt_black" : "steel_ss"), hd = e.handle || "", tT = D.top || 0, rows = D.rows.map(function (r) { return r.slice(); });
     rows[rows.length - 1][1] = Math.max(rows[rows.length - 1][0] + 100, Hh - tT);
     segsOf(p, e.closed).forEach(function (s, sIdx) {
-      var a = s[0], b = s[1], len = G.dist(a, b); if (len < 50) return; var u = G.norm(G.sub(b, a)), nv = [u[1] * side, -u[0] * side];
+      var a = s[0], b = s[1], len0 = G.dist(a, b); if (len0 < 50) return; var u = G.norm(G.sub(b, a)), nv = [u[1] * side, -u[0] * side];
+      /* an inside corner: this stretch starts where the previous one's front ends, and a filler closes the corner */
+      var segsAll = segsOf(p, e.closed), prevS = sIdx > 0 ? segsAll[sIdx - 1] : null, cut0 = 0;
+      if (prevS) { var pu = G.norm(G.sub(prevS[1], prevS[0])), pn = [pu[1] * side, -pu[0] * side]; if (pn[0] * u[0] + pn[1] * u[1] > 0.5) cut0 = Math.min(dp, len0 - 100); }
+      var a0 = a; a = [a[0] + u[0] * cut0, a[1] + u[1] * cut0]; var len = len0 - cut0; if (len < 50) return;
       var at = function (d, off) { return [a[0] + u[0] * d + nv[0] * off, a[1] + u[1] * d + nv[1] * off]; }, st = function (d0, d1, o0, o1, za, zb, look) { if (d1 - d0 < 0.5 || zb - za < 0.5 || o1 - o0 < 0.5) return; H.boxAlong(M, at(d0, (o0 + o1) / 2), at(d1, (o0 + o1) / 2), o1 - o0, z0 + za, z0 + zb, look); };
       var n = Math.max(1, Math.round(len / mw)), cw = len / n, F = dp - 18;
       if (D.back) { st(0, len, 0, 18, -D.z + 100 > 0 ? 0 : 0, D.back, own); st(len * 0.12, len * 0.88, 18, 22, Hh + 40, Hh + 52, led); st(len * 0.1, len * 0.9, 18, 240, Hh + 950, Hh + 980, own); }
@@ -130,6 +134,7 @@
       if (tT) st(-0, len, 0, dp + 25, Hh - tT, Hh, topL);
       if (tT && D.key === "kitchen_unit" && sIdx === 0) { var posOf = function (v) { return v === "left" ? 0.22 : v === "right" ? 0.78 : 0.5; }, ss = B.look("steel_ss"), blk = B.look("glass_black");
         if (e.sink && len > 900) { var sc = len * posOf(e.sink), sw = Math.min(800, len * 0.4); st(sc - sw / 2, sc + sw / 2, 70, dp - 70, Hh, Hh + 3, ss); st(sc - sw / 2 + 25, sc + sw / 2 - 25, 95, dp - 95, Hh + 3, Hh + 5, B.look("steel_matt_black")); st(sc - 14, sc + 14, 30, 58, Hh, Hh + 280, ss); st(sc - 12, sc + 12, 44, 200, Hh + 260, Hh + 282, ss); }
+        if (e.hob && e.chimney && len > 900) { var cc = len * posOf(e.hob), cw2 = e.chimney === "900" ? 900 : 600, zc0 = Hh + 700; st(cc - cw2 / 2, cc + cw2 / 2, 0, 480, zc0, zc0 + 50, ss); st(cc - cw2 / 2 + 40, cc + cw2 / 2 - 40, 0, 400, zc0 + 50, zc0 + 110, ss); st(cc - 130, cc + 130, 0, 260, zc0 + 110, zc0 + 800, ss); st(cc - cw2 / 2 + 60, cc + cw2 / 2 - 60, 440, 470, zc0 - 4, zc0, B.look("led_warm")); }
         if (e.hob && len > 900) { var hc = len * posOf(e.hob), hw2 = Math.min(720, len * 0.35); st(hc - hw2 / 2, hc + hw2 / 2, 90, dp - 60, Hh, Hh + 8, blk); [[-0.25, 0.3], [0.25, 0.3], [-0.25, 0.7], [0.25, 0.7]].forEach(function (q) { var bx = hc + hw2 * q[0], by = 90 + (dp - 150) * q[1]; st(bx - 70, bx + 70, by - 70, by + 70, Hh + 8, Hh + 20, B.look("steel_matt_black")); st(bx - 35, bx + 35, by - 35, by + 35, Hh + 20, Hh + 26, ss); }); } }
       if (D.under && e.led !== "none") st(20, len - 20, dp - 120, dp - 100, -8, 0, led);
       if (e.led === "top" || e.led === "all") st(0, len, 10, 26, Hh, Hh + 12, led);

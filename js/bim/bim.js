@@ -70,6 +70,8 @@
   }
   B.wallPoly = function (doc, w) { var cc = doc.c ? doc.c(w) : {}; if (!cc.wp) cc.wp = wallPoly(w, walls(doc, w.lvl)); return cc.wp; };
   /* openings in a wall: [{ e, s0, s1 (mm along the centre line), z0, z1 (above wall base) }] */
+  /* wall left standing in the two top corners of an arched opening (mm²): rectangle − half ellipse over the rise */
+  B.archSp = function (o) { if (!o || !o.head) return 0; var r = o.head === "arch" ? o.w / 2 : o.head === "seg" ? o.w * 0.2 : 0; if (!r || r > o.h - 300) return 0; return o.w * r * (1 - Math.PI / 4); };
   B.openings = function (doc, w) {
     return doc.d.ents.filter(function (o) { return (o.t === "door" || o.t === "window" || o.t === "opening") && o.host === w.id; }).map(function (o) {
       var z0 = o.t === "door" ? 0 : (o.sill != null ? o.sill : 900); return { e: o, s0: o.at - o.w / 2, s1: o.at + o.w / 2, z0: z0, z1: z0 + o.h };
@@ -375,7 +377,7 @@
     var rfPush = function (k, what, z) { if (!B.hasRf || !B.hasRf(e)) return false; var br = B.bars(doc, e); if (!br || !br.sets.length) return false; rows.push({ k: k, dim: "M", v: br.kg, label: "Reinforcement — " + what + " (from bars / BBS)", f: br.sets.map(function (x) { return x.nb + "×" + x.dia + "φ " + x.what.toLowerCase(); }).join(", "), z: z || zone(e.lvl), rf: true }); return true; };
     if (e.t === "wall") {
       var P = B.wallPoly(doc, e), H = wallH(doc, e), A = area([P.sL, P.eL, P.eR, P.sR]), c = wallLine(e), ops = B.openings(doc, e), vol = A * H, ded = 0, lint = 0, lintV = 0;
-      ops.forEach(function (o) { var oa = (o.s1 - o.s0) * Math.min(o.z1, H) - 0; if (oa / 1e6 > R.brickDed) ded += (o.s1 - o.s0) * (Math.min(o.z1, H) - o.z0) * e.th; if (R.lintel && e.mat !== "rcc" && o.z1 < H - 50) { var ll = (o.s1 - o.s0) + 2 * R.lintelBear; lint += ll; lintV += ll * e.th * R.lintelD; } });
+      ops.forEach(function (o) { var oa = (o.s1 - o.s0) * Math.min(o.z1, H) - 0; if (oa / 1e6 > R.brickDed) ded += ((o.s1 - o.s0) * (Math.min(o.z1, H) - o.z0) - B.archSp(o.e)) * e.th; if (R.lintel && e.mat !== "rcc" && o.z1 < H - 50 && !B.archSp(o.e)) { var ll = (o.s1 - o.s0) + 2 * R.lintelBear; lint += ll; lintV += ll * e.th * R.lintelD; } });
       var net = vol - ded - lintV, mat = e.mat || "brick";
       push(mat === "rcc" ? "rcc_wall" : mat === "block" ? "block" : mat === "stone" ? "stone" : "brick", "V", net, (mat === "rcc" ? "RCC wall" : mat === "block" ? "Block masonry" : mat === "stone" ? "Stone masonry" : "Brick masonry") + " " + Math.round(e.th) + " mm", "plan area " + (A / 1e6).toFixed(3) + " m² × h " + m(H) + " m − openings " + (ded / 1e9).toFixed(3) + " m³" + (lintV ? " − lintels " + (lintV / 1e9).toFixed(3) + " m³" : ""));
       if (mat === "rcc") { push("shut_wall", "A", 2 * c.L * H, "Shuttering — RCC wall (both faces)", "2 × " + m(c.L) + " × " + m(H)); push("steel_wall", "M", net / 1e9 * (bs.steel.column || 150), "Reinforcement — RCC wall (thumb rule " + (bs.steel.column || 150) + " kg/m³)", ""); }
@@ -384,7 +386,7 @@
       var faces = [[P.sL, P.eL], [P.sR, P.eR]], extSide = B.extSide(doc, e); var finA = e.fin && B.finArea ? B.finArea(doc, e, ops, H) : [0, 0];
       faces.forEach(function (f, i) {
         var Lf = G.dist(f[0], f[1]), gross = Lf * H, dd = 0, jamb = 0;
-        ops.forEach(function (o) { var oa = (o.s1 - o.s0) * (Math.min(o.z1, H) - o.z0); if (oa / 1e6 <= R.plasterSmall) return; if (oa / 1e6 <= R.plasterLarge) { if (i === 0) dd += oa; return; } dd += oa; jamb += (2 * (o.z1 - o.z0) + (o.s1 - o.s0)) * e.th / 2; });
+        ops.forEach(function (o) { var oa = (o.s1 - o.s0) * (Math.min(o.z1, H) - o.z0) - B.archSp(o.e); if (oa / 1e6 <= R.plasterSmall) return; if (oa / 1e6 <= R.plasterLarge) { if (i === 0) dd += oa; return; } dd += oa; jamb += (2 * (o.z1 - o.z0) + (o.s1 - o.s0)) * e.th / 2; });
         var isExt = e.ext && extSide === i, net2 = gross - dd + jamb;
         push(isExt ? "plaster_ext" : "plaster_int", "A", net2, (isExt ? "External plaster / finish" : "Internal plaster") + " — face " + (i ? "B" : "A"), m(Lf) + " × " + m(H) + " − openings" + (jamb ? " + jambs" : ""));
         push(isExt ? "paint_ext" : "paint_int", "A", Math.max(0, net2 - finA[i]), (isExt ? "Exterior painting" : "Interior painting"), finA[i] ? "plaster area − tiles / cladding" : "same as plaster");
@@ -394,7 +396,7 @@
     }
     if (e.t === "door" || e.t === "window" || e.t === "opening") {
       if (e.t === "opening") return rows;
-      push(e.t === "door" ? (e.mat === "steel" ? "door_steel" : e.mat === "pvc" ? "door_pvc" : e.mat === "al" ? "door_al" : "door_flush") : (e.mat === "upvc" ? "win_upvc" : "win_al"), "A", e.w * e.h, (e.t === "door" ? "Door shutter " : "Window ") + (e.preset || "") + " " + Math.round(e.w) + "×" + Math.round(e.h), m(e.w) + " × " + m(e.h));
+      push(e.t === "door" ? (e.mat === "steel" ? "door_steel" : e.mat === "pvc" ? "door_pvc" : e.mat === "al" ? "door_al" : "door_flush") : (e.mat === "upvc" ? "win_upvc" : "win_al"), "A", e.w * e.h - B.archSp(e), (e.t === "door" ? "Door shutter " : "Window ") + (e.preset || "") + " " + Math.round(e.w) + "×" + Math.round(e.h), m(e.w) + " × " + m(e.h));
       if (e.t === "door") push("door_frame", "L", 2 * e.h + e.w, "Door frame (running length) " + (e.preset || ""), "2 × " + m(e.h) + " + " + m(e.w));
       push(e.t === "door" ? "count_door" : "count_window", "N", 1, (e.t === "door" ? "Doors " : "Windows ") + (e.preset || ""), "1 no.");
       return rows;
