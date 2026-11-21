@@ -1,4 +1,8 @@
-# Estimate Pro for Windows — plan (not built yet; this folder is not published)
+# Estimate Pro for Windows (this folder is not published with the site)
+
+**21 Nov 2026 — first build for the owner's own use:** an Electron window on the live app (`main.js`), built by `.github/workflows/windows-app.yml` on windows-latest → installer and portable .exe as the run's artifact. No code signing, no Store, live site (the service worker keeps it working offline). The Tauri plan below stays as the smaller alternative for the public release.
+
+## Earlier plan
 
 ## What works today
 The site is an installable app (manifest + service worker). On Windows: open it in Edge or Chrome → ⋯ → Apps → Install.

@@ -34,7 +34,7 @@ Last updated at version 2026.11.21-q.
 4. Commercial plans (owner will describe).
 
 5. Device limits (-x): owner ran `server/devices.sql` on 21 Nov. To check with the owner: the devices select shows in Users, a second device gets the 'in use on another device' screen.
-6. Windows application: plan in `desktop/PLAN.md`. Owner to decide — publisher name / code-signing certificate, bundled files or live site, offline grace days, Microsoft Store or direct download. Then: Tauri wrapper + GitHub Actions build on windows-latest.
+6. Windows application: (21 Nov) first build for the owner's own use — Electron wrapper in `desktop/`, built by GitHub Actions (Actions → Windows app → Artifacts). Not yet confirmed that the build ran and the .exe opens — ask the owner. For the public release later: plan in `desktop/PLAN.md`. Owner to decide — publisher name / code-signing certificate, bundled files or live site, offline grace days, Microsoft Store or direct download. Then: Tauri wrapper + GitHub Actions build on windows-latest.
 
 ## B. 3D Studio — to build (no server needed)
 1. (done in -u for one device: My 3D models.) (-v: texture colours baked per vertex.) Still open: true per-pixel textures, Draco files, a shared library for all users (needs the server), thumbnails, plan symbol from the model outline.

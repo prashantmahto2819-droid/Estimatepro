@@ -1,0 +1,30 @@
+# Builds Estimate Pro for Windows (installer + portable .exe). Run it from the Actions tab → "Windows app" → Run workflow;
+# it also runs when anything in desktop/ changes. The files are under the run's "Artifacts".
+name: Windows app
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: ["desktop/**", ".github/workflows/windows-app.yml"]
+permissions:
+  contents: read
+jobs:
+  build:
+    runs-on: windows-latest
+    defaults:
+      run:
+        working-directory: desktop
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: npm install --no-audit --no-fund
+      - run: npx electron-builder --win --publish never
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: "false"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: EstimatePro-Windows
+          path: desktop/dist/*.exe
+          if-no-files-found: error
