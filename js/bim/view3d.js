@@ -91,7 +91,9 @@ float shadow(){
   vec3 lp=vL*0.5+0.5;
   if(lp.z>1.0||lp.x<0.0||lp.x>1.0||lp.y<0.0||lp.y>1.0) return 1.0;
   float nl=clamp(dot(normalize(vN),uSun),0.0,1.0);
-  float bias=mix(0.0016,0.0004,nl), spread=float(uK)*1.2/uSMs, s=0.0;
+  /* bias grows with the slope of the face to the sun and with the blur width, so faces the sun only grazes are not blotchy */
+  float tanT=sqrt(max(1.0-nl*nl,0.0))/max(nl,0.04), spread=float(uK)*1.2/uSMs;
+  float bias=clamp(0.0004+(1.0+float(uK)*1.2)*tanT/(3.0*uSMs),0.0006,0.012), s=0.0;
   for(int i=0;i<16;i++){
     vec2 off=poisson[i]*spread;
     float d=texture(uSM,lp.xy+off).r;
@@ -685,11 +687,16 @@ P.prototype.setScene=function(sc,keepCam){
     const g=gRaw.v||gRaw;
     if(!g||!g.length) continue;
     if(gRaw.mv){ movers.push({v:g,mv:gRaw.mv}); continue; }
+    /* split triangle by triangle: an object that is partly glass (a glazed shutter, a hob on a counter) must keep its
+       solid faces in the depth-writing pass, or they are drawn in sort order and show through each other */
     let transparent=false;
     for(let i=0;i<g.length;i+=ST){
       if(g[i+9]<0.99){transparent=true;break;}
     }
-    if(transparent) tr.push(g); else op.push(g);
+    if(!transparent){ op.push(g); continue; }
+    const T3=ST*3, nT=(g.length/T3)|0, o2=[], t2=[];
+    for(let t=0;t<nT;t++){ const b=t*T3, isT=g[b+9]<0.99||g[b+ST+9]<0.99||g[b+2*ST+9]<0.99, dst=isT?t2:o2; for(let k=0;k<T3;k++) dst.push(g[b+k]); }
+    if(o2.length) op.push(new Float32Array(o2)); if(t2.length) tr.push(new Float32Array(t2));
   }
 
   /* merge arrays */
@@ -821,11 +828,11 @@ P.prototype.mats=function(){
   const e=this.eye(), w=this.cv.width, h=this.cv.height;
   const asp=w/h||1;
   if(this.walk&&this.we){   /* first person: look from the eye along yaw / look-pitch */
-    const d=this.walkDir(), nW=0.05, fW=Math.max(600,this.dist*100);
+    const d=this.walkDir(), nW=0.12, fW=Math.max(600,this.dist*100);
     return{vp:mul(look(e,[e[0]+d[0],e[1]+d[1],e[2]+d[2]],[0,0,1]),persp(this.walkFov||1.15,asp,nW,fW)),eye:e,near:nW,far:fW};
   }
   const V=look(e,this.t,[0,0,1]);
-  const n=this.dist*0.01, f=this.dist*100;
+  const n=this.dist*0.04, f=this.dist*100;   /* a nearer near plane wastes depth precision: thin layers (a shutter 18 mm in front of its carcass) then flicker on 16-bit depth buffers */
   let Pr;
   if(this.ortho_){
     const s=this.dist*0.7;
