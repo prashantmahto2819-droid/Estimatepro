@@ -45,7 +45,7 @@ Last updated at version 2026.11.21-q.
 6. (-z10: vehicles turn round and come back.) Still open: vehicles following a drawn path, wheels that turn; people with a walking cycle.
 7. (-z2: CAMPATH + Tour walks the path; Record makes the video.) (-z3: speed, eye height, MP4 first.) Still open: look-at targets, stairs between levels, doors that open on the way.
 8. Section box: hide the shadows of cut-away parts; section fill colour.
-9. (done in -t: ✥ Move drags placed objects along the floor, ⟲ ⟳ turn by 15°.) (-z5: ▲ ▼ raise / lower, ⧉ copy.) (-z11: doors / windows / openings slide along their wall.) (-z12: walls move square to themselves, joined walls stretch.) Still open: snap to walls, rooms / slabs following a moved wall.
+9. (done in -t: ✥ Move drags placed objects along the floor, ⟲ ⟳ turn by 15°.) (-z5: ▲ ▼ raise / lower, ⧉ copy.) (-z11: doors / windows / openings slide along their wall.) (-z12: walls move square to themselves, joined walls stretch.) (-z13: rooms, slabs and roofs follow the wall.) Still open: snap to walls.
 10. Slanting outlines with inside corners (hip), gable roofs on slanting outlines, (-y: DOME and VAULT roof elements.) (-z2: smooth shading.) (-z5: cone, drum wall.) Still open: pyramid on a many-sided outline, ring beam.
 
 11. Materials: (done in -y: 386 looks — paint shade card, putty / primer / distemper, enamel, textures, tiles, granite, marble, wood, laminate, metal, glass, ACP; any material of a library item can be swapped in Properties.) Still open: picture-based (photo) materials built in for all users (needs the files above), bump / roughness maps, (-p: search box in Paint) (-r: favourites) (-z6: colour chips) brand shade codes.
@@ -62,7 +62,7 @@ Last updated at version 2026.11.21-q.
 3. (curved walls done in -e; ramps / sloping slabs done in -s: RAMP.) (-z5: ramp kerbs.) (-z11: ramp railing.) (-z12: room floor raised / sunk.) Still open: steps drawn by themselves at a split level, slabs sloping two ways.
 4. (done in -x: ELEVATION, SECTION, VIEWSUPDATE.) (-n: cut parts are filled.) Still open: (-o: overall width and height on every view) (-q: level-to-level chain and door / window size tags) (-z9: finish notes and opening marks on elevations.) Still open: notes per wall where finishes differ, outlines for library items that have no edges, views update on their own.
 5. (done in -r: SCHEDULE — door / window and room finish tables.) (-z5: column, beam and wall schedules.)
-6. (-w: 37 hatch patterns.) Still open: stone / random rubble patterns, own .pat file import, (-z10: bold / italic text) named text styles with fonts, blocks library shared between drawings.
+6. (-w: 37 hatch patterns.) Still open: stone / random rubble patterns, (-z13: HATCHLOAD reads .pat files) (-z10: bold / italic text) named text styles with fonts, (-z13: block library on the device.) Still open: block library shared between users (needs the server).
 7. (done in -r: PIPE — CPVC, rain-water pipes, conduits, cable trays with lengths and SOR rates.) (-z6: drain pipes and wiring in conduit as runs.) (-z7: trench excavation and refilling.) Still open: drain slopes / invert levels, manholes and chambers along the run. (Fittings are inside the SOR pipe / conduit rates.)
 8. (done in -r: north point and scale bar.) (-s: plot boundary from bearings, spot levels.) (-z5: SETBACK, AREASTATEMENT with coverage and FAR.) (-z6: CONTOURS; permitted coverage / FAR check.) (-z7: CUTFILL, height check.) Still open: smooth contours.
 

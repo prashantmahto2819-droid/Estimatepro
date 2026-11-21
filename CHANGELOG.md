@@ -3,6 +3,11 @@
 This file is for the people maintaining the app. It is not published with the site (see `.assetsignore`).
 The text users see is `EP_NOTES` in `js/version.js`.
 
+## 2026.11.21-z13
+- New `js/cad/libs.js`: BLOCKKEEP / BLOCKLIB (localStorage `ep_blocklib`, nested blocks carried in `sub`), HATCHLOAD (`CAD.parsePat`; patterns in localStorage `ep_pats` and in the drawing's `d.pats`, registered on open through `CAD.HOOKS.wire`; built-in names are never replaced).
+- `ui-bim.js`: wall move — `follow` lists the corners of rooms / slabs / roofs within the wall's half thickness (+ overhang for slabs and roofs) and shifts them with the wall.
+- Windows app: `desktop/` (Electron) + `.github/workflows/windows-app.yml`; first build succeeded on 21 Nov (run 44895805494). The repository is public — told the owner.
+
 ## 2026.11.21-z12
 - Room `fl` (floor offset): mesh platform + finish at the offset; rows `backfill` and `brick` (115 mm edge wall) when raised.
 - `views2d.js`: DETAILVIEW — `prims` turns the entities in a window into plain lines / arcs (BIM through `B.plan`), lines clipped at the window, block `DET-<mark>` inserted at k = sheet scale / detail scale; marks on layer A-DETAIL. A snapshot, not live.
