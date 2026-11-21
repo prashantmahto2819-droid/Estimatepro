@@ -63,7 +63,7 @@
     ed.doc.add({ t: "text", p: c, s: "PLOT AREA " + sqm.toFixed(2) + " sqm (" + (sqm * 10.7639).toFixed(0) + " sqft)\nPerimeter " + m(peri) + " m", h: 3.5 * N, rot: 0, al: "c", layer: "C-PROP-TXT" });
     return { area: sqm, peri: peri / 1000 };
   };
-  cmd("PLOTBOUNDARY", ["BOUNDARY", "PLOT", "SITEPLOT", "TRAVERSE"], async function (ed) {
+  cmd("PLOTBOUNDARY", ["SITEPLOT", "TRAVERSE", "PLOTLINE"], async function (ed) {
     var mode = await ed.getKw("Plot boundary — how do you want to give it?", ["Bearings", "Points"], ed.pbMode || "Bearings"); ed.pbMode = mode;
     var p0 = await ed.getPoint(mode === "Points" ? "First corner of the plot" : "Starting corner of the plot"), pts = [[p0[0], p0[1]]], nd = northDeg(ed.doc.d), un = (ed.doc.d.units === "m" ? 1000 : 1), last = 0;
     var prev = function () { ed.preview = function (w) { var out = [{ t: "pline", pts: pts.concat(mode === "Points" ? [[w[0], w[1]]] : []).map(function (p) { return [p[0], p[1], 0]; }), closed: false }]; return out; }; };
@@ -81,7 +81,7 @@
     ed.doc.begin("Plot boundary"); var r = B.plotBoundary(ed, pts); ed.doc.commit();
     ed.say("Plot boundary drawn: " + r.area.toFixed(2) + " sqm (" + (r.area * 10.7639).toFixed(0) + " sqft), perimeter " + r.peri.toFixed(2) + " m." + msg); if (ed.zoomExtents) ed.zoomExtents();
   });
-  cmd("SPOTLEVEL", ["SPOT", "LEVELMARK", "RL"], async function (ed) {
+  cmd("SPOTLEVEL", ["SPOT", "LEVELMARK"], async function (ed) {
     siteLayers(ed); var N = scaleOf(ed.doc.d), v = ed.spotLvl == null ? 0 : ed.spotLvl, cnt = 0;
     while (true) { var p = await ed.getPoint("Click the point (Enter to finish)", { opt: true }); if (p == null) break;
       var s = await ed.getText("Level at this point in metres (like 0.45 or -0.30)", { def: String(v) }); var x = parseFloat(s == null || s === "" ? v : s); if (!isFinite(x)) { ed.say("Type the level as a number."); continue; } v = ed.spotLvl = x;

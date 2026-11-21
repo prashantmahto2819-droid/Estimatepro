@@ -59,7 +59,7 @@ Last updated at version 2026.11.21-q.
 3. (curved walls done in -e; ramps / sloping slabs done in -s: RAMP.) Still open: split levels, slabs sloping two ways, ramp railings and kerbs.
 4. (done in -x: ELEVATION, SECTION, VIEWSUPDATE.) (-n: cut parts are filled.) Still open: (-o: overall width and height on every view) (-q: level-to-level chain and door / window size tags) material notes and opening positions on elevations, door / window swing marks, outlines for library items that have no edges, views update on their own.
 5. (done in -r: SCHEDULE — door / window and room finish tables.) Still open: finish schedule for walls, column / beam schedules.
-6. Hatch patterns library, text styles, blocks library shared between drawings.
+6. (-w: 37 hatch patterns.) Still open: stone / random rubble patterns, own .pat file import, text styles, blocks library shared between drawings.
 7. (done in -r: PIPE — CPVC, rain-water pipes, conduits, cable trays with lengths and SOR rates.) Still open: wires in conduit, drainage with slopes. (Fittings are inside the SOR pipe / conduit rates.)
 8. (done in -r: north point and scale bar.) (-s: plot boundary from bearings, spot levels.) Still open: contours from spot levels, setback lines, ground coverage / FAR check.
 

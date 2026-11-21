@@ -3,6 +3,10 @@
 This file is for the people maintaining the app. It is not published with the site (see `.assetsignore`).
 The text users see is `EP_NOTES` in `js/version.js`.
 
+## 2026.11.21-w
+- `hatch.js`: 18 more patterns (ANSI33–36, VERT, DASH, SQUARE, ANGLE, TILE, TILE2X1, HBONE, HONEY, TRIANG, STARS, INSUL, GRASS, WATER, PCC).
+- Fix: `site.js` aliases BOUNDARY / PLOT / RL removed — aliases win over command names in `Ed.exec`, so BOUNDARY and RL (railing) had been hijacked since -s. New aliases must be checked against `CAD.commands` and `CAD.aliases`.
+
 ## 2026.11.21-v
 - `templates.json`: category `part` in group `fin` — 25 NS items (partitions, grills, railing, curtains, site fittings); indicative rates.
 - `qto.js`: 25 more `B.NSMAP` keys; partitions get `q = {dim:"A"}`, curtains `{dim:"L"}` (pelmet box → key `curtain_pelmet`), car / bike / gas cylinder become view only; `nsQty` accepts kg and cum.
