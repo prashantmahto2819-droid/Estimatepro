@@ -58,6 +58,21 @@ uniform float uPLk;
 uniform int uK;
 uniform sampler2D uSM;
 uniform sampler2D uTx0,uTx1,uTx2,uTx3,uTx4;   /* the user's own material pictures (pattern 20…24) */
+uniform sampler2D uWM;      /* plan of the walls and columns, one tile per storey (2 × 2): light from fittings stops at them */
+uniform vec4 uWMb;          /* x0, y0, 1/width, 1/height of the plan in metres */
+uniform int uWMn;           /* storeys in the plan (0 = no wall check) */
+uniform float uWMz[4];      /* floor level of each storey, metres */
+int wmLvl(float z){ int k=0; for(int i=0;i<4;i++){ if(i>=uWMn) break; if(z>=uWMz[i]-0.03) k=i; } return k; }
+float wmAt(vec2 p,int lv){ vec2 q=(p-uWMb.xy)*uWMb.zw; if(q.x<0.0||q.y<0.0||q.x>1.0||q.y>1.0) return 0.0; vec2 tile=vec2(float(lv-(lv/2)*2),float(lv/2)); return texture(uWM,(tile+clamp(q,0.002,0.998))*0.5).r; }
+/* 1 = the fitting at b is seen from a, 0 = a wall, a column or a floor slab stands between */
+float wmSee(vec3 a,vec3 b){
+  if(uWMn==0) return 1.0;
+  int la=wmLvl(a.z), lb=wmLvl(b.z-0.06); if(la!=lb) return 0.0;
+  vec2 d=b.xy-a.xy; float L=length(d); if(L<0.25) return 1.0;
+  float px=1.0/(uWMb.z*256.0), stp=max(0.1,px*0.7), n=min(48.0,ceil(L/stp)); stp=L/n;   /* steps shorter than a wall is thick, so no wall is stepped over */
+  for(int k=1;k<48;k++){ float s=float(k)*stp; if(s>=L-0.12) break; if(wmAt(a.xy+d*(s/L),la)>0.45) return 0.0; }
+  return 1.0;
+}
 uniform bool uLinear;
 out vec4 fragColor;
 
@@ -196,7 +211,7 @@ void main(){
   vec3 amb=mix(uGnd,uSky,N.z*0.5+0.5)*uAmb;
   vec3 lit=amb + uSunCol*diff*sh;
   /* light fittings (no shadows): warm point lights that fall off with distance */
-  for(int i=0;i<32;i++){ if(i>=uPLn) break; vec3 toL=uPL[i].xyz-vP; float dL=length(toL); float nl=max(dot(N,toL/max(dL,1e-4)),0.0); lit+=uPLc[i]*uPL[i].w*uPLk*(0.18+0.82*nl)/(1.0+dL*dL*0.16); }
+  for(int i=0;i<32;i++){ if(i>=uPLn) break; vec3 toL=uPL[i].xyz-vP; float dL=length(toL); float nl=max(dot(N,toL/max(dL,1e-4)),0.0); float att=uPL[i].w*uPLk*(0.18+0.82*nl)/(1.0+dL*dL*0.16); if(att>0.012) att*=wmSee(vP+N*0.16,uPL[i].xyz); lit+=uPLc[i]*att; }
   /* walk-through: a soft warm light carried by the viewer, so rooms the sun does not reach are still readable */
   if(uHead>0.01){ vec3 toE=uEye-vP; float dE=length(toE); lit+=vec3(1.0,0.95,0.86)*uHead*(0.35+0.65*max(dot(N,toE/max(dE,1e-4)),0.0))/(1.0+dE*dE*0.012); }
 
@@ -1072,6 +1087,9 @@ P.prototype.render=function(pick){
   { const L=this.lights||[], t=this.walk&&this.we?this.we:this.t, near=L.map(function(l){return{l:l,d:(l[0]-t[0])*(l[0]-t[0])+(l[1]-t[1])*(l[1]-t[1])+(l[2]-t[2])*(l[2]-t[2])};}).sort(function(a,b){return a.d-b.d;}).slice(0,32), arr=new Float32Array(128);
     const arc=new Float32Array(96); near.forEach(function(x,i){ arr[i*4]=x.l[0]; arr[i*4+1]=x.l[1]; arr[i*4+2]=x.l[2]; arr[i*4+3]=x.l[3]==null?1:x.l[3]; const c=x.l[4]||[1,0.9,0.72]; arc[i*3]=c[0]; arc[i*3+1]=c[1]; arc[i*3+2]=c[2]; });
     if(!this._plcLoc) this._plcLoc=gl.getUniformLocation(this.mp,'uPLc'); gl.uniform3fv(this._plcLoc,arc);
+    { const W=this.wallMask, on=!!(W&&W.tex&&this.lightWalls!==false&&!this.lightThru); if(!this._wmLoc) this._wmLoc={s:gl.getUniformLocation(this.mp,'uWM'),b:gl.getUniformLocation(this.mp,'uWMb'),n:gl.getUniformLocation(this.mp,'uWMn'),z:gl.getUniformLocation(this.mp,'uWMz')};
+      gl.activeTexture(gl.TEXTURE8); gl.bindTexture(gl.TEXTURE_2D,on?W.tex:(this._wmBlank||(this._wmBlank=this._wmMake(null)))); gl.activeTexture(gl.TEXTURE0); gl.uniform1i(this._wmLoc.s,8); gl.uniform1i(this._wmLoc.n,on?W.z.length:0);
+      if(on){ gl.uniform4f(this._wmLoc.b,W.box[0],W.box[1],1/(W.box[2]-W.box[0]),1/(W.box[3]-W.box[1])); const zz=new Float32Array(4); W.z.forEach(function(v,i){ zz[i]=v; }); gl.uniform1fv(this._wmLoc.z,zz); } }
     if(!this._plLoc) this._plLoc=gl.getUniformLocation(this.mp,'uPL'); gl.uniform4fv(this._plLoc,arr); gl.uniform1i(u.uPLn,this.lightsOn===false?0:near.length); gl.uniform1f(u.uPLk,this.night?1.0:0.22); }
   gl.uniform1f(u.uAmb,this.night?(this.walk?0.42:0.75):this.walk?0.70:0.50); gl.uniform1f(u.uHead,this.walk?(this.night?0.22:0.9):0.0);   /* brighter fill light indoors while walking */
   gl.uniform1i(u.uK,this.kern);
@@ -1616,6 +1634,11 @@ P.prototype.project=function(p){   /* model point (m) → CSS px, or null when b
   const c=xfRow([p[0],p[1],p[2],1],this.mats().vp); if(c[3]<=1e-6) return null;
   return[(c[0]/c[3]*0.5+0.5)*this.cv.clientWidth,(0.5-c[1]/c[3]*0.5)*this.cv.clientHeight];
 };
+/* plan of walls for the light fittings: m = { canvas (2 × 2 tiles, white = solid), box: [x0, y0, x1, y1] m, z: [floor levels m] } or null */
+P.prototype._wmMake=function(cv){ const gl=this.gl, tx=gl.createTexture(); gl.activeTexture(gl.TEXTURE8); gl.bindTexture(gl.TEXTURE_2D,tx);
+  if(cv) gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,gl.RGBA,gl.UNSIGNED_BYTE,cv); else gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,1,1,0,gl.RGBA,gl.UNSIGNED_BYTE,new Uint8Array([0,0,0,255]));
+  gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.LINEAR); gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,gl.LINEAR); gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE); gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE); gl.activeTexture(gl.TEXTURE0); return tx; };
+P.prototype.setWallMask=function(m){ const gl=this.gl; if(this.wallMask&&this.wallMask.tex) gl.deleteTexture(this.wallMask.tex); this.wallMask=null; if(m&&m.canvas&&m.z&&m.z.length){ try{ this.wallMask={tex:this._wmMake(m.canvas),box:m.box,z:m.z.slice(0,4)}; }catch(e){ this.wallMask=null; } } this.dirty=true; };
 /* ray through a screen point: {o, d} in world metres */
 P.prototype.rayAt=function(x,y){
   const m=this.mats(), iv=inv(m.vp); if(!iv) return null;
