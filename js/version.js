@@ -1,5 +1,5 @@
 /* App version + "what's new" — the super admin is offered to send this on WhatsApp after each upload. Change both with every release. */
-window.EP_VER = "2026.11.21-z22";
-window.EP_NOTES = "• Vehicles follow a route: Building (BIM) tab → Drive path — click a car or bike, click the route; ▶ Play drives it along, turning at corners (closed route = round and round)\n• Manholes on drains are now placed at both ends, every bend and every junction, and in between at your spacing; shown on the plan; deeper than 0.9 m they become 120 × 90 cm with extra depth measured\n• 3D Move: furniture, fittings and columns set themselves against a wall face when dropped within 9 cm\n• 3D cut: choose the colour of the cut faces (box beside Cut)";
+window.EP_VER = "2026.11.21-z23";
+window.EP_NOTES = "• Doors can stand open in 3D: Properties of the door → Shown in 3D → Half open / Open; at night the light of the room passes through an open door\n• Steps at a door: Steps → Door → click the door between two rooms whose floors are at different heights; the steps are placed on the lower side, as wide as the door";
 /* pictures of this update: [file in /updates, caption]. Shown to the owner with the WhatsApp "what's new" message. */
-window.EP_PICS = [["z22-drive-cut.jpg", "A car on its drive path, and cut faces in a chosen colour"]];
+window.EP_PICS = [["z23-door-steps.jpg", "An open door with steps to a raised room, by day and at night"]];

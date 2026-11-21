@@ -1,6 +1,6 @@
 # Estimate Pro — pending work (kept with the code; not published)
 
-Last updated at version 2026.11.21-z22.
+Last updated at version 2026.11.21-z23.
 
 ## A. Waiting for the owner
 1. Server work: (-z21) module switches and a shared library of blocks and hatch patterns are built — the owner has to run `server/shared.sql` once in Supabase, then check that a switched-off module disappears for a normal user. Still open: shared 3D models / cut-outs / material pictures (large files — need Supabase Storage), WhatsApp update messages with real pictures attached (needs a sending gateway; links to the pictures are already added).
@@ -38,7 +38,7 @@ Last updated at version 2026.11.21-z22.
 
 ## B. 3D Studio — to build (no server needed)
 1. (done in -u for one device: My 3D models.) (-v: texture colours baked per vertex.) Still open: true per-pixel textures, Draco files, a shared library for all users (needs the server), thumbnails, plan symbol from the model outline.
-2. (done in -t: fittings light the scene, Night view.) (-z16: light stops at walls, columns and floors.) (-z19: furniture shadows from the nearest fitting, light through windows, nine storeys.) Still open: shadows from every fitting, light through open doors, wall lights (the shadow map looks down only).
+2. (done in -t: fittings light the scene, Night view.) (-z16: light stops at walls, columns and floors.) (-z19: furniture shadows from the nearest fitting, light through windows, nine storeys.) Still open: shadows from every fitting, (-z23: light through doors shown open.) wall lights (the shadow map looks down only).
 3. (done in -w: up to 5 own material pictures per drawing.) Still open: rotate / offset the picture on a surface, more than 5, a device library of materials.
 4. (done in -x: sky presets and an own background picture.) Still open: the picture does not light the model (no image-based lighting), (-r: sky saved per scene) ground materials by area.
 5. (-u: sky reflection on glass and polished surfaces.) (-z8: water surfaces with ripples.) (-z18: water mirrors what is on screen beside it.) (-z19: ✨ Reflections on glass and polished floors.) Still open: things outside the screen in the reflection, moving water, softer shadows.
@@ -59,7 +59,7 @@ Last updated at version 2026.11.21-z22.
 ## C. CAD Studio — to build
 1. (done in -x: SHEET puts plan + elevations + sections in one frame at one scale and plots with the title block.) (-s: portrait.) (-z4: SHEETADD — several sheets, each with its own scale; plot all.) (-z5: all sheets in one PDF, list of sheets.) (-z12: DETAILVIEW — a snapshot at another scale.) (-z14: details refresh with Update views and before plotting.)
 2. (-z15: building elements now exported; trial export with real DIMENSION entities — waiting for the owner to open it in AutoCAD.) Still open: ellipse and spline as true entities (need a newer DXF version than R12); DWG is not possible in the browser.
-3. (curved walls done in -e; ramps / sloping slabs done in -s: RAMP.) (-z5: ramp kerbs.) (-z11: ramp railing.) (-z12: room floor raised / sunk.) (-z15: STEPS element; cross fall on ramps / sloping slabs.) Still open: steps placed by themselves at a raised room.
+3. (curved walls done in -e; ramps / sloping slabs done in -s: RAMP.) (-z5: ramp kerbs.) (-z11: ramp railing.) (-z12: room floor raised / sunk.) (-z15: STEPS element; cross fall on ramps / sloping slabs.) (-z23: STEPS → Door places steps at a door between floors of different height.)
 4. (done in -x: ELEVATION, SECTION, VIEWSUPDATE.) (-n: cut parts are filled.) Still open: (-o: overall width and height on every view) (-q: level-to-level chain and door / window size tags) (-z9: finish notes and opening marks on elevations.) Still open: notes per wall where finishes differ, outlines for library items that have no edges, views update on their own.
 5. (done in -r: SCHEDULE — door / window and room finish tables.) (-z5: column, beam and wall schedules.)
 6. (-w: 37 hatch patterns.) (-z15: STONE, RUBBLE.) (-z13: HATCHLOAD reads .pat files) (-z10: bold / italic text) (-z14: Times / Courier fonts) (-z13: block library on the device.) Still open: block library shared between users (needs the server).

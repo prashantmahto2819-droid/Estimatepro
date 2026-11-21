@@ -3,6 +3,11 @@
 This file is for the people maintaining the app. It is not published with the site (see `.assetsignore`).
 The text users see is `EP_NOTES` in `js/version.js`.
 
+## 2026.11.21-z23
+- `mesh.js`: door `open` (degrees, 0–110) — the leaf is swung about its hinge (`swing`) to the side it opens (`flip`); double doors swing both leaves; sliding doors and shutters ignore it. `ui-bim.js`: Properties → "Shown in 3D" (Shut / Half open / Open); `wallMask` leaves a gap for doors with `open` ≥ 30, so fittings light through them at night.
+- `site.js`: STEPS option Door — finds the rooms on the two sides of the picked door (point 350 mm beyond each wall face), takes their `fl`, and places a `steps` element on the lower side with rise = the difference, width = the door, top step against the wall. No room on a side counts as floor level 0.
+- Harness: door open 90° with a room raised 450 mm → 3 risers of 150; day and night renders without GL errors.
+
 ## 2026.11.21-z22
 - `runs.js`: `B.manholes(doc, e)` — for a drain run with a spacing: both ends, bends over 10° (not closer than 2 m to the last one), points where another drain run ends on it, and evenly in between so that no gap exceeds the spacing. An end that runs into another drain with manholes is left to that drain; two ends meeting are counted by the lower id. Depth at each = start depth + chainage / fall. Quantities: `manhole` (CPWD 19.7.1.1, up to 0.9 m), `manhole_120` (19.7.2.1), `manhole_xd_90` (19.8.1.1, depth beyond 0.45 m), `manhole_xd_120` (19.8.2.1, beyond 0.9 m); a note when the deepest is over 2.5 m. Plan: chamber outline and cover circle.
 - `site.js`: DRIVEPATH (aliases VEHICLEPATH, DRIVEROUTE) — polyline on layer A-DRIVEPATH with `drv` (asset id) and `spd` (km/h). `mesh.js`: such an asset becomes a mover with `path / cum / len / loop / spd / rot`. `view3d.js`: `uFlip` is now vec4 (on, centre, angle) — a rotation about the vehicle's centre in both the main and the shadow vertex shaders; heading from the chord 1.2 m behind to 1.2 m ahead. Open path: there and back; closed: round and round.

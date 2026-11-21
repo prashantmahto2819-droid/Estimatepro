@@ -53,7 +53,14 @@
   };
   cmd("STEPS", ["ENTRYSTEPS", "FLIGHT"], async function (ed) {
     var bs = B.ensure(ed.doc.d), w = ed.stW || 1200, rise = ed.stRise || 450, mat = ed.stMat || "Brick", a;
-    while (true) { a = await ed.getPoint("Steps — middle of the first (lowest) riser. " + mat + ", " + Math.round(w) + " mm wide, climbing " + Math.round(rise) + " mm", { kw: ["Width", "Rise", "Material"] });
+    while (true) { a = await ed.getPoint("Steps — middle of the first (lowest) riser. " + mat + ", " + Math.round(w) + " mm wide, climbing " + Math.round(rise) + " mm", { kw: ["Width", "Rise", "Material", "Door"] });
+      if (a === "Door") {   /* steps at a door between two floors at different heights (a raised or sunk room) */
+        var pk = await ed.getEnt("Click the door (or opening) that needs steps", { filter: function (x) { return x.t === "door" || x.t === "opening"; } }); if (!pk || !pk.e) return; var dr = pk.e, pl = B.place(ed.doc, dr); if (!pl || !pl.w) { ed.say("That door is not on a wall."); return; }
+        var th = pl.w.th || 230, flAt = function (sgn) { var q = [pl.p[0] + pl.n[0] * sgn * (th / 2 + 350), pl.p[1] + pl.n[1] * sgn * (th / 2 + 350)], r = ed.doc.d.ents.filter(function (x) { return x.t === "room" && x.lvl === pl.w.lvl && x.pts && G.inPoly(q, x.pts); })[0]; return r ? (+r.fl || 0) : 0; }, f1 = flAt(1), f0 = flAt(-1), dz = Math.abs(f1 - f0);
+        if (dz < 50) { ed.say("The floors on the two sides of this door are at the same height. Give one room a raised or sunk floor first (Properties of the room → Floor raised / sunk)."); return; }
+        var low = f1 < f0 ? 1 : -1, I0 = B.stepsInfo({ rise: dz, tread: 300 }), st = [pl.p[0] + pl.n[0] * low * (th / 2 + I0.len), pl.p[1] + pl.n[1] * low * (th / 2 + I0.len)];
+        ed.doc.begin("Steps at door"); ed.doc.add({ t: "steps", a: st, dir: Math.atan2(-pl.n[1] * low, -pl.n[0] * low) * 180 / Math.PI, w: Math.max(600, dr.w || 900), rise: dz, tread: 300, mat: mat.toLowerCase(), z: Math.min(f0, f1), lvl: pl.w.lvl }); ed.doc.commit();
+        ed.say("Steps placed on the lower side of the door: " + I0.n + " risers of " + Math.round(I0.r) + " mm climbing " + Math.round(dz) + " mm, as wide as the door. The top step is level with the higher floor."); return; }
       if (a === "Width") { w = ed.stW = await ed.getDist("Width of the steps", { def: w }); continue; } if (a === "Rise") { rise = ed.stRise = await ed.getDist("Height to climb (a riser of about 150 mm is used)", { def: rise }); continue; }
       if (a === "Material") { mat = ed.stMat = await ed.getKw("Steps made of", ["Brick", "PCC", "RCC"], mat); continue; } break; }
     var mk = function (q) { return { t: "steps", a: [a[0], a[1]], dir: Math.atan2(q[1] - a[1], q[0] - a[0]) * 180 / Math.PI, w: w, rise: rise, tread: 300, mat: mat.toLowerCase(), z: 0, lvl: bs.cur }; };

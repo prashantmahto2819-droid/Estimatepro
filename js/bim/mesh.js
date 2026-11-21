@@ -147,7 +147,9 @@
         if (pull) { boxAlong(M, at(hx - 12), at(hx + 12), 110, zlo + 800, zlo + 830, hk); boxAlong(M, at(hx - 12), at(hx + 12), 110, zlo + 1270, zlo + 1300, hk); boxAlong(M, at(hx - 10), at(hx + 10), 20 + 110, zlo + 760, zlo + 1340, hk); boxAlong(M, at(hx - 12), at(hx + 12), 70, zlo + 780, zlo + 1320, B.look("steel_ss")); }
         else { boxAlong(M, at(hx - 22), at(hx + 22), 50, zlo + 960, zlo + 1120, hk); boxAlong(M, at(hx - 110), at(hx + 10), 120, zlo + 1030, zlo + 1050, hk); } }
     }
-    if (o.kind === "double") { var m = G.mid(la, lb); leafShape(la, G.sub(m, G.mul(u, 3))); leafShape(G.add(m, G.mul(u, 3)), lb); }
+    var og = Math.max(0, Math.min(110, +o.open || 0)) * Math.PI / 180, sw = function (h, q) { var r = G.dist(h, q), dv = G.norm(G.sub(q, h)); return G.add(h, G.add(G.mul(dv, r * Math.cos(og)), G.mul(n, side * r * Math.sin(og)))); };   /* a door shown standing open: the leaf swung about its hinge to the side it opens */
+    if (og > 0.01 && o.kind !== "sliding") { if (o.kind === "double") { var m2 = G.mid(la, lb); leafShape(la, sw(la, G.sub(m2, G.mul(u, 3)))); leafShape(lb, sw(lb, G.add(m2, G.mul(u, 3)))); } else if (o.swing === "r") leafShape(lb, sw(lb, la)); else leafShape(la, sw(la, lb)); }
+    else if (o.kind === "double") { var m = G.mid(la, lb); leafShape(la, G.sub(m, G.mul(u, 3))); leafShape(G.add(m, G.mul(u, 3)), lb); }
     else leafShape(la, lb);
   }
   /* ---------- roofs ---------- */
