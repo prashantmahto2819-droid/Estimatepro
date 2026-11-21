@@ -3,6 +3,11 @@
 This file is for the people maintaining the app. It is not published with the site (see `.assetsignore`).
 The text users see is `EP_NOTES` in `js/version.js`.
 
+## 2026.11.21-z24
+- `ui-bim.js`: `wallFaces` now keeps every wall face (start, unit vector, normal, length) and the plan points of the moved object; `snapMv` projects the points on each face normal and closes a gap of up to 90 mm, then once more on a face not parallel to the first (corner). Works at any wall angle.
+- `runs.js` mesh: a drain with manholes draws the top slab (chamber + 230 mm, 80 below to 60 above the level) and a dark cover at each `B.manholes` point.
+- Harness: sofa dropped 50 / 60 mm off a corner ends exactly on both faces; a sofa turned 45° beside a 45° wall closes a 61 mm gap to 0; render without GL errors.
+
 ## 2026.11.21-z23
 - `mesh.js`: door `open` (degrees, 0–110) — the leaf is swung about its hinge (`swing`) to the side it opens (`flip`); double doors swing both leaves; sliding doors and shutters ignore it. `ui-bim.js`: Properties → "Shown in 3D" (Shut / Half open / Open); `wallMask` leaves a gap for doors with `open` ≥ 30, so fittings light through them at night.
 - `site.js`: STEPS option Door — finds the rooms on the two sides of the picked door (point 350 mm beyond each wall face), takes their `fl`, and places a `steps` element on the lower side with rise = the difference, width = the door, top step against the wall. No room on a side counts as floor level 0.
