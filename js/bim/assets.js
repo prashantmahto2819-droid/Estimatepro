@@ -257,11 +257,11 @@
     return best ? { p: best.p, rot: best.rot } : null;
   };
   /* own width / depth / height of one placed item (e.W, e.D, e.HH in mm): stretch factors against the catalogue size */
-  function fac(e, def) { var s = e.sc || 1, f = [+e.W > 0 && def.w ? +e.W / (def.w * s) : 1, +e.D > 0 && def.d ? +e.D / (def.d * s) : 1, +e.HH > 0 && def.h ? +e.HH / (def.h * s) : 1]; return f[0] === 1 && f[1] === 1 && f[2] === 1 ? null : f; }
+  function fac(e, def) { if (def.param) return null; var s = e.sc || 1, f = [+e.W > 0 && def.w ? +e.W / (def.w * s) : 1, +e.D > 0 && def.d ? +e.D / (def.d * s) : 1, +e.HH > 0 && def.h ? +e.HH / (def.h * s) : 1]; return f[0] === 1 && f[1] === 1 && f[2] === 1 ? null : f; }
   B.assetFac = fac;
   function stretchPt(e, f, p) { var r = (e.rot || 0) * Math.PI / 180, c = Math.cos(r), sn = Math.sin(r), dx = p[0] - e.p[0], dy = p[1] - e.p[1], lx = (dx * c + dy * sn) * f[0], ly = (-dx * sn + dy * c) * f[1]; return [e.p[0] + lx * c - ly * sn, e.p[1] + lx * sn + ly * c]; }
   B.EXT.asset = {
-    plan: function (doc, e) { var def = A[e.kind] || A.tree, X = xf(e), s = e.sc || 1, fillCol = CAT_FILL[def.cat] || "rgba(140,140,140,.1)", f3 = fac(e, def), fp = rect(X([0, 0]), (def.w || 1000) * s * (f3 ? f3[0] : 1), (def.d || 1000) * s * (f3 ? f3[1] : 1), (e.rot || 0)), sg = def.sym(X, e);
+    plan: function (doc, e) { var def = A[e.kind] || A.tree, X = xf(e), s = e.sc || 1, fillCol = CAT_FILL[def.cat] || "rgba(140,140,140,.1)", f3 = fac(e, def), pw = def.param && +e.W > 0 ? +e.W : (def.w || 1000), pd2 = def.param && +e.D > 0 ? +e.D : (def.d || 1000), fp = rect(X([0, 0]), pw * s * (f3 ? f3[0] : 1), pd2 * s * (f3 ? f3[1] : 1), (e.rot || 0)), sg = def.sym(X, e);
       if (f3 && (f3[0] !== 1 || f3[1] !== 1)) sg = sg.map(function (q) { var o = Object.assign({}, q); if (q.a) o.a = stretchPt(e, f3, q.a); if (q.b) o.b = stretchPt(e, f3, q.b); if (q.c) { o.c = stretchPt(e, f3, q.c); if (q.r != null) o.r = q.r * Math.min(f3[0], f3[1]); } return o; });
       return { segs: sg, fill: [{ pts: fp, col: fillCol }], dashed: def.mount === "ceiling" ? G.polySegs(fp, true) : [] }; },
     labels: function (doc, e, h) { return []; },

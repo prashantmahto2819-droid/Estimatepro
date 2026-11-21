@@ -3,6 +3,10 @@
 This file is for the people maintaining the app. It is not published with the site (see `.assetsignore`).
 The text users see is `EP_NOTES` in `js/version.js`.
 
+## 2026.11.21-e
+- `js/bim/assets9.js` (new): size-driven furniture. `pm(id, name, cat, w, d, h, key, vars, build, o)` — `build(w, d, h, e)` returns `{parts, sym}` for the item's own `W`, `D`, `HH`; `def.param = true` (no stretch: `fac` returns null), `def.vars` + entity `var` = design. 14 items (`*_p`).
+- Units: entity `open: true` draws the inside of shutter rows instead of the shutters (`unitMesh`).
+
 ## 2026.11.21-d
 - Arches (`assets8.js`): helpers `vpoly` (convex outline in the item's vertical plane pushed through a depth), `arcBand`, `spandrel`, `withMesh(id, fn)` (adds geometry to an `mk` item). 14 items `pd_arch_*`, `pd_round_window_900`, `pd_niche_arched_600`, `pd_arcade_bay_3m`, `pd_arch_gate_3m`. The infill pieces sit in the wall thickness (230) under the head of a rectangular opening; the wall itself is not cut to an arch.
 - Lights: `B.LCOLS`, `B.lightRGB`; asset props `lcol`, `lpow` (0 = off); light entries are `[x, y, z, strength, rgb]`; shader `uPLc[16]`. Runs and room ceilings pass the colour of their LED look.

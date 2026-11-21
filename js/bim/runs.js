@@ -105,7 +105,15 @@
       if (D.pl) st(0, len, 0, dp - 60, 0, D.pl, dark);
       if (D.legs) { [[30, 80], [len - 80, len - 30]].forEach(function (q) { st(q[0], q[1], 30, 80, 0, Hh - tT, dark); st(q[0], q[1], dp - 80, dp - 30, 0, Hh - tT, dark); }); }
       rows.forEach(function (r, ri) {
-        var za = r[0], zb = r[1], ty = r[2]; st(0, len, D.back ? 18 : 0, F, za, zb, car);
+        var za = r[0], zb = r[1], ty = r[2];
+        if (e.open && (ty === "sh" || ty === "sl" || ty === "gl")) {   /* shutters off: the inside — back, partitions, shelves, hanging rail, drawers */
+          st(0, len, 0, 12, za, zb, car); st(0, len, 0, F, za, za + 18, car); st(0, len, 0, F, zb - 18, zb, car); var nb = Math.max(1, Math.round(len / (mw * 2))), bw2 = len / nb;
+          for (var pi = 0; pi <= nb; pi++) st(Math.max(0, pi * bw2 - 9), Math.min(len, pi * bw2 + 9), 0, F, za, zb, car);
+          for (var bi = 0; bi < nb; bi++) { var b0 = bi * bw2 + 9, b1 = (bi + 1) * bw2 - 9, tall = zb - za > 1500;
+            if (tall && bi % 2 === 0) { st(b0, b1, 0, F, zb - 400, zb - 382, car); st(b0 + 20, b1 - 20, F * 0.5 - 12, F * 0.5 + 12, zb - 480, zb - 456, hk); for (var hgi = 0; hgi < Math.floor((b1 - b0 - 80) / 90); hgi++) st(b0 + 50 + hgi * 90, b0 + 56 + hgi * 90, F * 0.2, F * 0.8, zb - 1400 + (hgi % 3) * 120, zb - 480, B.look(["paint_denim", "paint_wine", "paint_sand", "paint_slate"][hgi % 4])); st(b0, b1, F - 20, F - 2, za + 18, za + 220, own); st(b0, b1, F - 20, F - 2, za + 226, za + 428, own); st(b0, b1, 0, F, za + 430, za + 448, car); }
+            else { var nsv = Math.max(1, Math.round((zb - za) / 380)); for (var si = 1; si < nsv; si++) st(b0, b1, 0, F, za + (zb - za) * si / nsv - 9, za + (zb - za) * si / nsv + 9, car); } }
+          return; }
+        st(0, len, D.back ? 18 : 0, F, za, zb, car);
         if (ty === "op") { for (var i = 0; i <= n; i++) st(Math.max(0, i * cw - 9), Math.min(len, i * cw + 9), 0, dp, za, zb, own); for (var z = za; z <= zb - 20; z += Math.max(250, (zb - za) / Math.max(1, Math.round((zb - za) / 350)))) st(0, len, 0, dp, z, z + 18, own); st(0, len, 0, dp, zb - 18, zb, own); st(0, len, 0, 12, za, zb, own); return; }
         if (ty === "sl") { var ns = Math.max(2, Math.round(len / mw)), sw = len / ns; for (var k = 0; k < ns; k++) { var o = k % 2 ? 22 : 0, mir = e.mirror && k % 2 === 1; st(k * sw + (k ? -15 : 0), (k + 1) * sw, F - 22 + o, F + o, za, zb, mir ? B.look("mirror") : own); if (hd !== "profile") st((k % 2 ? k * sw + 30 : (k + 1) * sw - 60), (k % 2 ? k * sw + 60 : (k + 1) * sw - 30), F + o, F + o + 6, za + (zb - za) * 0.35, za + (zb - za) * 0.65, hk); } st(0, len, F - 30, F + 30, zb - 30, zb, dark); st(0, len, F - 30, F + 30, za, za + 20, dark); return; }
         for (var m = 0; m < n; m++) {
