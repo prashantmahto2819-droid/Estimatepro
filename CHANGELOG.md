@@ -3,6 +3,13 @@
 This file is for the people maintaining the app. It is not published with the site (see `.assetsignore`).
 The text users see is `EP_NOTES` in `js/version.js`.
 
+## 2026.11.21-z31
+- `bim.js` `stairGeom`: kind "ushape" (risers split about a third each, the third flight never longer than the first; returns `U`, `U0`, `W2`, `ua`), kind "spiral" (`e.p` is the corner of its square; centre post r 75, outer radius w + 75, tread angle `sa` 15–45°, turning to the stair's side; steps carry `poly`, `c`, `thin`; returns `S`, `c`, `Ro`, `thEnd`, `post`). All kinds return `landEdges` (outer edges of landings with their height).
+- `stairOutline`: `hole` and `ek` (per edge: clearance key, true, or null = where you step off) for L, U and spiral, `inP` (a point inside the opening). `cutWell` builds the railing chains from `hole` / `ek`.
+- `stairRails`: a flight ends at a landing whenever its last step is one; spiral = one piece per tread on the outer edge; "out" / "both" add the landing edges. `stairHead` uses the tread centre. Spiral quantities: treads 60 mm + post as RCC stair, tread finish, railing.
+- `mesh.js`: polygon treads and the centre post.
+- Harness: U (8 + 7 + 6 risers, 2.75 × 3.5 m), spiral (2.15 m square, 21 treads), L with railing on both sides — all reach 3200, openings of 6 / 24 / 6 points, railings round each; dog-leg and L tests of -z29 / -z30 unchanged.
+
 ## 2026.11.21-z30
 - `bim.js` `stairGeom`: kind "lshape" — flight 1 along the going, last step a w × w landing (`lw`), flight 2 along the side normal with its width along the going; returns `L: true`. Steps now carry `lw` (landing width) instead of the mesh guessing it. `stairOutline`: bounding rectangle plus `hole` (six points) and `L0`; landing volume w × w × waist.
 - `mesh.js`: step polygons made counter-clockwise whatever the flight direction. `tools.js`: type Lshape; `cutWell` cuts the L-shaped hole and rails its inner edges; the "already cut" test uses the landing centre.

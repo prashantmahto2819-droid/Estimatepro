@@ -152,12 +152,13 @@
   });
   /* the stair opening in the slab(s) at the top of a stair, with a railing round it on the floor above (not on the arrival edge, not where a wall stands within 200 mm) */
   function cutWell(ed, e) {
-    var d = ed.doc.d, L = B.level(d, e.lvl), O = B.stairOutline(e), top = L.elev + e.n * e.R, n = 0, mid = (O.hole ? G.mid(O.hole[1], O.hole[4]) : G.mid(O.pts[0], O.pts[2]));
+    var d = ed.doc.d, L = B.level(d, e.lvl), O = B.stairOutline(e), top = L.elev + e.n * e.R, n = 0, mid = O.inP;
     d.ents.slice().forEach(function (s) { if (s.t !== "slab" || !s.pts) return; var Ls = B.level(d, s.lvl), zt = (Ls ? Ls.elev : 0) + (s.off || 0); if (Math.abs(zt - top) > 60 || !O.pts.every(function (q) { return G.inPoly(q, s.pts); }) || (s.holes || []).some(function (h) { return G.inPoly(mid, h); })) return; var o2 = CAD.clone(s); o2.holes = (s.holes || []).concat([ccw((O.hole || O.pts).map(function (q) { return [q[0], q[1]]; }))]); ed.doc.mod(s.id, o2); n++; });
     var up = B.ensure(d).levels.filter(function (x) { return Math.abs(x.elev - top) <= 60; })[0], nr = 0;
     if (n && up) { d.ents.slice().forEach(function (x) { if (x.t === "railing" && x.well === e.id) ed.doc.del(x.id); });
       var C = B.stairClear(ed.doc, e), dog = e.kind === "dogleg", P = O.pts, need = function (v) { return v == null || v > 200; }, at = function (a, b2, f) { return [a[0] + (b2[0] - a[0]) * f, a[1] + (b2[1] - a[1]) * f]; };
-      var H6 = O.hole, edges = O.L ? [[H6[3], H6[4], true], [H6[4], H6[5], true], [H6[5], H6[0], need(C.back)], [H6[0], H6[1], need(C.near)], [H6[1], H6[2], need(C.front)]] : dog ? [[at(P[0], P[3], (e.w + (e.gap || 100)) / O.wd), P[0], need(C.back)], [P[0], P[1], need(C.near)], [P[1], P[2], need(C.front)], [P[2], P[3], need(C.far)]] : [[P[1], P[0], need(C.near)], [P[0], P[3], need(C.back)], [P[3], P[2], need(C.far)]];
+      var edges; if (O.hole) { var Hn = O.hole.length, st0 = Math.max(0, O.ek.indexOf(null)), last0 = st0; while (O.ek[(last0 + 1) % Hn] === null && last0 - st0 < Hn) last0++; edges = []; for (var k = 1; k <= Hn; k++) { var ix = (last0 + k) % Hn, key = O.ek[ix]; if (key === null) continue; edges.push([O.hole[ix], O.hole[(ix + 1) % Hn], key === true ? true : need(C[key])]); } }
+      else edges = dog ? [[at(P[0], P[3], (e.w + (e.gap || 100)) / O.wd), P[0], need(C.back)], [P[0], P[1], need(C.near)], [P[1], P[2], need(C.front)], [P[2], P[3], need(C.far)]] : [[P[1], P[0], need(C.near)], [P[0], P[3], need(C.back)], [P[3], P[2], need(C.far)]];
       var chain = null, flush = function () { if (chain && chain.length > 1) { ed.doc.add({ t: "railing", pts: chain, h: 1000, lvl: up.id, layer: lay(ed, "A-RAIL"), well: e.id }); nr++; } chain = null; };
       edges.forEach(function (g) { if (!g[2]) { flush(); return; } if (!chain) chain = [g[0]]; chain.push(g[1]); }); flush(); }
     return { n: n, rails: nr, O: O };
@@ -169,7 +170,7 @@
     while (true) {
       p = await ed.getPoint("Start of the first step (bottom corner) — " + kind + ", width " + Math.round(w) + ", tread " + Math.round(T) + ", " + n + " risers of " + R.toFixed(0) + " mm, flights to the " + side.toLowerCase() + " of the going. Corner = fit it into a corner of a room", { kw: ["Corner", "Type", "Width", "Tread", "Side", "Gap", "Railing"] });
       if (p === "Railing") { rail = ed.stRail = await ed.getKw("Railing on which side of the flights? (now: " + rail + ")", ["Well", "Outer", "Both", "None"], rail); continue; }
-      if (p === "Type") { kind = ed.stK = await ed.getKw("Stair type (Lshape = two flights at a right angle with a square landing)", ["Straight", "Dogleg", "Lshape"], kind); continue; }
+      if (p === "Type") { kind = ed.stK = await ed.getKw("Stair type (Lshape = two flights at a right angle; Ushape = three flights round a well; Spiral = round a centre post)", ["Straight", "Dogleg", "Lshape", "Ushape", "Spiral"], kind); continue; }
       if (p === "Width") { w = ed.stW = await ed.getDist("Flight width", { def: w }); continue; }
       if (p === "Tread") { T = ed.stT = await ed.getDist("Tread (going)", { def: T }); continue; }
       if (p === "Side") { side = ed.stSide = await ed.getKw("The flights lie on which side of the line you click (walking up)?", ["Left", "Right"], side); continue; }
@@ -191,7 +192,7 @@
     var C = B.stairClear(ed.doc, e), O = C.out;
     ed.say(kind + " stair: " + n + " risers × " + R.toFixed(1) + " mm" + (R > 190 ? " — riser is high; check the requirement" : "") + ". It covers " + Math.round(O.len) + " × " + Math.round(O.wd) + " mm. Clear to the walls — behind the first step " + mm(C.back) + ", beyond the far end " + mm(C.front) + ", start side " + mm(C.near) + ", other side " + mm(C.far) + "." + (C.hit ? " ⚠ It runs into " + C.hit + " wall(s) — move it, change the Side, or use Corner." : ""));
     /* the floor above: offer to cut the stair opening */
-    var top = L.elev + L.h, slabs = ed.doc.d.ents.filter(function (s) { if (s.t !== "slab" || !s.pts) return false; var Ls = B.level(ed.doc.d, s.lvl), zt = (Ls ? Ls.elev : 0) + (s.off || 0); if (Math.abs(zt - top) > 60) return false; return O.pts.every(function (q2) { return G.inPoly(q2, s.pts); }) && !(s.holes || []).some(function (h) { return G.inPoly((O.hole ? G.mid(O.hole[1], O.hole[4]) : G.mid(O.pts[0], O.pts[2])), h); }); });
+    var top = L.elev + L.h, slabs = ed.doc.d.ents.filter(function (s) { if (s.t !== "slab" || !s.pts) return false; var Ls = B.level(ed.doc.d, s.lvl), zt = (Ls ? Ls.elev : 0) + (s.off || 0); if (Math.abs(zt - top) > 60) return false; return O.pts.every(function (q2) { return G.inPoly(q2, s.pts); }) && !(s.holes || []).some(function (h) { return G.inPoly(O.inP, h); }); });
     if (slabs.length) { var yn = await ed.getKw("Cut the stair opening (" + Math.round(O.len) + " × " + Math.round(O.wd) + " mm) in the floor slab above?", ["Yes", "No"], "Yes"); if (yn === "Yes") { ed.doc.begin("Stair opening"); var cw = cutWell(ed, e); ed.doc.commit(); ed.say("Opening cut in the slab above; its concrete, shuttering and steel are reduced by that area." + (cw.rails ? " A railing is placed round it on the floor above (not where you step off, not along walls)." : " Put a railing round it with Railing.")); } }
     var Hd = B.stairHead(ed.doc, e); if (Hd.low) ed.say("⚠ Headroom: " + Hd.low + " tread(s) have less than 2100 mm under the slab above (least " + Math.round(Hd.min) + " mm). Cut the opening with Stair opening.");
     if (slabs.length) return;
