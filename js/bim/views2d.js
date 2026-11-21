@@ -176,6 +176,53 @@
     ensureLayers(ed); pruneSections(ed); names = names.filter(function (n2) { return insertsOf(ed, n2).length; }); names.forEach(function (nm) { if (makeView(ed, nm, N)) n++; }); ed.say(n + " view(s) redrawn from the model.");
   });
 
+  /* regenerate every placed view (used before plotting, so a sheet never prints an out-of-date elevation) */
+  B.refreshViews = function (ed) { var d = ed.doc.d, names = Object.keys(d.blocks || {}).filter(isViewBlock).filter(function (n) { return insertsOf(ed, n).length; }); if (!names.length) return 0; var N = scaleOf(d), n = 0; ed.doc.begin("Update views"); try { ensureLayers(ed); names.forEach(function (nm) { if (makeView(ed, nm, N)) n++; }); if (Object.keys(d.blocks).some(function (k) { return /^SCH-/.test(k) && insertsOf(ed, k).length; })) ["Doors", "Rooms"].forEach(function (w) { if (insertsOf(ed, "SCH-" + w).length) makeSchedule(ed, w, N); }); } finally { ed.doc.commit(); } return n; };
+
+  /* ---------- schedules as tables: doors / windows, room finishes ---------- */
+  function table(title, heads, rows, widths, N) {
+    var th = 2.5 * N, rh = 6 * N, ents = [], W = widths.reduce(function (a, b) { return a + b; }, 0) * N, y = 0, L = "A-SCHED";
+    ents.push({ t: "text", p: [0, 2 * N], s: title, h: 3.5 * N, rot: 0, al: "l", layer: L });
+    var all = [heads].concat(rows), H = all.length * rh; for (var i = 0; i <= all.length; i++) ents.push({ t: "line", a: [0, -i * rh], b: [W, -i * rh], layer: L });
+    var x = 0; ents.push({ t: "line", a: [0, 0], b: [0, -H], layer: L }); widths.forEach(function (w) { x += w * N; ents.push({ t: "line", a: [x, 0], b: [x, -H], layer: L }); });
+    all.forEach(function (r, ri) { var cx = 0; r.forEach(function (c, ci) { ents.push({ t: "text", p: [cx + 1.5 * N, -(ri + 1) * rh + 1.8 * N], s: String(c == null ? "" : c).slice(0, Math.floor(widths[ci] / 1.5)), h: th, rot: 0, al: "l", layer: L }); cx += widths[ci] * N; }); });
+    return { ents: ents, bb: [0, -H, W, 6 * N] };
+  }
+  function makeSchedule(ed, what, N) {
+    var d = ed.doc.d, doc = ed.doc, T;
+    if (what === "Doors") { var g = {}, order = []; d.ents.forEach(function (o) { if (o.t !== "door" && o.t !== "window") return; if (!B.hostOf(doc, o)) return; var k = [o.t, Math.round(o.w), Math.round(o.h), o.t === "window" ? Math.round(o.sill || 0) : 0, o.kind || "", o.style || "", o.head || "", o.mat || ""].join("|"); if (!g[k]) { g[k] = { o: o, n: 0 }; order.push(k); } g[k].n++; });
+      var dn = 0, wn = 0, SN = { "": "flush", groove: "flush, grooves", vgroove: "flush, grooves", panel: "panelled", panel6: "6 panels", carved: "main door", vision: "glass strip", halfglass: "half glass", glass: "glazed", louvre: "louvred", jali: "jali", grill: "grill" };
+      order.sort(function (a, b) { return (g[a].o.t === g[b].o.t ? 0 : g[a].o.t === "door" ? -1 : 1) || g[b].o.w - g[a].o.w; });
+      var rows = order.map(function (k) { var o = g[k].o, isD = o.t === "door"; return [(isD ? "D" + (++dn) : "W" + (++wn)), isD ? "Door" : "Window", Math.round(o.w) + " × " + Math.round(o.h), isD ? "-" : String(Math.round(o.sill || 0)), g[k].n, [isD ? (o.kind || "single") : ({ win: "openable", sliding: "sliding", fixed: "fixed glass", louvre: "louvred", grill: "with grill", casement2: "two shutters" }[o.kind] || o.kind || ""), isD ? (SN[o.style || ""] || o.style) : "", o.head === "arch" ? "round arch" : o.head === "seg" ? "flat arch" : "", o.mat || ""].filter(Boolean).join(", ")]; });
+      if (!rows.length) return null; T = table("DOOR AND WINDOW SCHEDULE", ["Mark", "Type", "Size W × H (mm)", "Sill (mm)", "Nos", "Description"], rows, [14, 20, 36, 20, 12, 70], N); }
+    else { var FL = { vitrified: "Vitrified tiles", ceramic: "Ceramic tiles", kota: "Kota stone", granite: "Granite", ips: "IPS / CC" }, CD = { tray: "tray", double: "double step", island: "island", border: "border" };
+      var rr = d.ents.filter(function (r) { return r.t === "room"; }).map(function (r) { var Lv = B.level(d, r.lvl); return [r.name || "Room", Lv ? Lv.name : "", (B.area(r.pts) / 1e6).toFixed(2), (G.segsLength(G.polySegs(r.pts, true)) / 1000).toFixed(2), FL[r.floor] || (r.floor ? r.floor : "-"), r.skirt ? String(r.skirt) : "-", r.ceil ? "Yes" + (r.cdes ? ", " + (CD[r.cdes] || r.cdes) : "") : "-"]; });
+      if (!rr.length) return null; T = table("ROOM FINISH SCHEDULE", ["Room", "Level", "Area (sqm)", "Perimeter (m)", "Floor finish", "Skirting (mm)", "False ceiling"], rr, [36, 26, 22, 26, 34, 24, 34], N); }
+    var Bl = Object.assign({}, ed.doc.d.blocks); Bl["SCH-" + what] = { base: [0, 0], ents: T.ents }; ed.doc.set("blocks", Bl); return T;
+  }
+  B.makeSchedule = makeSchedule;
+  LAYERS["A-SCHED"] = { color: 7, lw: 0.18, lt: "CONTINUOUS" }; LAYERS["A-SYMB"] = { color: 7, lw: 0.25, lt: "CONTINUOUS" };
+  cmd("SCHEDULE", ["SCH", "DOORSCHEDULE", "ROOMSCHEDULE"], async function (ed) {
+    var w = await ed.getKw("Which schedule?", ["Doors", "Rooms"], "Doors"), N = scaleOf(ed.doc.d); ensureLayers(ed); var T = makeSchedule(ed, w, N);
+    if (!T) { ed.say(w === "Doors" ? "No doors or windows in the model yet." : "No rooms yet — use Room inside each room first."); return; }
+    if (insertsOf(ed, "SCH-" + w).length) { ed.say("The schedule on the drawing was brought up to date."); return; }
+    var pb = planBox(ed), p = await ed.getPoint("Click where the table goes (its top-left corner), or press Enter to put it beside the drawing", { allowNone: true }), tl = p && p.length ? p : [pb ? pb[2] + 15 * N : 0, pb ? pb[3] : 0];
+    ed.doc.add({ t: "insert", block: "SCH-" + w, p: [tl[0], tl[1] - 6 * N], sx: 1, sy: 1, rot: 0, layer: "A-SCHED" });
+    ed.say((w === "Doors" ? "Door and window" : "Room finish") + " schedule placed. Run SCHEDULE again (or Update views) after changes."); if (ed.zoomExtents) ed.zoomExtents();
+  });
+  cmd("NORTHPOINT", ["NP", "NORTH"], async function (ed) {
+    var N = scaleOf(ed.doc.d), bs = B.ensure(ed.doc.d), ang = ((bs.sun && +bs.sun.north) || +bs.north || 0), p = await ed.getPoint("Click where the north point goes"), R = 8 * N, a = (90 - ang) * Math.PI / 180, dir = [Math.cos(a), Math.sin(a)], nr = [-dir[1], dir[0]]; ensureLayers(ed);
+    var tip = G.add(p, G.mul(dir, R)), tail = G.sub(p, G.mul(dir, R)), L = "A-SYMB";
+    ed.doc.add({ t: "circle", c: p, r: R, layer: L }); ed.doc.add({ t: "line", a: tail, b: tip, layer: L }); ed.doc.add({ t: "line", a: tip, b: G.add(G.sub(tip, G.mul(dir, 5 * N)), G.mul(nr, 2.5 * N)), layer: L }); ed.doc.add({ t: "line", a: tip, b: G.sub(G.sub(tip, G.mul(dir, 5 * N)), G.mul(nr, 2.5 * N)), layer: L });
+    ed.doc.add({ t: "text", p: G.add(G.add(p, G.mul(dir, R + 2 * N)), [-1.4 * N, -1.5 * N]), s: "N", h: 4 * N, rot: 0, al: "l", layer: L }); ed.say("North point placed" + (ang ? " (north is " + ang + "° from the top of the drawing, as set in ☀ Sun)." : " — north is up. Set another direction in 3D → ☀ Sun → North."));
+  });
+  cmd("SCALEBAR", ["SB"], async function (ed) {
+    var N = scaleOf(ed.doc.d), p = await ed.getPoint("Click where the scale bar starts"), unit = [100, 200, 250, 500, 1000, 2000, 2500, 5000, 10000, 20000, 50000].filter(function (u) { return u >= 9 * N; })[0] || 50000, L = "A-SYMB", h = 1.5 * N; ensureLayers(ed);
+    for (var i = 0; i < 4; i++) { var x0 = p[0] + i * unit, x1 = x0 + unit; ed.doc.add({ t: "pline", pts: [[x0, p[1], 0], [x1, p[1], 0], [x1, p[1] + h, 0], [x0, p[1] + h, 0]], closed: true, layer: L }); if (i % 2 === 0) ed.doc.add({ t: "hatch", pat: "SOLID", sc: 1, ang: 0, loops: [[[x0, p[1], 0], [x1, p[1], 0], [x1, p[1] + h, 0], [x0, p[1] + h, 0]]], layer: L }); }
+    for (var k = 0; k <= 4; k++) { var v = k * unit / 1000, sv = (v % 1 ? v.toFixed(2).replace(/0$/, "") : String(v)) + (k === 4 ? " m" : ""); ed.doc.add({ t: "text", p: [p[0] + k * unit - sv.replace(" m", "").length * 0.7 * N, p[1] + h + 1.2 * N], s: sv, h: 2.5 * N, rot: 0, al: "l", layer: L }); }
+    ed.doc.add({ t: "text", p: [p[0], p[1] - 4 * N], s: "Scale 1 : " + N, h: 2.5 * N, rot: 0, al: "l", layer: L }); ed.say("Scale bar for 1:" + N + " placed (" + (unit / 1000) + " m divisions).");
+  });
+
   cmd("SHEET", ["LAYOUT", "SHT"], async function (ed) {
     if (!hasModel(ed)) throw new Error("Draw the building first — the sheet is put together from the plan and the 3D model.");
     var d = ed.doc.d, paper = await ed.getKw("Paper size", Object.keys(CAD.PAPER), (d.sheet && d.sheet.size) || "A3"), what = await ed.getKw("Views on the sheet", ["Standard", "AllElevations"], "Standard");

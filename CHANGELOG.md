@@ -3,6 +3,13 @@
 This file is for the people maintaining the app. It is not published with the site (see `.assetsignore`).
 The text users see is `EP_NOTES` in `js/version.js`.
 
+## 2026.11.21-r
+- `templates.json`: category `fence` in group `bld` (after `bwall`) — pits / blocks, RCC posts & struts (2 NS items with analysis: post 125×125×2400 ₹1,275, strut 100×100×2400 ₹1,000 — indicative), angle-iron posts, barbed wire (16.17.1, 16.18.1, 16.16, 16.53), chain link / welded mesh, gate.
+- `runs.js`: services runs (`grp:"s"`) — CPVC pipes, rain-water pipes, PVC / MS conduit, cable trays; command PIPE; mapped to CPWD 18.8.x / 12.41.x and E&M 1.21.x / 1.20.x / 4.1.x.
+- `views2d.js`: `B.refreshViews`, `B.makeSchedule` (blocks `SCH-Doors`, `SCH-Rooms`), commands SCHEDULE, NORTHPOINT (uses the sun's north), SCALEBAR; plot calls `refreshViews` first.
+- `ui-bim.js`: material favourites (`ep_matfav`, this device), scenes store sky kind / rotation and night.
+- `view3d.js`: 32 point lights.
+
 ## 2026.11.21-q
 - Elevations: `B.viewLines` returns `tags` — "D w × h" / "W w × h" for doors and windows on walls square to the view whose centre passes the depth buffer; written above the opening. Height: a chain GL → each level → top, with the overall height outside it; a segment too short for upright text gets its text beside the line.
 

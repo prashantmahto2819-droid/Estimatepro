@@ -49,8 +49,8 @@ in vec3 vM;
 uniform vec3 uSun,uEye,uSunCol,uSky,uGnd,uHor;
 uniform float uSel,uCut,uShadow,uSMs,uStyle,uFog,uAmb,uHead,uXr;
 uniform vec4 uBox;
-uniform vec4 uPL[16];   /* light fittings: xyz + strength */
-uniform vec3 uPLc[16];  /* colour of each fitting's light */
+uniform vec4 uPL[32];   /* light fittings: xyz + strength */
+uniform vec3 uPLc[32];  /* colour of each fitting's light */
 uniform int uPLn;
 uniform float uPLk;
 uniform int uK;
@@ -190,7 +190,7 @@ void main(){
   vec3 amb=mix(uGnd,uSky,N.z*0.5+0.5)*uAmb;
   vec3 lit=amb + uSunCol*diff*sh;
   /* light fittings (no shadows): warm point lights that fall off with distance */
-  for(int i=0;i<16;i++){ if(i>=uPLn) break; vec3 toL=uPL[i].xyz-vP; float dL=length(toL); float nl=max(dot(N,toL/max(dL,1e-4)),0.0); lit+=uPLc[i]*uPL[i].w*uPLk*(0.18+0.82*nl)/(1.0+dL*dL*0.16); }
+  for(int i=0;i<32;i++){ if(i>=uPLn) break; vec3 toL=uPL[i].xyz-vP; float dL=length(toL); float nl=max(dot(N,toL/max(dL,1e-4)),0.0); lit+=uPLc[i]*uPL[i].w*uPLk*(0.18+0.82*nl)/(1.0+dL*dL*0.16); }
   /* walk-through: a soft warm light carried by the viewer, so rooms the sun does not reach are still readable */
   if(uHead>0.01){ vec3 toE=uEye-vP; float dE=length(toE); lit+=vec3(1.0,0.95,0.86)*uHead*(0.35+0.65*max(dot(N,toE/max(dE,1e-4)),0.0))/(1.0+dE*dE*0.012); }
 
@@ -1054,8 +1054,8 @@ P.prototype.render=function(pick){
   gl.uniform1f(u.uSMs,this.smSize);
   gl.uniform1f(u.uStyle,this.style);
   gl.uniform1f(u.uFog,this.fog?1:0);
-  { const L=this.lights||[], t=this.walk&&this.we?this.we:this.t, near=L.map(function(l){return{l:l,d:(l[0]-t[0])*(l[0]-t[0])+(l[1]-t[1])*(l[1]-t[1])+(l[2]-t[2])*(l[2]-t[2])};}).sort(function(a,b){return a.d-b.d;}).slice(0,16), arr=new Float32Array(64);
-    const arc=new Float32Array(48); near.forEach(function(x,i){ arr[i*4]=x.l[0]; arr[i*4+1]=x.l[1]; arr[i*4+2]=x.l[2]; arr[i*4+3]=x.l[3]==null?1:x.l[3]; const c=x.l[4]||[1,0.9,0.72]; arc[i*3]=c[0]; arc[i*3+1]=c[1]; arc[i*3+2]=c[2]; });
+  { const L=this.lights||[], t=this.walk&&this.we?this.we:this.t, near=L.map(function(l){return{l:l,d:(l[0]-t[0])*(l[0]-t[0])+(l[1]-t[1])*(l[1]-t[1])+(l[2]-t[2])*(l[2]-t[2])};}).sort(function(a,b){return a.d-b.d;}).slice(0,32), arr=new Float32Array(128);
+    const arc=new Float32Array(96); near.forEach(function(x,i){ arr[i*4]=x.l[0]; arr[i*4+1]=x.l[1]; arr[i*4+2]=x.l[2]; arr[i*4+3]=x.l[3]==null?1:x.l[3]; const c=x.l[4]||[1,0.9,0.72]; arc[i*3]=c[0]; arc[i*3+1]=c[1]; arc[i*3+2]=c[2]; });
     if(!this._plcLoc) this._plcLoc=gl.getUniformLocation(this.mp,'uPLc'); gl.uniform3fv(this._plcLoc,arc);
     if(!this._plLoc) this._plLoc=gl.getUniformLocation(this.mp,'uPL'); gl.uniform4fv(this._plLoc,arr); gl.uniform1i(u.uPLn,this.lightsOn===false?0:near.length); gl.uniform1f(u.uPLk,this.night?1.0:0.22); }
   gl.uniform1f(u.uAmb,this.night?(this.walk?0.42:0.75):this.walk?0.70:0.50); gl.uniform1f(u.uHead,this.walk?(this.night?0.22:0.9):0.0);   /* brighter fill light indoors while walking */

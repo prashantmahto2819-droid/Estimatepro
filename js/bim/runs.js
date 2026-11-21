@@ -10,6 +10,7 @@
   var EP = window.EP, CAD = EP.cad, G = EP.geom, B = EP.bim; if (!B || !CAD) return;
   B.TYPES.run = 1; B.EXT = B.EXT || {};
   var Gc = "plaster_grc", Wp = "plaster_pop_white";
+  function add(id, o) { if (!B.LOOKS[id]) B.LOOKS[id] = o; }
   /* profile: [[offset0, offset1, z0, z1, look | null (= the run's own material)]…], mm; z = default height of its underside above the floor */
   var RUNS = B.RUNS = {
     cornice: { n: "Cornice moulding 150 (inside, wall top)", fam: "p", z: 2850, look: Wp, key: "run_cornice", pr: [[0, 40, 0, 30], [0, 70, 30, 60], [0, 110, 60, 85], [0, 150, 85, 120], [0, 120, 120, 135], [0, 170, 135, 150]] },
@@ -66,6 +67,18 @@
     shoe_rack: { n: "Shoe cabinet", fam: "u", z: 0, h: 1000, dp: 350, mw: 450, pl: 80, rows: [[80, 1000, "sh"]], look: "laminate_oak", key: "shoe_rack" }
   });
   B.RUN_HANDLES = [["", "Bar handle"], ["knob", "Knob"], ["profile", "Handle-less (profile groove)"], ["gold", "Bar handle — gold"], ["black", "Bar handle — black"]];
+  /* pipes, conduits and trays drawn by points (grp "s"): a square section of the pipe's size stands in for the round one */
+  (function () { var sq = function (d) { return [[-d / 2, d / 2, 0, d]]; }, S = function (id, n, d, z, look, o) { RUNS[id] = Object.assign({ n: n, fam: "p", grp: "s", z: z, look: look, key: id, pr: sq(d) }, o || {}); };
+    add("pipe_cpvc", { n: "Pipe — CPVC (off-white)", c: "#e9e2c8", p: B.PT.plain, g: 0.25 }); add("pipe_upvc", { n: "Pipe — uPVC / SWR (grey)", c: "#9aa0a3", p: B.PT.plain, g: 0.2 }); add("pipe_conduit", { n: "Conduit — PVC (black)", c: "#26272a", p: B.PT.plain, g: 0.15 }); add("pipe_gi", { n: "Pipe / conduit — steel", c: "#aeb3b6", p: B.PT.plain, g: 0.4 });
+    S("pipe_cpvc_15", "CPVC water pipe 15 mm (concealed)", 21, 600, "pipe_cpvc"); S("pipe_cpvc_20", "CPVC water pipe 20 mm (concealed)", 27, 600, "pipe_cpvc"); S("pipe_cpvc_25", "CPVC water pipe 25 mm (concealed)", 34, 600, "pipe_cpvc"); S("pipe_cpvc_32", "CPVC water pipe 32 mm (concealed)", 42, 600, "pipe_cpvc");
+    S("pipe_rain_75", "uPVC rain-water / waste pipe 75 mm (on wall)", 75, 300, "pipe_upvc"); S("pipe_rain_110", "uPVC rain-water / soil pipe 110 mm (on wall)", 110, 300, "pipe_upvc");
+    S("conduit_pvc_20", "PVC conduit 20 mm", 20, 2700, "pipe_conduit"); S("conduit_pvc_25", "PVC conduit 25 mm", 25, 2700, "pipe_conduit"); S("conduit_ms_20", "Steel conduit 20 mm", 20, 2700, "pipe_gi"); S("conduit_ms_25", "Steel conduit 25 mm", 25, 2700, "pipe_gi");
+    RUNS.cable_tray_100 = { n: "Cable tray 100 × 50 (perforated)", fam: "p", grp: "s", z: 2800, look: "pipe_gi", key: "cable_tray_100", pr: [[-50, 50, 0, 3], [-50, -47, 3, 50], [47, 50, 3, 50]] };
+    RUNS.cable_tray_150 = { n: "Cable tray 150 × 50 (perforated)", fam: "p", grp: "s", z: 2800, look: "pipe_gi", key: "cable_tray_150", pr: [[-75, 75, 0, 3], [-75, -72, 3, 50], [72, 75, 3, 50]] };
+    RUNS.cable_tray_300 = { n: "Cable tray 300 × 50 (perforated)", fam: "p", grp: "s", z: 2800, look: "pipe_gi", key: "cable_tray_300", pr: [[-150, 150, 0, 3], [-150, -147, 3, 50], [147, 150, 3, 50]] };
+    var M2 = { pipe_cpvc_15: ["cpwd23", "18.8.1"], pipe_cpvc_20: ["cpwd23", "18.8.2"], pipe_cpvc_25: ["cpwd23", "18.8.3"], pipe_cpvc_32: ["cpwd23", "18.8.4"], pipe_rain_75: ["cpwd23", "12.41.1"], pipe_rain_110: ["cpwd23", "12.41.2"], conduit_pvc_20: ["em22", "1.21.1"], conduit_pvc_25: ["em22", "1.21.2"], conduit_ms_20: ["em22", "1.20.1"], conduit_ms_25: ["em22", "1.20.2"], cable_tray_100: ["em22", "4.1.1"], cable_tray_150: ["em22", "4.1.2"], cable_tray_300: ["em22", "4.1.4"] };
+    B.MAP = B.MAP || {}; Object.keys(M2).forEach(function (k) { B.MAP[k] = { c: [M2[k]], books: [M2[k][0]] }; });
+  })();
   B.RUN_LED = [["", "No LED"], ["joint", "LED in the vertical joints"], ["top", "LED line at the top"], ["bottom", "LED line at the bottom"], ["both", "LED lines at top and bottom"], ["all", "LED in the joints, top and bottom"]];
   B.RUN_LEDLOOKS = ["led_warm", "led_cool", "led_daylight", "led_amber", "led_blue", "led_green", "led_pink"];
   function def(e) { return RUNS[e.kind] || RUNS.band; }
@@ -232,12 +245,12 @@
 
   var cmds = CAD.commands, AL = CAD.aliases;
   function cmd(name, al, fn) { cmds[name] = { fn: fn }; (al || []).forEach(function (a) { AL[a] = name; }); }
-  function kwOf(fam) { var o = {}; Object.keys(RUNS).forEach(function (k) { if (RUNS[k].fam === fam) o[k.split("_").map(function (w) { return w[0].toUpperCase() + w.slice(1); }).join("")] = k; }); return o; }
+  function kwOf(fam, grp) { var o = {}; Object.keys(RUNS).forEach(function (k) { if (RUNS[k].fam === fam && (RUNS[k].grp || "") === (grp || "")) o[k.split("_").map(function (w) { return w[0].toUpperCase() + w.slice(1); }).join("")] = k; }); return o; }
   /* points along the arc from a through m to c (without a itself), about one every 250 mm */
   function arcPts(a, m, c) { var k = G.circle3(a, m, c); if (!k || k.r > G.dist(a, c) * 50) return [c]; var t1 = Math.atan2(a[1] - k.c[1], a[0] - k.c[0]), t2 = Math.atan2(m[1] - k.c[1], m[0] - k.c[0]), t3 = Math.atan2(c[1] - k.c[1], c[0] - k.c[0]), nz = function (x) { x %= Math.PI * 2; return x < 0 ? x + Math.PI * 2 : x; }, ccw = nz(t2 - t1) < nz(t3 - t1), sw = ccw ? nz(t3 - t1) : -nz(t1 - t3), n = Math.max(6, Math.min(64, Math.ceil(Math.abs(sw) * k.r / 250))), P = [];
     for (var i = 1; i <= n; i++) { var t = t1 + sw * i / n; P.push(i === n ? [c[0], c[1]] : [k.c[0] + k.r * Math.cos(t), k.c[1] + k.r * Math.sin(t)]); } return P; }
-  async function draw(ed, fam) {
-    B.ensure(ed.doc.d); var KW = kwOf(fam), names = Object.keys(KW), memo = fam === "p" ? "runKind" : fam === "u" ? "unitKind" : "cladKind", cur = ed[memo] && RUNS[ed[memo]] && RUNS[ed[memo]].fam === fam ? ed[memo] : KW[names[0]];
+  async function draw(ed, fam, grp) {
+    B.ensure(ed.doc.d); var KW = kwOf(fam, grp), names = Object.keys(KW), memo = grp === "s" ? "svcKind" : fam === "p" ? "runKind" : fam === "u" ? "unitKind" : "cladKind", cur = ed[memo] && RUNS[ed[memo]] && RUNS[ed[memo]].fam === fam && (RUNS[ed[memo]].grp || "") === (grp || "") ? ed[memo] : KW[names[0]];
     var kind = cur, side = ed.runSide === -1 ? -1 : 1, lvl = B.ensure(ed.doc.d).cur, pts = [], D = RUNS[kind];
     var head = function () { return RUNS[kind].n + " — start point"; };
     while (true) {
@@ -257,6 +270,7 @@
     ed.say(RUNS[kind].n + " added, " + (B.runLen({ pts: pts }) / 1000).toFixed(2) + " m. Height, size, material and LED are in Properties.");
   }
   cmd("RUN", ["MOULDING", "MOLDING", "CORNICE", "LEDLINE", "LEDSTRIP", "SKIRTING"], function (ed) { return draw(ed, "p"); });
+  cmd("PIPE", ["PIPERUN", "CONDUIT", "PLUMBING", "CABLETRAY"], function (ed) { return draw(ed, "p", "s"); });
   cmd("CABINET", ["WARDROBE", "KITCHEN", "TVUNIT", "CUPBOARD", "ALMIRAH"], function (ed) { return draw(ed, "u"); });
   cmd("CLADDING", ["CLAD", "WPC", "ACP", "LOUVRE"], function (ed) { return draw(ed, "c"); });
 })();

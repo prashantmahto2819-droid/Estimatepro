@@ -28,14 +28,15 @@ Last updated at version 2026.11.21-q.
    - Company tile / laminate / ACP shade cards: use only with the company's or dealer's permission; a straight photo of the real sample taken by the owner is always fine.
    What to send in the chat, in this order (10–20 files at a time, name each file by what it is, e.g. `wc-wall-hung.glb`, `tile-600x600-beige.jpg`):
    1) sanitary ware and taps (GLB), 2) furniture — beds, sofas, wardrobes, TV units, doors (GLB), 3) decorative and garden lights (GLB), 4) cars, people, trees (GLB or PNG), 5) material pictures (JPG) with the real width of the area shown, 6) sky / site background (JPG). With each batch say the site it came from and the licence shown there.
-3. Decisions: the 30 quick rates that differ from their analysis (tipper, tanker…); whether 1:30 / 1:40 / 1:60 scales may be used on Design Studio sheets.
+3. Confirm the indicative Non-SOR rates: fencing — precast RCC post ₹1,275 each, strut ₹1,000 each (-r).
+3a. Decisions: the 30 quick rates that differ from their analysis (tipper, tanker…); whether 1:30 / 1:40 / 1:60 scales may be used on Design Studio sheets.
 4. Commercial plans (owner will describe).
 
 ## B. 3D Studio — to build (no server needed)
 1. (done in -u for one device: My 3D models.) (-v: texture colours baked per vertex.) Still open: true per-pixel textures, Draco files, a shared library for all users (needs the server), thumbnails, plan symbol from the model outline.
 2. (done in -t: fittings light the scene, Night view.) Still open: lights do not cast shadows and pass through walls; emissive glow on the fitting itself.
 3. (done in -w: up to 5 own material pictures per drawing.) Still open: rotate / offset the picture on a surface, more than 5, a device library of materials.
-4. (done in -x: sky presets and an own background picture.) Still open: the picture does not light the model (no image-based lighting), sky is not saved per scene, ground materials by area.
+4. (done in -x: sky presets and an own background picture.) Still open: the picture does not light the model (no image-based lighting), (-r: sky saved per scene) ground materials by area.
 5. Reflections on glass and water; softer shadows.
 6. Vehicles that turn at the end of the path, wheels that turn; people with a walking cycle.
 7. Camera path drawn on the plan for the video; MP4 export where the browser allows.
@@ -56,10 +57,10 @@ Last updated at version 2026.11.21-q.
 2. Real dimensions, ellipse and spline in DXF export; DWG is not possible in the browser.
 3. Curved walls, sloping slabs / ramps, split levels.
 4. (done in -x: ELEVATION, SECTION, VIEWSUPDATE.) (-n: cut parts are filled.) Still open: (-o: overall width and height on every view) (-q: level-to-level chain and door / window size tags) material notes and opening positions on elevations, door / window swing marks, outlines for library items that have no edges, views update on their own.
-5. Door / window schedule and room finish schedule as tables on the sheet.
+5. (done in -r: SCHEDULE — door / window and room finish tables.) Still open: finish schedule for walls, column / beam schedules.
 6. Hatch patterns library, text styles, blocks library shared between drawings.
-7. Plumbing and electrical runs (pipes, conduits) with lengths in Σ Quantities.
-8. Site: contours / levels grid, plot boundary from bearings, north point and scale bar.
+7. (done in -r: PIPE — CPVC, rain-water pipes, conduits, cable trays with lengths and SOR rates.) Still open: fittings count (bends, tees), wires in conduit, drainage with slopes.
+8. (done in -r: north point and scale bar.) Still open: contours / levels grid, plot boundary from bearings.
 
 ## D. Other
 1. Design Studio sheets: views are small and some labels overlap.
