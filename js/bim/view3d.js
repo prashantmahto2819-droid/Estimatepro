@@ -342,6 +342,7 @@ uniform sampler2D uCol,uDep;
 uniform vec2 uRes;
 uniform float uNear,uFar;
 uniform bool uDoSSAO,uDoTone,uVignette;
+uniform float uBloom;   /* glow round light sources (night) */
 out vec4 fragColor;
 
 /* Poisson disk for SSAO (16 samples) */
@@ -387,6 +388,11 @@ void main(){
   vec4 col=texture(uCol,vUV);
   float ao=uDoSSAO ? ssao() : 1.0;
   col.rgb*=ao;
+  if(uBloom>0.0){
+    vec3 g=vec3(0.0); float asp=uRes.y/uRes.x;
+    for(int i=0;i<28;i++){ float fi=float(i)+0.5, r=sqrt(fi/28.0)*0.034, a=fi*2.399963; vec3 s=texture(uCol,vUV+vec2(cos(a)*r*asp,sin(a)*r)).rgb; float l=max(max(s.r,s.g),s.b); g+=s*smoothstep(0.80,1.0,l)*(1.0-sqrt(fi/28.0)*0.6); }
+    col.rgb+=g*(uBloom/28.0)*1.6;
+  }
   if(uDoTone){
     col.rgb=aces(col.rgb);
     col.rgb=pow(col.rgb,vec3(1.0/2.2)); /* sRGB gamma */
@@ -959,7 +965,8 @@ P.prototype.render=function(pick){
     return;
   }
 
-  const usePost=this.ssao;
+  const bloomOn=this.night && this.bloom!==false && !this.ortho_ && (this.lights||[]).length>0 && this.style<0.5;
+  const usePost=this.ssao || bloomOn;
 
   /* 1. Shadow map pass */
   if(this.shadows && lt.sunCol[0]>0){
@@ -1124,7 +1131,7 @@ P.prototype.render=function(pick){
     gl.uniform2f(cu.uRes,w,h);
     gl.uniform1f(cu.uNear,near);
     gl.uniform1f(cu.uFar,far);
-    gl.uniform1i(cu.uDoSSAO,1);
+    gl.uniform1i(cu.uDoSSAO,this.ssao?1:0); gl.uniform1f(cu.uBloom,bloomOn?1.0:0.0);
     gl.uniform1i(cu.uDoTone,this.linear?1:0);
     gl.uniform1i(cu.uVignette,0);
     gl.bindVertexArray(this.emptyVAO);
@@ -1467,7 +1474,7 @@ P.prototype._skyU=function(m){
   gl.uniform3f(L.uCR,r[0]*tn*asp,r[1]*tn*asp,r[2]*tn*asp); gl.uniform3f(L.uCU,up[0]*tn,up[1]*tn,up[2]*tn); gl.uniform3f(L.uCF,f[0],f[1],f[2]);
   let kind=this.night?0:(this.skyKind|0), t=null;
   if(kind===5){ t=this._skyTex(this.skySrc); if(!t.ready) kind=0; }
-  gl.uniform1i(L.uKind,kind); gl.uniform1f(L.uLinS,this.linear?1:0); gl.uniform1f(L.uRot,this.skyRot||0); gl.uniform1f(L.uDrift,this.play?((performance.now()/1000)*0.012)%1000:0);
+  gl.uniform1i(L.uKind,kind); gl.uniform1i(L.uPic,7);   /* never unit 0: that may hold the post-process colour texture being drawn into */ gl.uniform1f(L.uLinS,this.linear?1:0); gl.uniform1f(L.uRot,this.skyRot||0); gl.uniform1f(L.uDrift,this.play?((performance.now()/1000)*0.012)%1000:0);
   if(t){ const pano=this.skyPano||t.asp>=1.9; let n=2; while(n<8 && (6.2831853/n)/t.asp>1.25) n+=2; const span=(6.2831853/n)/t.asp;
     gl.uniform4f(L.uPicA,n,span,-span*this.skyHz,pano?1:0); gl.activeTexture(gl.TEXTURE7); gl.bindTexture(gl.TEXTURE_2D,t.tex); gl.uniform1i(L.uPic,7); gl.activeTexture(gl.TEXTURE0); }
 };

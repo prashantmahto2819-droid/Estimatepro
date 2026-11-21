@@ -97,7 +97,7 @@
     var Hh = e.h || D.h, dp = Math.max(150, e.dp || D.dp), mw = Math.max(200, e.mw || D.mw), car = B.look(B.LOOKS[e.look2] ? e.look2 : "paint_pure_white"), dark = B.look("steel_matt_black"), glass = B.look("glass_clear"), topL = B.look(B.LOOKS[e.lookT] ? e.lookT : "granite_black"),
       hk = B.look(e.handle === "gold" ? "steel_gold_pvd" : e.handle === "black" ? "steel_matt_black" : "steel_ss"), hd = e.handle || "", tT = D.top || 0, rows = D.rows.map(function (r) { return r.slice(); });
     rows[rows.length - 1][1] = Math.max(rows[rows.length - 1][0] + 100, Hh - tT);
-    segsOf(p, e.closed).forEach(function (s) {
+    segsOf(p, e.closed).forEach(function (s, sIdx) {
       var a = s[0], b = s[1], len = G.dist(a, b); if (len < 50) return; var u = G.norm(G.sub(b, a)), nv = [u[1] * side, -u[0] * side];
       var at = function (d, off) { return [a[0] + u[0] * d + nv[0] * off, a[1] + u[1] * d + nv[1] * off]; }, st = function (d0, d1, o0, o1, za, zb, look) { if (d1 - d0 < 0.5 || zb - za < 0.5 || o1 - o0 < 0.5) return; H.boxAlong(M, at(d0, (o0 + o1) / 2), at(d1, (o0 + o1) / 2), o1 - o0, z0 + za, z0 + zb, look); };
       var n = Math.max(1, Math.round(len / mw)), cw = len / n, F = dp - 18;
@@ -128,6 +128,9 @@
         }
       });
       if (tT) st(-0, len, 0, dp + 25, Hh - tT, Hh, topL);
+      if (tT && D.key === "kitchen_unit" && sIdx === 0) { var posOf = function (v) { return v === "left" ? 0.22 : v === "right" ? 0.78 : 0.5; }, ss = B.look("steel_ss"), blk = B.look("glass_black");
+        if (e.sink && len > 900) { var sc = len * posOf(e.sink), sw = Math.min(800, len * 0.4); st(sc - sw / 2, sc + sw / 2, 70, dp - 70, Hh, Hh + 3, ss); st(sc - sw / 2 + 25, sc + sw / 2 - 25, 95, dp - 95, Hh + 3, Hh + 5, B.look("steel_matt_black")); st(sc - 14, sc + 14, 30, 58, Hh, Hh + 280, ss); st(sc - 12, sc + 12, 44, 200, Hh + 260, Hh + 282, ss); }
+        if (e.hob && len > 900) { var hc = len * posOf(e.hob), hw2 = Math.min(720, len * 0.35); st(hc - hw2 / 2, hc + hw2 / 2, 90, dp - 60, Hh, Hh + 8, blk); [[-0.25, 0.3], [0.25, 0.3], [-0.25, 0.7], [0.25, 0.7]].forEach(function (q) { var bx = hc + hw2 * q[0], by = 90 + (dp - 150) * q[1]; st(bx - 70, bx + 70, by - 70, by + 70, Hh + 8, Hh + 20, B.look("steel_matt_black")); st(bx - 35, bx + 35, by - 35, by + 35, Hh + 20, Hh + 26, ss); }); } }
       if (D.under && e.led !== "none") st(20, len - 20, dp - 120, dp - 100, -8, 0, led);
       if (e.led === "top" || e.led === "all") st(0, len, 10, 26, Hh, Hh + 12, led);
       if ((D.under || e.led) && H.lights) { var q2 = at(len / 2, dp + 200); H.lights.push([q2[0] / 1000, q2[1] / 1000, (z0 + (D.under ? -100 : Hh + 150)) / 1000, 0.5]); }

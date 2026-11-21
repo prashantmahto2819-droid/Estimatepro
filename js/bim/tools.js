@@ -33,6 +33,17 @@
     ed.preview = null;
     if (made.length >= 3 && G.dist(made[0].a, made[made.length - 1].b) < 1) made.forEach(function (w) { ed.doc.mod(w.id, Object.assign(CAD.clone(w), { ext: true })); });
   });
+  /* ---------- CURVEDWALL: a round wall as a chain of short straight walls (so doors, finishes and quantities all work) ---------- */
+  cmd("CURVEDWALL", ["CW", "ARCWALL", "ROUNDWALL"], async function (ed) {
+    var b = ensureBim(ed), th = ed.wTh || b.wallTh, mat = ed.wMat || b.wallMat, H = ed.wH || null, layer = lay(ed, "A-WALL");
+    var a = await ed.getPoint("Curved wall: start point (" + Math.round(th) + " mm " + mat + ")"), c = await ed.getPoint("End point of the curve", { base: a }); if (G.dist(a, c) < 50) return;
+    var chain = function (m) { var k = G.circle3(a, m, c); if (!k || k.r > G.dist(a, c) * 50) return [a, c]; var t1 = Math.atan2(a[1] - k.c[1], a[0] - k.c[0]), t2 = Math.atan2(m[1] - k.c[1], m[0] - k.c[0]), t3 = Math.atan2(c[1] - k.c[1], c[0] - k.c[0]), nz = function (x) { x %= Math.PI * 2; return x < 0 ? x + Math.PI * 2 : x; }, ccw = nz(t2 - t1) < nz(t3 - t1), sw = ccw ? nz(t3 - t1) : -nz(t1 - t3), n = Math.max(4, Math.min(48, Math.ceil(Math.abs(sw) * k.r / 400))), P = [];
+      for (var i = 0; i <= n; i++) { var t = t1 + sw * i / n; P.push([k.c[0] + k.r * Math.cos(t), k.c[1] + k.r * Math.sin(t)]); } P[0] = a; P[n] = c; return P; };
+    ed.preview = function (w) { var P = chain(w), o = []; for (var i = 0; i + 1 < P.length; i++) o.push({ t: "wall", a: P[i], b: P[i + 1], th: th, h: H, mat: mat, just: "c", lvl: cur(ed), layer: layer }); return o; };
+    var m = await ed.getPoint("A point on the curve (how far it bulges)"); ed.preview = null; var P = chain(m);
+    for (var i = 0; i + 1 < P.length; i++) ed.doc.add({ t: "wall", a: P[i], b: P[i + 1], th: th, h: H, mat: mat, just: "c", lvl: cur(ed), layer: layer, ext: false, curve: 1 });
+    ed.say("Curved wall made of " + (P.length - 1) + " short walls. Doors and windows go on any piece; for an outer wall set Exterior in Properties.");
+  });
   /* ---------- hosted: DOOR / WINDOW / OPENING ---------- */
   async function hostedCmd(ed, t) {
     ensureBim(ed); var lib = t === "door" ? B.DOORS : B.WINDOWS, pre = (ed.preset && ed.preset[t]) || lib[t === "door" ? 1 : 0];

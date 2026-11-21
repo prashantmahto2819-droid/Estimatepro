@@ -3,6 +3,11 @@
 This file is for the people maintaining the app. It is not published with the site (see `.assetsignore`).
 The text users see is `EP_NOTES` in `js/version.js`.
 
+## 2026.11.21-g
+- Night glow: composite shader `uBloom` (28-tap spiral, pixels brighter than 0.8); the post pass now also runs when `night` and there are lights (`bloomOn`), with SSAO off. Fix: the sky shader's `uPic` sampler is always unit 7 — on unit 0 it read the post colour texture while drawing into it (GL_INVALID_OPERATION on the sky triangle).
+- `CURVEDWALL` (CW, ARCWALL, ROUNDWALL) in `bim/tools.js`: start, end, a point on the curve → chain of straight walls about 400 mm long (`curve: 1`).
+- Kitchen base unit: `sink` / `hob` = left | centre | right, drawn on the counter of the first stretch.
+
 ## 2026.11.21-f
 - Arched heads: `door / window / opening .head` = "arch" (rise = w / 2) or "seg" (rise = 0.2 w). In `hosted()` (`mesh.js`) the height `h` is to the crown; frame, leaf and panes stop at the springing; the corners are filled with the wall's own face looks through the full thickness; doors / windows get an arched frame band, glass fan and radial bars. Wall quantity still deducts the full w × h rectangle.
 
