@@ -3,6 +3,10 @@
 This file is for the people maintaining the app. It is not published with the site (see `.assetsignore`).
 The text users see is `EP_NOTES` in `js/version.js`.
 
+## 2026.11.21-z47
+- `bim.js` `stairGeom`: U stair with `winder` "3" (twelve risers or more) — treads / three winders / treads / three winders / treads, the last flight never longer than the first; returns `runs`, `windRail` (two pieces round each corner), `U0`, `W2`, `ua`. `stairOutline`: when the last flight ends level with the start (`ua` < 50) the opening is a five-point outline without the zero-width notch. `tools.js`: type Uwinder; `cutWell` drops railing pieces shorter than 150 mm.
+- Harness: 21 risers → 5 + 3 + 5 + 3 + 5, 2.25 × 3.25 m, top 3200; plan and 3D looked at; other stair tests unchanged.
+
 ## 2026.11.21-z46
 - `bim.js` `stairGeom`: dog-leg with `winder` "3" (eleven risers or more) — `na` treads, six wedge treads (three round each inner corner, the gap strip joined to the third), `nb` treads back; returns `runs`, `lenD` (length on plan), `windRail` (three pieces round the outside). `stairOutline` takes `lenD`; the flat rail across the well is left out when `runs` is given. `tools.js` type Dwinder; `ui-bim.js` the turn select also for dog-leg.
 - Harness: 21 risers → 8 + 6 + 7, 3.0 × 2.1 m, top 3200, rails 2 × 2.342 + 2 × 2.049 + 4.006 m round the winders; opening and railing as for the plain dog-leg; U, L, spiral and two-floor tests unchanged.
