@@ -80,7 +80,9 @@
       return { pat: pat, xs: xs, zs: zs, diag: dg, W: W, H: Hh, fw: fw, kg: (xs.length * Hh + 2 * W) / 1000 * 1.13 + rl / 1000 * 0.62 + 2 * (W + Hh) / 1000 * 0.98 }; }
     else { fill(xs, W, 300, -W / 2); fill(zs, Hh, 150, 0); }
     var len = xs.length * Hh + zs.length * W; return { pat: pat, xs: xs, zs: zs, W: W, H: Hh, fw: fw, kg: len / 1000 * 1.13 + 2 * (W + Hh) / 1000 * 0.98 }; };
-  B.archSp = function (o) { if (!o || !o.head) return 0; var r = o.head === "arch" ? o.w / 2 : o.head === "seg" ? o.w * 0.2 : o.head === "point" ? o.w * 0.866 : 0; if (!r || r > o.h - 300) return 0; return o.head === "point" ? 0.2518 * o.w * o.w : o.w * r * (1 - Math.PI / 4); };
+  B.archSp = function (o) { if (!o || !o.head) return 0; var r = o.head === "arch" ? o.w / 2 : o.head === "seg" ? o.w * 0.2 : o.head === "point" ? o.w * 0.866 : o.head === "horse" ? o.w * 0.75 : 0; if (!r || r > o.h - 300) return 0;
+    if (o.head === "horse") return 0.11815 * o.w * o.w + 0.134 * o.w * (o.h - r);   /* what stays solid inside the w × h cut: round the circle (3r² − 2.5274r²) and the two piers under it */
+    return o.head === "point" ? 0.2518 * o.w * o.w : o.w * r * (1 - Math.PI / 4); };
   B.openings = function (doc, w) {
     return doc.d.ents.filter(function (o) { return (o.t === "door" || o.t === "window" || o.t === "opening") && o.host === w.id; }).map(function (o) {
       var z0 = o.t === "door" ? 0 : (o.sill != null ? o.sill : 900); return { e: o, s0: o.at - o.w / 2, s1: o.at + o.w / 2, z0: z0, z1: z0 + o.h };

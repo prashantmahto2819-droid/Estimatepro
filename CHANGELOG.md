@@ -3,6 +3,10 @@
 This file is for the people maintaining the app. It is not published with the site (see `.assetsignore`).
 The text users see is `EP_NOTES` in `js/version.js`.
 
+## 2026.11.21-z45
+- Head "horse" (horseshoe arch) for doors, windows and openings. The wall is still cut square to the crown over the full width; inside that cut `mesh.js` builds a circle of radius w / 2 running from 30° below its centre on one side to 30° below on the other (rise 0.75 w), fills round it with the wall's own faces, and adds the two piers under the springing; frame, leaf and glazing stand between the piers (`A` / `Bp` moved in to 0.866 × w / 2); the fan-light has bars from the circle's centre. `B.archSp` returns the solid left inside the cut (0.11815 w² + 0.134 w (h − 0.75 w)), so brick, plaster and shutter area follow.
+- Harness: door 1.2 × 2.4 → solid 0.41 m², shutter 2.47 m²; door and window looked at in 3D from outside and inside.
+
 ## 2026.11.21-z44
 - `bim.js` `B.grillOf`: pattern "ring" — uprights at ~140, two rails a band (≤160 mm, 28 % of the height) apart at mid height, a twelve-sided ring in each gap; weight = bars and rails × 1.13 + rings × 0.62 (10 mm round) + flat all round. Drawn through the existing `diag` strips.
 - Both the ring and the diamond pattern were looked at in 3D from outside and inside (picture in /updates).
