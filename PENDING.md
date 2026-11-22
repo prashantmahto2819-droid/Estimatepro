@@ -1,6 +1,6 @@
 # Estimate Pro — pending work (kept with the code; not published)
 
-Last updated at version 2026.11.21-z42.
+Last updated at version 2026.11.21-z43.
 
 ## A. Waiting for the owner
 1. Server work: (-z21) module switches and a shared library of blocks and hatch patterns are built — the owner has to run `server/shared.sql` once in Supabase, then check that a switched-off module disappears for a normal user. Still open: shared 3D models / cut-outs / material pictures (large files — need Supabase Storage), WhatsApp update messages with real pictures attached (needs a sending gateway; links to the pictures are already added).
@@ -60,7 +60,7 @@ Last updated at version 2026.11.21-z42.
 1. (done in -x: SHEET puts plan + elevations + sections in one frame at one scale and plots with the title block.) (-s: portrait.) (-z4: SHEETADD — several sheets, each with its own scale; plot all.) (-z5: all sheets in one PDF, list of sheets.) (-z12: DETAILVIEW — a snapshot at another scale.) (-z14: details refresh with Update views and before plotting.)
 2. (-z15: building elements now exported; trial export with real DIMENSION entities — waiting for the owner to open it in AutoCAD.) Still open: ellipse and spline as true entities (need a newer DXF version than R12); DWG is not possible in the browser.
 3. (curved walls done in -e; ramps / sloping slabs done in -s: RAMP.) (-z5: ramp kerbs.) (-z11: ramp railing.) (-z12: room floor raised / sunk.) (-z15: STEPS element; cross fall on ramps / sloping slabs.) (-z23: STEPS → Door places steps at a door between floors of different height.)
-4. (done in -x: ELEVATION, SECTION, VIEWSUPDATE.) (-n: cut parts are filled.) Still open: (-o: overall width and height on every view) (-q: level-to-level chain and door / window size tags) (-z9: finish notes and opening marks on elevations.) Still open: notes per wall where finishes differ, outlines for library items that have no edges, (-z38: VIEWSAUTO.)
+4. (done in -x: ELEVATION, SECTION, VIEWSUPDATE.) (-n: cut parts are filled.) Still open: (-o: overall width and height on every view) (-q: level-to-level chain and door / window size tags) (-z9: finish notes and opening marks on elevations.) (-z43: a wall painted on its own is named on its elevation.) Still open: outlines for library items that have no edges, (-z38: VIEWSAUTO.)
 5. (done in -r: SCHEDULE — door / window and room finish tables.) (-z5: column, beam and wall schedules.)
 6. (-w: 37 hatch patterns.) (-z15: STONE, RUBBLE.) (-z13: HATCHLOAD reads .pat files) (-z10: bold / italic text) (-z14: Times / Courier fonts) (-z13: block library on the device.) Still open: block library shared between users (needs the server).
 7. (done in -r: PIPE — CPVC, rain-water pipes, conduits, cable trays with lengths and SOR rates.) (-z6: drain pipes and wiring in conduit as runs.) (-z7: trench excavation and refilling.) (-z14: fall and manholes.) (-z22: manholes at ends, bends and junctions, shown on plan; 120 × 90 cm and extra depth by depth.) (-z38: circular manholes beyond 2.5 m.) Still open: manholes deeper than 2.5 m (circular), drop connections. (-z24: covers shown in 3D.) (Fittings are inside the SOR pipe / conduit rates.)

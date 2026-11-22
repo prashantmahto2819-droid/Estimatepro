@@ -3,6 +3,10 @@
 This file is for the people maintaining the app. It is not published with the site (see `.assetsignore`).
 The text users see is `EP_NOTES` in `js/version.js`.
 
+## 2026.11.21-z43
+- `views2d.js` `B.viewLines`: for elevations, walls parallel to the view with their own `lookO` / `colO` (outer face towards the viewer; else `lookI` / `colI`) and not hidden at their middle get a tag "Finish: <name>" at 82 % of their height; the note becomes "Outer walls (where not marked)".
+- Harness: front wall painted exposed brick → mark only on the front elevation; the other three unchanged.
+
 ## 2026.11.21-z42
 - `cad/editor.js`: `ed.marks` — a function returning shapes drawn over the plan on every repaint (not part of the drawing, not plotted). `ui-bim.js`: while the 3D Section panel is open, `ed.marks` draws the section box (dashed rectangle with corner ticks); cleared when the panel closes. The height cut (Cut slider) has no mark on plan.
 

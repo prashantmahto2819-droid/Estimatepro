@@ -1,5 +1,5 @@
 /* App version + "what's new" — the super admin is offered to send this on WhatsApp after each upload. Change both with every release. */
-window.EP_VER = "2026.11.21-z42";
-window.EP_NOTES = "• The 3D Section box is shown on the plan: in split view a red dashed rectangle marks where the 3D model is cut, and moves as you slide the sides";
+window.EP_VER = "2026.11.21-z43";
+window.EP_NOTES = "• Elevations name the finish of each wall painted on its own: a wall given its own material or colour (🪣 Paint in 3D) is marked Finish: … on the elevation it faces, and the general note then reads Outer walls (where not marked)\n• Elevations made before this update get the marks when you press Update views";
 /* pictures of this update: [file in /updates, caption]. Shown to the owner with the WhatsApp "what's new" message. */
-window.EP_PICS = [["z42-cutbox.jpg", "The 3D section box drawn on the plan in split view"]];
+window.EP_PICS = [];
