@@ -177,6 +177,15 @@
     ed.say("Section " + id + "-" + id + " drawn at 1:" + N + ". Cut parts are in thick lines. Erase the section line to remove it; VIEWSUPDATE redraws after changes."); if (ed.zoomExtents) ed.zoomExtents();
   });
 
+  /* views that keep themselves up to date: a little after the model changes, sections, elevations, details and schedules are made again and folded into the same undo step */
+  cmd("VIEWSAUTO", ["AUTOVIEWS", "VIEWSLIVE"], async function (ed) { var bs = CAD.clone(B.ensure(ed.doc.d)); bs.autoViews = !bs.autoViews; ed.doc.begin("Views update by themselves"); ed.doc.set("bim", bs); ed.doc.commit(); ed.say(bs.autoViews ? "On — sections, elevations, details and schedules are now made again by themselves about a second after the building changes (one Undo takes back the change and the view together). On a large drawing this can make editing slower; run this again to turn it off." : "Off — views change only when you press Update views."); });
+  (function () { var tv = null, last = null;
+    var touches = function (tx) { return tx.ops.some(function (op) { return [op.e, op.before, op.after].some(function (x) { return x && B.TYPES[x.t]; }); }); };
+    var run = function (ed, tries) { var doc = ed.doc, d = doc.d; if (!d.bim || !d.bim.autoViews) return; if (doc.tx) { if (tries < 6) tv = setTimeout(function () { run(ed, tries + 1); }, 1500); return; }
+      var top = doc.undoS[doc.undoS.length - 1]; if (!top || top === last || doc.redoS.length) return; last = top; if (top.label === "Update views" || !touches(top)) return;
+      var n0 = doc.undoS.length; try { B.refreshViews(ed); } catch (er) { if (window.console) console.warn("views not updated", er); return; }
+      if (doc.undoS.length === n0 + 1 && doc.undoS[n0 - 1] === top) { var v = doc.undoS.pop(); doc.undoS.pop(); var merged = { label: top.label, ops: top.ops.concat(v.ops) }; doc.undoS.push(merged); last = merged; } else last = doc.undoS[doc.undoS.length - 1]; };
+    B.autoViewsHook = function (ed) { if (!ed.doc.d.bim || !ed.doc.d.bim.autoViews) return; clearTimeout(tv); tv = setTimeout(function () { run(ed, 0); }, 1100); }; })();
   cmd("VIEWSUPDATE", ["VU"], async function (ed) {
     var d = ed.doc.d, names = Object.keys(d.blocks).filter(isViewBlock).filter(function (n) { return insertsOf(ed, n).length; }), N = scaleOf(d), n = 0;
     var nd = 0, ns = 0; ed.doc.begin("Update views"); try { nd = B.refreshDetails ? B.refreshDetails(ed) : 0; SCH_KINDS.forEach(function (w) { if (insertsOf(ed, "SCH-" + w).length && makeSchedule(ed, w, N)) ns++; }); } finally { ed.doc.commit(); }

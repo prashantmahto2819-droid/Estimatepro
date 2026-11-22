@@ -3,6 +3,14 @@
 This file is for the people maintaining the app. It is not published with the site (see `.assetsignore`).
 The text users see is `EP_NOTES` in `js/version.js`.
 
+## 2026.11.21-z38
+- `views2d.js`: VIEWSAUTO (aliases AUTOVIEWS, VIEWSLIVE) toggles `bim.autoViews`; `B.autoViewsHook(ed)` (called from the change hook in `ui-bim.js`) waits 1.1 s, and if the newest undo step touches a building element (and nothing is waiting in redo, no transaction is open) runs `B.refreshViews` and folds its step into that one.
+- `view3d.js`: `uTm` — water ripples drift with play time.
+- `mesh.js` / `bim.js` / `ui-bim.js`: door `casing` (architrave both faces; quantity `door_architrave`, L, CPWD 9.40.1.1); grill pattern "dia" (`grillOf().diag`, flat strips at ±45°, 212 mm apart); ceiling plaster less the soffit of beams whose middle is not over a counted wall.
+- `runs.js`: manholes deeper than 2.5 m → `manhole_c152` (19.13.1.1) + `manhole_xd_c152` (19.14.1, beyond 2.3 m); the 120 × 90 group is now 0.9–2.5 m.
+- Checked and struck from the list as already there: recliner, floor lamps, rugs, dining tables that bring their chairs (catalogue 9).
+- Harness: diamond grill 24 bars 28.2 kg; architrave 10.7 m; plaster 52.510 − 7.077 − 1.097 m²; drain falling 1:20 → depths 0.6 / 1.65 / 2.7 / 3.75 m → 1 + 1 + 2 manholes; walls raised with auto views on → section redrawn, one undo step, undo restores both; water frames differ between two play times, no GL error.
+
 ## 2026.11.21-z37
 - `bim/tools.js`: `B.followWalls(doc, tx)` in the wrapped commit, before the rooms are refitted — for every wall whose ends changed in the transaction, slabs and roofs of that level (and the floor slab resting on those walls) with two or more corners within half the wall + 90 + overhang + 500 mm of the old wall line have those corners shifted by the wall's movement there (between the two ends); a corner claimed by several walls takes the largest shift once; anything already changed in the same transaction is skipped (so MOVE of everything and the 3D wall move are not doubled).
 - Harness: outer wall stretched 1 m → plinth slab and roof slab corners +1 m with the 450 overhang kept, one undo step; partition moved → slabs unchanged; all moved together → no double shift; 3D wall move → slabs moved once.

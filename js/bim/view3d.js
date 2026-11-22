@@ -52,7 +52,7 @@ in vec4 vC;
 in float vI;
 in vec3 vM;
 uniform vec3 uSun,uEye,uSunCol,uSky,uGnd,uHor;
-uniform float uSel,uCut,uShadow,uSMs,uStyle,uFog,uAmb,uHead,uXr,uSecFill;
+uniform float uSel,uCut,uShadow,uSMs,uStyle,uFog,uAmb,uHead,uXr,uSecFill,uTm;
 uniform vec3 uSecCol;
 uniform vec4 uBox;
 uniform vec4 uPL[32];   /* light fittings: xyz + strength */
@@ -213,7 +213,7 @@ void main(){
   }else if(pi==15){/* soil */
     col*=0.75+0.4*fbm(uv*5.0);
   }else if(pi==17){/* water: soft ripples that also tilt the surface, so the reflected sky breaks up */
-    float w1=fbm(uv*2.2+vec2(0.0,1.7)), w2=fbm(uv*5.1+vec2(3.1,0.4));
+    float w1=fbm(uv*2.2+vec2(uTm*0.07,1.7+uTm*0.045)), w2=fbm(uv*5.1+vec2(3.1-uTm*0.06,0.4+uTm*0.09));   /* the ripples drift while ▶ Play is on */
     col*=0.82+0.22*w1+0.1*w2;
     if(N.z>0.5) N=normalize(N+vec3((w1-0.5)*0.22,(w2-0.5)*0.22,0.0));
   }
@@ -1132,6 +1132,7 @@ P.prototype.render=function(pick){
   gl.uniform3fv(u.uHor,lt.hor||[0.75,0.78,0.82]);
   gl.uniform1f(u.uSel,this.sel);
   gl.uniform1f(u.uCut,this.cut);
+  if(this._tmLoc===undefined) this._tmLoc=gl.getUniformLocation(this.mp,'uTm'); gl.uniform1f(this._tmLoc,this.play?((this._playT||0)%600):0);
   if(this._sfLoc===undefined) this._sfLoc=gl.getUniformLocation(this.mp,'uSecFill'); gl.uniform1f(this._sfLoc,(this.cut<1e7||this.box)&&this.secFill!==false&&!this.xray?1:0); if(this._secCLoc===undefined) this._secCLoc=gl.getUniformLocation(this.mp,"uSecCol"); gl.uniform3fv(this._secCLoc,this.secCol||[0.46,0.42,0.40]);
   gl.uniform4f(u.uBox,-1e9,1e9,-1e9,1e9); gl.uniform1f(u.uXr,1.0);   /* the ground is never cut or made see-through */
   gl.uniform1f(u.uShadow,this.shadows?1:0);

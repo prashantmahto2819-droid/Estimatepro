@@ -92,13 +92,15 @@
     box(M, G.add(A, G.mul(u, fw / 2)), fw, fd, Math.atan2(u[1], u[0]) * 180 / Math.PI, z0 + zb, z0 + zt, frameD);
     box(M, G.sub(Bp, G.mul(u, fw / 2)), fw, fd, Math.atan2(u[1], u[0]) * 180 / Math.PI, z0 + zb, z0 + zt, frameD);
     boxAlong(M, A, Bp, fd, z0 + zt - fw, z0 + zt, frameD);
+    if (o.t === "door" && +o.casing > 20 && !o.head) { var cw = +o.casing, nC = G.perp(u), thC = ((pl.w && pl.w.th) || 230) / 2 + 9, angC = Math.atan2(u[1], u[0]) * 180 / Math.PI; [1, -1].forEach(function (sd) { var off = G.mul(nC, sd * thC); box(M, G.add(G.sub(A, G.mul(u, cw / 2)), off), cw, 18, angC, z0 + zb, z0 + zt + cw, frameD); box(M, G.add(G.add(Bp, G.mul(u, cw / 2)), off), cw, 18, angC, z0 + zb, z0 + zt + cw, frameD); boxAlong(M, G.add(A, off), G.add(Bp, off), 18, z0 + zt, z0 + zt + cw, frameD); }); }   /* architrave (casing) round the frame on both faces */
     if (o.t === "window") {
       boxAlong(M, A, Bp, fd, z0 + zb, z0 + zb + fw, mat);
       var ia = G.add(A, G.mul(u, fw)), ib = G.sub(Bp, G.mul(u, fw)), panes = o.kind === "louvre" ? 0 : (o.kind === "sliding" || o.kind === "casement2" ? 2 : 1);
       if (o.kind === "louvre") { for (var z = zb + fw + 60; z < zt - fw; z += 90) boxAlong(M, ia, ib, 70, z0 + z, z0 + z + 8, glass, Math.min(1, glass.a + 0.25)); }
       else { boxAlong(M, ia, ib, 8, z0 + zb + fw, z0 + zt - fw, glass); if (panes === 2) box(M, pl.p, 40, fd * 0.8, Math.atan2(u[1], u[0]) * 180 / Math.PI, z0 + zb + fw, z0 + zt - fw, mat); }
       var gr = B.grillOf ? B.grillOf(o) : null; if (gr) { var gm = o.kind === "grill" ? mat : B.look("steel_matt_black"), go = G.mul(n, o.kind === "grill" ? 0 : (o.flip ? -1 : 1) * Math.min(55, th / 2 - 20)), gc = G.add(pl.p, go), ga = G.add(ia, go), gb = G.add(ib, go), ang = Math.atan2(u[1], u[0]) * 180 / Math.PI;   /* bars a little inside the glass, on the side the window opens to */
-        gr.xs.forEach(function (x) { box(M, G.add(gc, G.mul(u, x)), 12, 12, ang, z0 + zb + fw, z0 + zt - fw, gm); }); gr.zs.forEach(function (z) { boxAlong(M, ga, gb, 12, z0 + zb + fw + z - 6, z0 + zb + fw + z + 6, gm); }); }
+        gr.xs.forEach(function (x) { box(M, G.add(gc, G.mul(u, x)), 12, 12, ang, z0 + zb + fw, z0 + zt - fw, gm); }); gr.zs.forEach(function (z) { boxAlong(M, ga, gb, 12, z0 + zb + fw + z - 6, z0 + zb + fw + z + 6, gm); });
+        (gr.diag || []).forEach(function (g) { var L = Math.hypot(g[2] - g[0], g[3] - g[1]); if (L < 20) return; var px = -(g[3] - g[1]) / L * 6, pz = (g[2] - g[0]) / L * 6, P = function (x, z) { return v3(G.add(gc, G.mul(u, x)), z0 + zb + fw + z); }, a1 = P(g[0] - px, g[1] - pz), a2 = P(g[0] + px, g[1] + pz), b2 = P(g[2] + px, g[3] + pz), b1 = P(g[2] - px, g[3] - pz); M.quad(a1, a2, b2, b1, gm); M.quad(b1, b2, a2, a1, gm); }); }
       return;
     }
     if (o.t === "opening") return;

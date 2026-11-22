@@ -1,5 +1,5 @@
 /* App version + "what's new" — the super admin is offered to send this on WhatsApp after each upload. Change both with every release. */
-window.EP_VER = "2026.11.21-z37";
-window.EP_NOTES = "• Slabs and roofs follow their walls on the plan: when an outer wall is moved or stretched, the corners of the slab and roof that sat on it go with it, keeping their overhang — in the same step as the wall (one Undo)\n• A wall inside the building does not disturb the slab; a slab or roof you move yourself in the same edit is left alone";
+window.EP_VER = "2026.11.21-z38";
+window.EP_NOTES = "• Views update by themselves (Building tab, beside Update views): when on, sections, elevations, details and schedules are made again about a second after the building changes — one Undo takes back both\n• Water moves: with ▶ Play on in 3D the ripples of pools and ponds drift\n• Doors: Architrave round the frame (50 / 75 / 100 mm) in Properties — shown in 3D, measured in metres under moulded beading (CPWD 9.40.1.1)\n• Window safety grill: new Diamond grid pattern\n• Ceiling plaster of a slab also leaves out the soffit under beams that do not sit on a wall\n• Drains deeper than 2.5 m get the 1.52 m circular manhole with its extra depth (CPWD 19.13 / 19.14)";
 /* pictures of this update: [file in /updates, caption]. Shown to the owner with the WhatsApp "what's new" message. */
-window.EP_PICS = [];
+window.EP_PICS = [["z38-batch.jpg", "A pond with moving water, and a door with an architrave"]];
