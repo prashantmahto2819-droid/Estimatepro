@@ -3,6 +3,10 @@
 This file is for the people maintaining the app. It is not published with the site (see `.assetsignore`).
 The text users see is `EP_NOTES` in `js/version.js`.
 
+## 2026.11.21-z50
+- Phone layout (≤ 820 px), from the owner's screenshot where the plan had shrunk to a strip and the 3D toolbar covered the 3D view: `.cad-host` height 100dvh − 64 px (was 100vh − 150); `.cad-log` one line; split view gives the plan flex 1.25 / min 170 px and 3D flex 1 / min 150 px; `.v3-bar` shows only the new `.v3-more` button until opened (then scrolls inside the pane, above the cube); `.vcube-wrap` scaled to 58 %. `ui-bim.js`: the toggle button and its handler. Wide screens unchanged.
+- Checked at 390 × 760: plan 190 px, 3D 192 px, tools closed / open / full 3D.
+
 ## 2026.11.21-z49
 - `view3d.js`: `lampShadowAll` (toolbar toggle "More shadows", off by default) — the three fittings nearest to the view after the first are rendered looking down into the tiles of one 2048 × 2048 depth picture (texture unit 12; `uLS4`, `uLS4m[3]`, `uLS4p[3]`, `lampSh4`); the light loop dims each of them by its own tile. Costs three more depth passes of the opaque geometry per frame. A failure switches lamp shadows off as before.
 - Harness: four ceiling lights, three sofas, night — toggle on gives three extra maps, frames differ, no GL error, program links. Frame time could not be measured here (software renderer).
