@@ -3,6 +3,10 @@
 This file is for the people maintaining the app. It is not published with the site (see `.assetsignore`).
 The text users see is `EP_NOTES` in `js/version.js`.
 
+## 2026.11.21-z48
+- Curved walls stay a chain of short straight walls (`curve: 1`), so everything hosted on them keeps working; `mesh.js` now shows the chain as one surface: `B.curveOf(doc, w)` finds the circle from the neighbouring piece and which ends join; the side-face normals are set radial, the vertical and top edges at joints are dropped, and the end faces at joints are not drawn. Plan view unchanged (facets of about 400 mm).
+- Harness: half circle of radius 3 m in 24 pieces — no joint lines close up, with or without shadows.
+
 ## 2026.11.21-z47
 - `bim.js` `stairGeom`: U stair with `winder` "3" (twelve risers or more) — treads / three winders / treads / three winders / treads, the last flight never longer than the first; returns `runs`, `windRail` (two pieces round each corner), `U0`, `W2`, `ua`. `stairOutline`: when the last flight ends level with the start (`ua` < 50) the opening is a five-point outline without the zero-width notch. `tools.js`: type Uwinder; `cutWell` drops railing pieces shorter than 150 mm.
 - Harness: 21 risers → 5 + 3 + 5 + 3 + 5, 2.25 × 3.25 m, top 3200; plan and 3D looked at; other stair tests unchanged.

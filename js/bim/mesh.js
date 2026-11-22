@@ -39,7 +39,12 @@
   function boxAlong(M, a, b, w, z0, z1, col, alpha) { var u = G.norm(G.sub(b, a)), n = G.mul(G.perp(u), w / 2); prism(M, [G.add(a, n), G.sub(a, n), G.sub(b, n), G.add(b, n)], z0, z1, col, null, alpha); }
 
   /* ---------- walls with openings ---------- */
+  /* a piece of a curved wall (CURVEDWALL): the circle it lies on, from the piece next to it, and which of its ends join another piece */
+  B.curveOf = function (doc, w) { if (!w.curve || !w.a || !w.b) return null; var near = function (p, q) { return Math.abs(p[0] - q[0]) < 2 && Math.abs(p[1] - q[1]) < 2; }, pa = null, pb = null;
+    doc.d.ents.forEach(function (o) { if (o === w || o.id === w.id || o.t !== "wall" || !o.curve || o.lvl !== w.lvl) return; if (!pa) { if (near(o.b, w.a)) pa = o.a; else if (near(o.a, w.a)) pa = o.b; } if (!pb) { if (near(o.a, w.b)) pb = o.b; else if (near(o.b, w.b)) pb = o.a; } });
+    var k = pa ? G.circle3(pa, w.a, w.b) : pb ? G.circle3(w.a, w.b, pb) : null; if (!k || !(k.r > 0) || k.r > G.dist(w.a, w.b) * 400) return null; return { c: k.c, r: k.r, ja: !!pa, jb: !!pb }; };
   function wall(M, doc, w, z0) {
+    var cvK = w.curve ? B.curveOf(doc, w) : null, vSt = M.v.length, eSt = M.e.length;
     var P = B.wallPoly(doc, w), H = B.wallH(doc, w), c = B.wallLine(w), ops = B.openings(doc, w), z1 = z0 + H, d = doc.d, xs = w.ext ? B.extSide(doc, w) : -1;
     var lkI = B.lookFor(d, "wall_int", w.lookI, w.colI), lkO = w.ext ? B.lookFor(d, "wall_ext", w.lookO, w.colO) : lkI, col = lkO, fc = [xs === 0 ? lkO : lkI, xs === 1 ? lkO : lkI];
     var proj = function (q) { return G.dot(G.sub(q, c.a), c.u); };
@@ -54,7 +59,7 @@
     });
     // top, bottom, ends
     var foot = [P.sL, P.eL, P.eR, P.sR]; cap(M, ccw(foot), null, z1, 1, col); cap(M, ccw(foot), null, z0, -1, col);
-    M.quad(v3(P.sR, z0), v3(P.sL, z0), v3(P.sL, z1), v3(P.sR, z1), col); M.quad(v3(P.eL, z0), v3(P.eR, z0), v3(P.eR, z1), v3(P.eL, z1), col);
+    if (!(cvK && cvK.ja)) M.quad(v3(P.sR, z0), v3(P.sL, z0), v3(P.sL, z1), v3(P.sR, z1), col); if (!(cvK && cvK.jb)) M.quad(v3(P.eL, z0), v3(P.eR, z0), v3(P.eR, z1), v3(P.eL, z1), col);   /* the ends of a curved-wall piece that meet the next piece are inside the wall */
     M.edge(v3(P.sL, z0), v3(P.sL, z1)); M.edge(v3(P.sR, z0), v3(P.sR, z1)); M.edge(v3(P.eL, z0), v3(P.eL, z1)); M.edge(v3(P.eR, z0), v3(P.eR, z1)); M.edge(v3(P.sL, z1), v3(P.sR, z1)); M.edge(v3(P.eL, z1), v3(P.eR, z1));
     // reveals of each opening (through the thickness, on the centre-line frame)
     ops.forEach(function (o) {
@@ -63,7 +68,11 @@
       M.quad(v3(G.sub(Bp, h), z0 + zb), v3(G.add(Bp, h), z0 + zb), v3(G.add(Bp, h), z0 + zt), v3(G.sub(Bp, h), z0 + zt), col);    // jamb at s1
       if (zt < H - 0.5) M.quad(v3(G.add(A, h), z0 + zt), v3(G.sub(A, h), z0 + zt), v3(G.sub(Bp, h), z0 + zt), v3(G.add(Bp, h), z0 + zt), col);   // head (soffit)
       if (zb > 0.5) M.quad(v3(G.add(A, h), z0 + zb), v3(G.add(Bp, h), z0 + zb), v3(G.sub(Bp, h), z0 + zb), v3(G.sub(A, h), z0 + zb), col);      // sill
-    });  if (B.finMesh && w.fin) { try { B.finMesh(M, doc, w, z0, H, ops); } catch (er) { /* a bad finish never stops the wall */ } }
+    });
+    if (cvK) {   /* seen as one smooth curve: the faces are shaded round the centre and the lines at the joints between pieces are left out */
+      var V = M.v, cx = cvK.c[0] * K, cy = cvK.c[1] * K; for (var vi = vSt; vi + 14 <= V.length; vi += 14) { if (Math.abs(V[vi + 5]) > 0.2) continue; var rx = V[vi] - cx, ry = V[vi + 1] - cy, rl = Math.hypot(rx, ry) || 1, dt = (V[vi + 3] * rx + V[vi + 4] * ry) / rl; if (Math.abs(dt) > 0.75) { var sg = dt > 0 ? 1 : -1; V[vi + 3] = sg * rx / rl; V[vi + 4] = sg * ry / rl; V[vi + 5] = 0; } }
+      var J = []; if (cvK.ja) J.push([w.a[0] * K, w.a[1] * K]); if (cvK.jb) J.push([w.b[0] * K, w.b[1] * K]); if (J.length) { var E = M.e, keep = E.slice(0, eSt), tolJ = (w.th || 230) * K * 0.9; for (var ei = eSt; ei + 6 <= E.length; ei += 6) { var drop = J.some(function (q) { return Math.hypot(E[ei] - q[0], E[ei + 1] - q[1]) < tolJ && Math.hypot(E[ei + 3] - q[0], E[ei + 4] - q[1]) < tolJ; }); if (!drop) for (var ek = 0; ek < 6; ek++) keep.push(E[ei + ek]); } M.e = keep; } }
+    if (B.finMesh && w.fin) { try { B.finMesh(M, doc, w, z0, H, ops); } catch (er) { /* a bad finish never stops the wall */ } }
   }
   /* element look → building category (if the user set it) → look of the element's material → category default */
   function byMat(d, cat, mat, elLook, elCol) {
