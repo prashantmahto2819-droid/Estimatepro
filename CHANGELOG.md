@@ -3,6 +3,9 @@
 This file is for the people maintaining the app. It is not published with the site (see `.assetsignore`).
 The text users see is `EP_NOTES` in `js/version.js`.
 
+## 2026.11.21-z42
+- `cad/editor.js`: `ed.marks` — a function returning shapes drawn over the plan on every repaint (not part of the drawing, not plotted). `ui-bim.js`: while the 3D Section panel is open, `ed.marks` draws the section box (dashed rectangle with corner ticks); cleared when the panel closes. The height cut (Cut slider) has no mark on plan.
+
 ## 2026.11.21-z41
 - `ui-bim.js` Tour along the camera path: a height profile every 0.1 m — at each point the tread (of any stair, any level) under it whose top is within 420 mm of the height reached so far sets the new height; the camera eases to it. Works for all stair kinds (polygon treads included) and for going down.
 - Harness: path up a dog-leg stair → camera height rises from 1.6 to 4.8 m (3.2 m floor + eye) and stays there.

@@ -96,6 +96,7 @@
     this.sel.forEach(function (id) { var e = doc.get(id); if (e && doc.visible(e)) self.drawEnt(c, e, K.sel, true); });
     if (this.hover && !this.sel.has(this.hover)) { var he = doc.get(this.hover); if (he) this.drawEnt(c, he, K.hov, true); }
     // preview of the running command
+    if (this.marks) { var mkL = null; try { mkL = this.marks(); } catch (er) { mkL = null; } (mkL || []).forEach(function (e) { self.drawEnt(c, e, e._pc || "#e0503a", false, true); }); }   /* standing marks drawn over the plan (e.g. where the 3D view is cut) */
     if (this.preview) { var pv = this.preview(this.cursorW || [0, 0]); (pv || []).forEach(function (e) { self.drawEnt(c, e, e._pc || K.sel, false, true); }); }
     if (!this.cmd || this.cmd.grips) this.drawGrips(c, K);
     if (this.iso) this._isoZ = this.workZ();

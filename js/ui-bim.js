@@ -221,11 +221,12 @@
     }
     if (m === "section") {
       var sp = root.querySelector(".v3-sec"), bb = (C.v3bbox || [-10, -10, 0, 10, 10, 5]);
-      if (!sp.hidden) { sp.hidden = true; v.box = null; btn("section", false); v.dirty = true; return; }
+      if (!sp.hidden) { sp.hidden = true; v.box = null; btn("section", false); v.dirty = true; ed.marks = null; ed.dirty = true; return; }
       var pad2 = 0.5, lo = [bb[0] - pad2, bb[1] - pad2], hi = [bb[3] + pad2, bb[4] + pad2], row = function (k, lab, val) { return "<label>" + lab + "<input type='range' min='0' max='100' value='" + val + "' data-v3box='" + k + "'></label>"; };
       sp.innerHTML = "<b>Section box</b>" + row(0, "West side", 0) + row(1, "East side", 100) + row(2, "South side", 0) + row(3, "North side", 100) + "<span class='muted'>Slide a side in to cut the model there. The Cut slider on top cuts by height.</span>";
       sp.hidden = false; btn("section", true); C.v3boxR = [lo, hi];
-      sp.oninput = function () { var q = sp.querySelectorAll("[data-v3box]"), f = function (i) { return +q[i].value / 100; }; v.box = [lo[0] + (hi[0] - lo[0]) * f(0), lo[0] + (hi[0] - lo[0]) * f(1), lo[1] + (hi[1] - lo[1]) * f(2), lo[1] + (hi[1] - lo[1]) * f(3)]; v.dirty = true; };
+      sp.oninput = function () { var q = sp.querySelectorAll("[data-v3box]"), f = function (i) { return +q[i].value / 100; }; v.box = [lo[0] + (hi[0] - lo[0]) * f(0), lo[0] + (hi[0] - lo[0]) * f(1), lo[1] + (hi[1] - lo[1]) * f(2), lo[1] + (hi[1] - lo[1]) * f(3)]; v.dirty = true; ed.dirty = true; };
+      ed.marks = function () { var bx = C.v3 && C.v3.box; if (!bx || !C.v3mode || C.v3mode === "off") return null; var x0 = Math.min(bx[0], bx[1]) * 1000, x1 = Math.max(bx[0], bx[1]) * 1000, y0 = Math.min(bx[2], bx[3]) * 1000, y1 = Math.max(bx[2], bx[3]) * 1000, tk = Math.max(150, (x1 - x0 + y1 - y0) / 60), out = [{ t: "pline", pts: [[x0, y0, 0], [x1, y0, 0], [x1, y1, 0], [x0, y1, 0]], closed: true, lt: "DASHED" }]; [[x0, y0, 1, 1], [x1, y0, -1, 1], [x1, y1, -1, -1], [x0, y1, 1, -1]].forEach(function (q) { out.push({ t: "line", a: [q[0], q[1]], b: [q[0] + q[2] * tk, q[1]] }); out.push({ t: "line", a: [q[0], q[1]], b: [q[0], q[1] + q[3] * tk] }); }); return out; };   /* the box the 3D view is cut to, shown on the plan (split view) */ ed.dirty = true;
       return;
     }
     if (m === "tour") {
