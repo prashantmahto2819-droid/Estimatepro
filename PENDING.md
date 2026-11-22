@@ -1,6 +1,6 @@
 # Estimate Pro — pending work (kept with the code; not published)
 
-Last updated at version 2026.11.21-z40.
+Last updated at version 2026.11.21-z41.
 
 ## A. Waiting for the owner
 1. Server work: (-z21) module switches and a shared library of blocks and hatch patterns are built — the owner has to run `server/shared.sql` once in Supabase, then check that a switched-off module disappears for a normal user. Still open: shared 3D models / cut-outs / material pictures (large files — need Supabase Storage), WhatsApp update messages with real pictures attached (needs a sending gateway; links to the pictures are already added).
@@ -43,7 +43,7 @@ Last updated at version 2026.11.21-z40.
 4. (done in -x: sky presets and an own background picture.) Still open: the picture does not light the model (no image-based lighting), (-r: sky saved per scene) ground materials by area.
 5. (-u: sky reflection on glass and polished surfaces.) (-z8: water surfaces with ripples.) (-z18: water mirrors what is on screen beside it.) (-z19: ✨ Reflections on glass and polished floors.) Still open: things outside the screen in the reflection, (-z38: moving water in Play.) softer shadows.
 6. (-z10: vehicles turn round and come back.) (-z18: walkers bob with each step.) (-z20: wheels that turn, walkers sway.) (-z22: DRIVEPATH — a vehicle follows its own route.) (-z39: slow at corners and ends.) Still open: vehicles that stop at gates, limbs that move (needs animated models).
-7. (-z2: CAMPATH + Tour walks the path; Record makes the video.) (-z3: speed, eye height, MP4 first.) Still open: look-at targets, stairs between levels, doors that open on the way.
+7. (-z2: CAMPATH + Tour walks the path; Record makes the video.) (-z3: speed, eye height, MP4 first.) (-z41: the camera-path walk climbs stairs.) Still open: look-at targets, doors that open on the way.
 8. (done in -z17: cut faces hatched, cut-away parts throw no shadow.) (-z22: colour of the cut faces.) Still open: a cut line on plan for the 3D section.
 9. (done in -t: ✥ Move drags placed objects along the floor, ⟲ ⟳ turn by 15°.) (-z5: ▲ ▼ raise / lower, ⧉ copy.) (-z11: doors / windows / openings slide along their wall.) (-z12: walls move square to themselves, joined walls stretch.) (-z13: rooms, slabs and roofs follow the wall.) (-z22: snaps to wall faces within 90 mm.) (-z24: slanting walls and corners.) (-z25: other furniture standing square.) Still open: furniture standing at an angle.
 10. Slanting outlines with inside corners (hip), gable roofs on slanting outlines, (-y: DOME and VAULT roof elements.) (-z2: smooth shading.) (-z5: cone, drum wall.) (-z14: ring beam.) (-z15: pyramid on a many-sided base.)

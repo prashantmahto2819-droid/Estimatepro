@@ -238,12 +238,16 @@
         var tot = cum[cum.length - 1], spd = Math.max(0.3, +(bim(ed).camSpeed) || 1.4), LvC = B.level(ed.doc.d, bim(ed).cur), fz = ((LvC ? LvC.elev : 0) + (+(bim(ed).ngl) < 0 ? 0 : 0)) / 1000;
         if (tot > 0.5) {
           var at = function (d) { d = Math.max(0, Math.min(tot, d)); var k2 = 1; while (k2 < cum.length - 1 && cum[k2] < d) k2++; var f2 = (d - cum[k2 - 1]) / ((cum[k2] - cum[k2 - 1]) || 1); return [PP[k2 - 1][0] + (PP[k2][0] - PP[k2 - 1][0]) * f2, PP[k2 - 1][1] + (PP[k2][1] - PP[k2 - 1][1]) * f2]; };
+          /* the walk climbs stairs: wherever the path crosses a tread within a step's reach of the height it is at, it takes that tread's height, and keeps the height it has reached afterwards */
+          var treads = []; ed.doc.d.ents.forEach(function (st) { if (st.t !== "stair") return; var Ls = B.level(ed.doc.d, st.lvl), bz = Ls ? Ls.elev : 0, Sg; try { Sg = B.stairGeom(st); } catch (er) { return; } Sg.steps.forEach(function (sp) { var wS = sp.lw || sp.w, P = sp.poly || [sp.a, G.add(sp.a, G.mul(sp.u, sp.T)), G.add(G.add(sp.a, G.mul(sp.u, sp.T)), G.mul(sp.n, wS)), G.add(sp.a, G.mul(sp.n, wS))]; treads.push({ P: P, z: bz + sp.z1 }); }); });
+          var zProf = null, climbs = 0; if (treads.length) { var nZ = Math.max(2, Math.ceil(tot / 0.1)), curZ = fz * 1000; zProf = new Float32Array(nZ + 1); for (var zi = 0; zi <= nZ; zi++) { var pz = at(tot * zi / nZ), pm = [pz[0] * 1000, pz[1] * 1000], bestT = null; treads.forEach(function (tr) { if (Math.abs(tr.z - curZ) <= 420 && G.inPoly(pm, tr.P) && (!bestT || Math.abs(tr.z - curZ) < Math.abs(bestT.z - curZ) || (tr.z === bestT.z))) bestT = tr; }); if (bestT && bestT.z !== curZ) { curZ = bestT.z; climbs++; } zProf[zi] = curZ / 1000; } if (!climbs) zProf = null; }
+          var zAt = function (d) { if (!zProf) return fz; var x = Math.max(0, Math.min(1, d / tot)) * (zProf.length - 1), i0 = Math.floor(x); return zProf[Math.min(zProf.length - 1, i0)]; }, zCam = fz;
           var eyeW = Math.max(0.3, +(bim(ed).camEye) || 1.6), runW = C.v3tour = {}, Tw = performance.now(), a0 = at(0), a1 = at(1.5); v.spin = false; v.setWalk(true, fz, a0); v.we[2] = fz + eyeW; C.v3tourWalk = true; v.yaw = Math.atan2(-(a1[0] - a0[0]), a1[1] - a0[1]); btn("tour", true);
-          say("Walking the camera path — " + tot.toFixed(1) + " m at " + spd + " m/s. Press Tour again to stop. Use ● Record with it to make a video.");
+          say("Walking the camera path — " + tot.toFixed(1) + " m at " + spd + " m/s" + (zProf ? ", climbing the stairs it crosses" : "") + ". Press Tour again to stop. Use ● Record with it to make a video.");
           (function stepW() {
             if (C.v3tour !== runW || !C.v3 || C.v3.dead) return;
             var dW = (performance.now() - Tw) / 1000 * spd, pW = at(dW), qW = at(dW + 1.5), ty = Math.hypot(qW[0] - pW[0], qW[1] - pW[1]) > 0.05 ? Math.atan2(-(qW[0] - pW[0]), qW[1] - pW[1]) : v.yaw, dy2 = ty - v.yaw; while (dy2 > Math.PI) dy2 -= 2 * Math.PI; while (dy2 < -Math.PI) dy2 += 2 * Math.PI;
-            v.we = [pW[0], pW[1], fz + eyeW]; var nowW = performance.now(), dtW = Math.min(0.2, (nowW - (runW.t || nowW)) / 1000); runW.t = nowW; v.yaw += dy2 * (1 - Math.exp(-dtW * 5)); v.wpitch = 0; v.dirty = true;
+            var nowW = performance.now(), dtW = Math.min(0.2, (nowW - (runW.t || nowW)) / 1000); runW.t = nowW; zCam += (zAt(dW) - zCam) * (1 - Math.exp(-dtW * 7)); v.we = [pW[0], pW[1], zCam + eyeW]; runW.z = zCam; v.yaw += dy2 * (1 - Math.exp(-dtW * 5)); v.wpitch = 0; v.dirty = true;
             if (dW >= tot) { C.v3tour = null; C.v3tourWalk = false; v.setWalk(false); btn("tour", false); say("Tour finished."); if (C.v3rec && C.v3rec.auto) v3mode(ed, C, "rec"); return; }
             requestAnimationFrame(stepW);
           })();

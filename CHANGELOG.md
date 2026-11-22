@@ -3,6 +3,10 @@
 This file is for the people maintaining the app. It is not published with the site (see `.assetsignore`).
 The text users see is `EP_NOTES` in `js/version.js`.
 
+## 2026.11.21-z41
+- `ui-bim.js` Tour along the camera path: a height profile every 0.1 m — at each point the tread (of any stair, any level) under it whose top is within 420 mm of the height reached so far sets the new height; the camera eases to it. Works for all stair kinds (polygon treads included) and for going down.
+- Harness: path up a dog-leg stair → camera height rises from 1.6 to 4.8 m (3.2 m floor + eye) and stays there.
+
 ## 2026.11.21-z40
 - Material pictures (`bim.texs`): `rot` (degrees) and `ox` / `oy` (mm). `assets7.js` `B.regTex` fills `B.TEXR`; `view3d.js` `uTxR[5]` turns and shifts the picture coordinates of patterns 20–24; `ui-assets.js` buttons ⟳ (45° steps, 0–135) and ⇄ (half-width shift on / off). The turn applies to every surface painted with that picture.
 - Harness: a striped tile on the walls, straight and at 45° — frames differ, no GL error.
