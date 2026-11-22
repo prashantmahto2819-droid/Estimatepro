@@ -3,6 +3,10 @@
 This file is for the people maintaining the app. It is not published with the site (see `.assetsignore`).
 The text users see is `EP_NOTES` in `js/version.js`.
 
+## 2026.11.21-z37
+- `bim/tools.js`: `B.followWalls(doc, tx)` in the wrapped commit, before the rooms are refitted — for every wall whose ends changed in the transaction, slabs and roofs of that level (and the floor slab resting on those walls) with two or more corners within half the wall + 90 + overhang + 500 mm of the old wall line have those corners shifted by the wall's movement there (between the two ends); a corner claimed by several walls takes the largest shift once; anything already changed in the same transaction is skipped (so MOVE of everything and the 3D wall move are not doubled).
+- Harness: outer wall stretched 1 m → plinth slab and roof slab corners +1 m with the 450 overhang kept, one undo step; partition moved → slabs unchanged; all moved together → no double shift; 3D wall move → slabs moved once.
+
 ## 2026.11.21-z36
 - `bim/tools.js`: `B.refitRooms(doc, levels)` — each room is traced again with `CAD.boundaryAt` from a point inside it, against the walls and columns of its own level; skipped when no closed boundary is found, when the area changes more than threefold, or when the new outline swallows another room's inner point. `Doc.prototype.commit` is wrapped: a transaction that touches a wall or column refits the rooms of those levels before it is committed, so it is one undo step (`B.autoRooms = false` turns it off). Command ROOMSFIT (aliases ROOMREFIT, ROOMSUPDATE).
 - Harness: partition moved 700 mm → both rooms follow, one undo step, undo restores; partition erased → rooms untouched; outer wall stretched 1 m → the room follows. Stair, floor and 3D-move tests unchanged.

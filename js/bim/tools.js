@@ -227,9 +227,23 @@
       var o2 = CAD.clone(r); o2.pts = P; doc.mod(r.id, o2); n++; });
     return { n: n, open: open };
   };
+  /* slabs and roofs follow their walls: corners that sat on a wall (two or more of them) go with it when the wall is moved or stretched on the plan; things changed in the same edit are left alone */
+  B.followWalls = function (doc, tx) {
+    var d = doc.d, touched = {}, moves = []; tx.ops.forEach(function (op) { if (op.k === "mod") touched[op.id] = (touched[op.id] || 0) + 1; else if (op.e) touched[op.e.id] = 1; });
+    var first = {}, lastA = {}; tx.ops.forEach(function (op) { if (op.k !== "mod" || !op.before || op.before.t !== "wall" || !op.after || op.after.t !== "wall") return; if (!first[op.id]) first[op.id] = op.before; lastA[op.id] = op.after; });
+    Object.keys(first).forEach(function (id) { var b = first[id], a = lastA[id]; if (!b.a || !a.a) return; var dA = G.sub(a.a, b.a), dB = G.sub(a.b, b.b); if (Math.hypot(dA[0], dA[1]) < 1 && Math.hypot(dB[0], dB[1]) < 1) return; moves.push({ w: b, dA: dA, dB: dB }); });
+    if (!moves.length) return 0; var lv = B.ensure(d).levels, n = 0;
+    d.ents.slice().forEach(function (o) { if ((o.t !== "slab" && o.t !== "roof") || !o.pts || touched[o.id]) return; var best = {}, any = false;
+      moves.forEach(function (mv) { var w = mv.w, sameL = o.lvl === w.lvl; if (!sameL) { var Lo = B.level(d, o.lvl), Lw = B.level(d, w.lvl); if (!(o.t === "slab" && Lo && Lw && Math.abs((Lo.elev + (o.off || 0)) - (Lw.elev + Lw.h)) < 60)) return; }   /* its own floor, or the floor slab resting on these walls */
+        var LW = G.dist(w.a, w.b); if (LW < 1) return; var u = [(w.b[0] - w.a[0]) / LW, (w.b[1] - w.a[1]) / LW], tol = (w.th || 230) / 2 + 90 + (+o.over || 0) + 500, idx = [];
+        o.pts.forEach(function (q, i) { var x = q[0] - w.a[0], y = q[1] - w.a[1], tt = x * u[0] + y * u[1], dn = Math.abs(-x * u[1] + y * u[0]); if (dn <= tol && tt > -tol && tt < LW + tol) idx.push([i, Math.max(0, Math.min(1, tt / LW))]); });
+        if (idx.length < 2) return; idx.forEach(function (k) { var dl = [mv.dA[0] + (mv.dB[0] - mv.dA[0]) * k[1], mv.dA[1] + (mv.dB[1] - mv.dA[1]) * k[1]], mg = Math.hypot(dl[0], dl[1]); if (mg > 0.5 && (!best[k[0]] || mg > best[k[0]].mg)) { best[k[0]] = { d: dl, mg: mg }; any = true; } }); });
+      if (!any) return; var o2 = CAD.clone(o); Object.keys(best).forEach(function (i) { o2.pts[i] = [o.pts[i][0] + best[i].d[0], o.pts[i][1] + best[i].d[1]].concat(o.pts[i].slice(2)); }); doc.mod(o.id, o2); n++; });
+    return n;
+  };
   (function () { var Doc = CAD.Doc; if (!Doc || Doc.prototype._roomsWrap) return; var commit0 = Doc.prototype.commit; Doc.prototype._roomsWrap = true;
     Doc.prototype.commit = function () { var tx = this.tx; if (tx && tx.ops.length && !this._refitting && B.autoRooms !== false) { var lv = {}, hit = false, self = this; tx.ops.forEach(function (op) { [op.e, op.before, op.after].forEach(function (x) { if (x && (x.t === "wall" || x.t === "column") && x.lvl != null) { lv[x.lvl] = 1; hit = true; } }); });
-        if (hit) { this._refitting = true; try { B.refitRooms(this, lv); } catch (er) { if (window.console) console.warn("rooms not refitted", er); } this._refitting = false; } }
+        if (hit) { this._refitting = true; try { B.followWalls(this, tx); } catch (er2) { if (window.console) console.warn("slabs not moved with walls", er2); } try { B.refitRooms(this, lv); } catch (er) { if (window.console) console.warn("rooms not refitted", er); } this._refitting = false; } }
       return commit0.apply(this, arguments); }; })();
   cmd("ROOMSFIT", ["ROOMREFIT", "ROOMSUPDATE"], async function (ed) { ed.doc.begin("Fit rooms to walls"); var r = B.refitRooms(ed.doc, null); ed.doc.commit(); ed.say(r.n + " room(s) drawn again from their walls" + (r.open ? "; " + r.open + " left as they were (walls not closed round them, or two rooms have become one)" : "") + ". Rooms now follow by themselves whenever a wall is moved, stretched, added or erased."); });
   cmd("ROOM", ["RM", "SPACE"], async function (ed) {
