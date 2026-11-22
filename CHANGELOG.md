@@ -3,6 +3,10 @@
 This file is for the people maintaining the app. It is not published with the site (see `.assetsignore`).
 The text users see is `EP_NOTES` in `js/version.js`.
 
+## 2026.11.21-z49
+- `view3d.js`: `lampShadowAll` (toolbar toggle "More shadows", off by default) — the three fittings nearest to the view after the first are rendered looking down into the tiles of one 2048 × 2048 depth picture (texture unit 12; `uLS4`, `uLS4m[3]`, `uLS4p[3]`, `lampSh4`); the light loop dims each of them by its own tile. Costs three more depth passes of the opaque geometry per frame. A failure switches lamp shadows off as before.
+- Harness: four ceiling lights, three sofas, night — toggle on gives three extra maps, frames differ, no GL error, program links. Frame time could not be measured here (software renderer).
+
 ## 2026.11.21-z48
 - Curved walls stay a chain of short straight walls (`curve: 1`), so everything hosted on them keeps working; `mesh.js` now shows the chain as one surface: `B.curveOf(doc, w)` finds the circle from the neighbouring piece and which ends join; the side-face normals are set radial, the vertical and top edges at joints are dropped, and the end faces at joints are not drawn. Plan view unchanged (facets of about 400 mm).
 - Harness: half circle of radius 3 m in 24 pieces — no joint lines close up, with or without shadows.
