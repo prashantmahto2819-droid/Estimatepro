@@ -1,6 +1,6 @@
 # Estimate Pro — pending work (kept with the code; not published)
 
-Last updated at version 2026.11.21-z34.
+Last updated at version 2026.11.21-z35.
 
 ## A. Waiting for the owner
 1. Server work: (-z21) module switches and a shared library of blocks and hatch patterns are built — the owner has to run `server/shared.sql` once in Supabase, then check that a switched-off module disappears for a normal user. Still open: shared 3D models / cut-outs / material pictures (large files — need Supabase Storage), WhatsApp update messages with real pictures attached (needs a sending gateway; links to the pictures are already added).
@@ -70,7 +70,7 @@ Last updated at version 2026.11.21-z34.
 1. (-z27: corner fitting, side, clear distances, wall warning, opening in the slab above.) (-z28: railing on the flights, headroom check.) (-z29: rail at the landing and round the opening above, landing length and gap as fields, STAIRUP repeats the stair on the floors above.) (-z30: L-shaped stair with a quarter landing.) (-z31: U-shaped stair, spiral stair, rails on the outer edges of landings.) (-z32: three winders on the L stair, warning for the height between the turns of a spiral.) (-z33: steel spiral weighed under structural steel, top platform.) Still open: winders on dog-leg and U stairs, a top platform for the spiral, an opening that leaves the slab over the low end, railing on the outer edge of the landing.
 
 ## C3. Floors
-1. (-z34: skirting at doors, flooring at openings, shuttering of opening sides, raised-floor edge.) Still open: ceiling plaster net of walls and beams, filling item for a sunk floor (toilets), rooms that follow walls moved on the plan, false ceiling less openings, flooring in door thresholds.
+1. (-z34: skirting at doors, flooring at openings, shuttering of opening sides, raised-floor edge.) (-z35: ceiling plaster net of walls, sunk floor filling and waterproofing.) Still open: ceiling plaster net of beams, a brick-bat / cinder filling rate item, rooms that follow walls moved on the plan, false ceiling less openings, flooring in door thresholds.
 
 ## D. Other
 1. Design Studio sheets: (-z20: scales 1:15 / 30 / 40 / 60 added so views are larger.) Still open: labels that overlap — needs the owner to point at a sheet where it happens.

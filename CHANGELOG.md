@@ -3,6 +3,10 @@
 This file is for the people maintaining the app. It is not published with the site (see `.assetsignore`).
 The text users see is `EP_NOTES` in `js/version.js`.
 
+## 2026.11.21-z35
+- `bim.js` slab quantities: ceiling plaster = slab area less the plan area of walls whose top lies between 200 mm under the slab soffit and 50 mm over its top and whose centre is under the slab (capped at half the slab). Room with `fl` < −5: `sunk_fill` (V, CPWD 4.1.10 lean concrete — label says to change the item for brick-bat / cinder) and `wp_sunken` (A = floor + perimeter × depth, CPWD 22.5); map entries in `assets4.js`.
+- Harness: 8 × 5 m house with one partition → 52.510 − 7.077 m² (hand check: 26 m × 0.23 + 4.77 × 0.23); toilet 15.598 m² sunk 300 → 4.679 m³ and 20.422 m².
+
 ## 2026.11.21-z34
 - Floor audit (`bim.js` quantities). Found and corrected: skirting ran across doors (now less the widths of doors / floor-level openings whose centre lies within half the wall thickness + 80 mm of the room outline); flooring and PCC ignored holes in the room's floor slab (now less the holes whose centre is inside the room); slab shuttering left out the sides of holes; the raised-floor brick edge was the whole perimeter (now only the door widths).
 - Not changed, noted: ceiling plaster is the whole soffit including over walls; a sunk floor (negative `fl`) has no filling item; rooms do not follow walls moved on the plan; false ceiling is not reduced for openings.

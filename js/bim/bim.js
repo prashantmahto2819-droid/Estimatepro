@@ -486,7 +486,11 @@
       var perH = (e.holes || []).reduce(function (t, h) { return t + G.segsLength(G.polySegs(h, true)); }, 0);   /* the sides of openings (stair wells, ducts) are shuttered too */
       push("shut_slab", "A", Ap + (per + perH) * e.th, "Shuttering — slab soffit + edges", "soffit " + (Ap / 1e6).toFixed(3) + " m² + edge " + m(per) + (perH ? " + sides of openings " + m(perH) : "") + " × " + m(e.th), z);
       if (!rfPush("steel_slab", "slab", z)) push("steel_slab", "M", Ap * e.th / 1e9 * bs.steel.slab, "Reinforcement — slab (thumb rule " + bs.steel.slab + " kg/m³)", "", z);
-      if (e.kind !== "chajja") push("ceiling_plaster", "A", Ap, "Ceiling plaster (soffit)", "", z);
+      if (e.kind !== "chajja") {   /* the soffit over the walls that carry the slab is not plastered */
+        var Lsl = B.level(d, e.lvl), zTop = (Lsl ? Lsl.elev : 0) + (e.off || 0), Aw = 0, nW = 0;
+        d.ents.forEach(function (w) { if (w.t !== "wall") return; var Lw = B.level(d, w.lvl); if (!Lw) return; var wt = Lw.elev + (w.base || 0) + (w.h != null ? w.h : Lw.h); if (wt < zTop - e.th - 200 || wt > zTop + 50) return; var P = B.wallPoly(doc, w); if (!P) return; var Q = [P.sL, P.eL, P.eR, P.sR], c = [(Q[0][0] + Q[2][0]) / 2, (Q[0][1] + Q[2][1]) / 2]; if (!G.inPoly(c, e.pts) || (e.holes || []).some(function (h) { return G.inPoly(c, h); })) return; Aw += Math.abs(area(Q)); nW++; });
+        Aw = Math.min(Aw, Ap * 0.5);
+        push("ceiling_plaster", "A", Ap - Aw, "Ceiling plaster (soffit)", Aw > 0 ? (Ap / 1e6).toFixed(3) + " m² − over " + nW + " wall" + (nW > 1 ? "s " : " ") + (Aw / 1e6).toFixed(3) + " m²" : "", z); }
       return rows;
     }
     if (e.t === "column") {
@@ -546,6 +550,7 @@
       if (e.skirt) push("skirting", "A", (perR - dW) * e.skirt, "Skirting " + e.skirt + " mm — " + nmR, (dW ? "(" + m(perR) + " − " + dN + " door" + (dN > 1 ? "s " : " ") + m(dW) + ")" : m(perR)) + " × " + m(e.skirt));
       if (e.ceil) push("false_ceiling", "A", Agross, "False ceiling — " + nmR, "");
       if (lvlR.elev <= 0) push("pcc_floor", "V", Aroom * 75, "PCC under floor 75 mm — " + nmR, "", "plinth");
+      if (+e.fl < -5) { var sk = -(+e.fl); push("sunk_fill", "V", Aroom * sk, "Filling of the sunk floor — " + nmR + " (" + Math.round(sk) + " mm, taken as lean concrete 1:5:10; change the item if brick-bat or cinder filling is used)", (Aroom / 1e6).toFixed(3) + " m² × " + m(sk)); push("wp_sunken", "A", Aroom + perR * sk, "Waterproofing of the sunk floor — " + nmR, "floor " + (Aroom / 1e6).toFixed(3) + " m² + sides " + m(perR) + " × " + m(sk)); }
       if (+e.fl > 5) { push("backfill", "V", Aroom * (+e.fl), "Filling under the raised floor — " + nmR + " (" + Math.round(+e.fl) + " mm)", (Aroom / 1e6).toFixed(3) + " m² × " + m(+e.fl)); if (dW > 0) push("brick", "V", dW * 115 * (+e.fl), "Brick edge of the raised floor at the door" + (dN > 1 ? "s" : "") + " — " + nmR, m(dW) + " × 0.115 × " + m(+e.fl) + " (the walls of the room hold the filling elsewhere)"); }
       return rows;
     }

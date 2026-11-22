@@ -87,7 +87,7 @@
   Object.keys(A).forEach(function (id) { var df = A[id]; if ((df.cat === GR || df.cat === TE) && QD[df.key]) df.q = QD[df.key]; });
   B.MAP = Object.assign(B.MAP || {}, {
     ms_grill: { c: [["cpwd23", "9.48.1"], ["cpwd", "9.48.1"]], q: /M\.S\. grills of required pattern/i }, ms_grill_design: { c: [["cpwd23", "9.48.1"], ["cpwd", "9.48.1"]], q: /M\.S\. grills of required pattern/i },
-    ms_gate: { c: [["cpwd23", "10.25.2"], ["cpwd", "10.25.2"]], q: /steel work welded in built up sections/i }, ms_stair: { c: [["cpwd23", "10.25.2"], ["cpwd", "10.25.2"]], q: /steel work welded in built up sections/i }, ms_railing: { c: [["cpwd23", "10.26.1"], ["cpwd", "10.26.1"]], q: /hand rail of approved size/i },
+    ms_gate: { c: [["cpwd23", "10.25.2"], ["cpwd", "10.25.2"]], q: /steel work welded in built up sections/i }, sunk_fill: { c: [["cpwd23", "4.1.10"], ["cpwd", "4.1.10"]], q: /1:5:10/i }, wp_sunken: { c: [["cpwd23", "22.5"], ["cpwd", "22.5"]], q: /water proofing treatment in sunken/i }, ms_stair: { c: [["cpwd23", "10.25.2"], ["cpwd", "10.25.2"]], q: /steel work welded in built up sections/i }, ms_railing: { c: [["cpwd23", "10.26.1"], ["cpwd", "10.26.1"]], q: /hand rail of approved size/i },
     ss_railing: { c: [["cpwd23", "10.28"], ["cpwd", "10.28"]], q: /stainless steel.*railing/i }, rolling_shutter: { c: [["cpwd23", "10.6.1"], ["cpwd", "10.6.1"]], q: /rolling shutters/i },
     collapsible_gate: { c: [["cpwd23", "10.3"], ["cpwd", "10.3"]], q: /collapsible steel shutters/i }, stone_jali: { c: [["cpwd23", "7.33.1"]], q: /stone jali/i },
     ss_grill: null, laser_grill: null, al_grill: null, glass_railing: null, tree_guard: null,
