@@ -3,6 +3,9 @@
 This file is for the people maintaining the app. It is not published with the site (see `.assetsignore`).
 The text users see is `EP_NOTES` in `js/version.js`.
 
+## 2026.11.21-z39
+- `view3d.js` movers on a path: a time table along the route (every 0.25 m) — speed falls to 42 % within 3.5 m of a corner over 20°, to 25 % within 4 m of the ends of an open route; position by binary search; wheels turn by the distance covered. Harness: 40 m loop with four corners takes 9.7 s instead of 7.2 s; no GL errors.
+
 ## 2026.11.21-z38
 - `views2d.js`: VIEWSAUTO (aliases AUTOVIEWS, VIEWSLIVE) toggles `bim.autoViews`; `B.autoViewsHook(ed)` (called from the change hook in `ui-bim.js`) waits 1.1 s, and if the newest undo step touches a building element (and nothing is waiting in redo, no transaction is open) runs `B.refreshViews` and folds its step into that one.
 - `view3d.js`: `uTm` — water ripples drift with play time.

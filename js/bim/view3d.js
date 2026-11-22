@@ -1567,11 +1567,19 @@ P.prototype._drawMovers=function(prog,full){
     if(prog._wh===undefined) prog._wh=gl.getUniformLocation(prog,'uWh');
     const PT=m.mv.path, go=this.play&&(PT?m.mv.len>0.5:m.mv.d>0.5), t=(this._playT||0)+(PT?0:m.seed);
     if(PT&&go){   /* drives along the path drawn for it: there and back, or round and round on a closed path */
-      const v=m.mv.spd||5.5, Lp=m.mv.len, cum=m.mv.cum; let s=(t*v)%(m.mv.loop?Lp:2*Lp), back=false; if(s>Lp){ back=true; s=2*Lp-s; }
+      const v=m.mv.spd||5.5, Lp=m.mv.len, cum=m.mv.cum;
+      if(!m.mv.tt){   /* it slows for the corners (and to turn round at the ends of an open route): time along the route, every quarter metre */
+        const cs=[]; for(let i=1;i<PT.length-1;i++){ const a1=Math.atan2(PT[i][1]-PT[i-1][1],PT[i][0]-PT[i-1][0]), a2=Math.atan2(PT[i+1][1]-PT[i][1],PT[i+1][0]-PT[i][0]); let da=Math.abs(a2-a1); if(da>Math.PI) da=2*Math.PI-da; if(da>0.35) cs.push(cum[i]); }
+        if(m.mv.loop){ cs.push(0); cs.push(Lp); } const ends=m.mv.loop?[]:[0,Lp], n=Math.max(2,Math.ceil(Lp/0.25)), tt=new Float32Array(n+1); let T=0;
+        for(let i=0;i<n;i++){ const sm=(i+0.5)*Lp/n; let f=1; cs.forEach(c=>{ f=Math.min(f,0.42+0.58*Math.min(1,Math.abs(sm-c)/3.5)); }); ends.forEach(c=>{ f=Math.min(f,0.25+0.75*Math.min(1,Math.abs(sm-c)/4)); }); T+=(Lp/n)/(v*f); tt[i+1]=T; }
+        m.mv.tt=tt; m.mv.T=T; }
+      const tt=m.mv.tt, TT=m.mv.T, cyc=m.mv.loop?TT:2*TT; let tc=t%cyc, back=false; if(tc>TT){ back=true; tc=2*TT-tc; }
+      let lo=0, hi=tt.length-1; while(hi-lo>1){ const md=(lo+hi)>>1; if(tt[md]<=tc) lo=md; else hi=md; } const seg=Lp/(tt.length-1); let s=(lo+(tc-tt[lo])/((tt[hi]-tt[lo])||1))*seg;
+      const run=Math.floor(t/cyc)*(m.mv.loop?Lp:2*Lp)+(back?2*Lp-s:s);
       const at=function(q){ if(m.mv.loop) q=((q%Lp)+Lp)%Lp; else q=Math.max(0,Math.min(Lp,q)); let k=1; while(k<cum.length-1&&cum[k]<q) k++; const f=(q-cum[k-1])/((cum[k]-cum[k-1])||1); return [PT[k-1][0]+(PT[k][0]-PT[k-1][0])*f,PT[k-1][1]+(PT[k][1]-PT[k-1][1])*f]; };
       const c=at(s), a=at(s-1.2), b=at(s+1.2); let hd=Math.hypot(b[0]-a[0],b[1]-a[1])>0.01?Math.atan2(b[1]-a[1],b[0]-a[0]):m.mv.rot; if(back) hd+=Math.PI;
       if(prog._flip) gl.uniform4f(prog._flip,1,m.piv[0],m.piv[1],hd-m.mv.rot);
-      if(prog._wh) gl.uniform4f(prog._wh,-(t*v)/0.33,m.mv.dir[0],m.mv.dir[1],1);
+      if(prog._wh) gl.uniform4f(prog._wh,-(run%207.3)/0.33,m.mv.dir[0],m.mv.dir[1],1);
       gl.uniform3f(prog._off,c[0]-m.piv[0],c[1]-m.piv[1],0);
     } else {
       let d=0, back=false; if(go){ const T=m.mv.d/5.5, ph=(t%(2*T)); back=ph>T; d=back?(2*T-ph)*5.5:ph*5.5; }   /* about 20 km/h to the end of its run, turns round and comes back */
