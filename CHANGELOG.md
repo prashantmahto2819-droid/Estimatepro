@@ -3,6 +3,10 @@
 This file is for the people maintaining the app. It is not published with the site (see `.assetsignore`).
 The text users see is `EP_NOTES` in `js/version.js`.
 
+## 2026.11.21-z36
+- `bim/tools.js`: `B.refitRooms(doc, levels)` — each room is traced again with `CAD.boundaryAt` from a point inside it, against the walls and columns of its own level; skipped when no closed boundary is found, when the area changes more than threefold, or when the new outline swallows another room's inner point. `Doc.prototype.commit` is wrapped: a transaction that touches a wall or column refits the rooms of those levels before it is committed, so it is one undo step (`B.autoRooms = false` turns it off). Command ROOMSFIT (aliases ROOMREFIT, ROOMSUPDATE).
+- Harness: partition moved 700 mm → both rooms follow, one undo step, undo restores; partition erased → rooms untouched; outer wall stretched 1 m → the room follows. Stair, floor and 3D-move tests unchanged.
+
 ## 2026.11.21-z35
 - `bim.js` slab quantities: ceiling plaster = slab area less the plan area of walls whose top lies between 200 mm under the slab soffit and 50 mm over its top and whose centre is under the slab (capped at half the slab). Room with `fl` < −5: `sunk_fill` (V, CPWD 4.1.10 lean concrete — label says to change the item for brick-bat / cinder) and `wp_sunken` (A = floor + perimeter × depth, CPWD 22.5); map entries in `assets4.js`.
 - Harness: 8 × 5 m house with one partition → 52.510 − 7.077 m² (hand check: 26 m × 0.23 + 4.77 × 0.23); toilet 15.598 m² sunk 300 → 4.679 m³ and 20.422 m².

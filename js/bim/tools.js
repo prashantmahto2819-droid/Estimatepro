@@ -214,6 +214,24 @@
     ups.forEach(function (x) { var o = CAD.clone(e); delete o.id; o.lvl = x.id; o.n = Math.max(2, Math.round(x.h / 150)); o.R = x.h / o.n; var id = ed.doc.add(o), ne = ed.doc.get((id && id.id) || id); made++; if (ne) cut += cutWell(ed, ne).n; });
     ed.doc.commit(); ed.say(made + " stair(s) added above, each with risers to suit its own floor height; " + cut + " opening(s) cut in the slabs. Check the top floor: the last stair leads to the level above it (terrace) only if a slab is there.");
   });
+  /* rooms follow their walls: after walls of a level change, each room on it is drawn again from the wall faces round its own middle point */
+  B.refitRooms = function (doc, lvls) {
+    var d = doc.d, rooms = d.ents.filter(function (r) { return r.t === "room" && r.pts && r.pts.length > 2 && (!lvls || lvls[r.lvl]); }), n = 0, open = 0; if (!rooms.length) return { n: 0, open: 0 };
+    var inner = function (r) { var cx = 0, cy = 0; r.pts.forEach(function (q) { cx += q[0]; cy += q[1]; }); var c = [cx / r.pts.length, cy / r.pts.length]; if (G.inPoly(c, r.pts)) return c; for (var i = 0; i < r.pts.length; i++) { var a = r.pts[i], b = r.pts[(i + 1) % r.pts.length], L = G.dist(a, b); if (L < 400) continue; var mid = G.mid(a, b), nn = [-(b[1] - a[1]) / L, (b[0] - a[0]) / L]; for (var sgn = -1; sgn <= 1; sgn += 2) { var q2 = [mid[0] + nn[0] * 150 * sgn, mid[1] + nn[1] * 150 * sgn]; if (G.inPoly(q2, r.pts)) return q2; } } return c; };
+    var mids = {}; rooms.forEach(function (r) { mids[r.id] = inner(r); });
+    var polyA = function (P) { var s2 = 0; for (var i = 0; i < P.length; i++) { var a = P[i], b = P[(i + 1) % P.length]; s2 += a[0] * b[1] - b[0] * a[1]; } return Math.abs(s2) / 2; };
+    rooms.forEach(function (r) { var base = B.roomOpts(doc), opts = { only: function (e) { return (e.t === "wall" || e.t === "column") && e.lvl === r.lvl; }, segs: base.segs }, bd = null; try { bd = CAD.boundaryAt(doc, mids[r.id], null, opts); } catch (er) { bd = null; }
+      if (!bd) { open++; return; } var P = ccw(G.loopPts(bd.outer)).map(function (q) { return [q[0], q[1]]; }), A0 = polyA(r.pts), A1 = polyA(P); if (P.length < 3 || A1 < A0 * 0.3 || A1 > A0 * 3) { open++; return; }
+      if (rooms.some(function (o) { return o.id !== r.id && o.lvl === r.lvl && G.inPoly(mids[o.id], P); })) { open++; return; }   /* a wall between two rooms has gone: leave both for the user to settle */
+      var same = P.length === r.pts.length && Math.abs(A1 - A0) < 100 && P.every(function (q) { return r.pts.some(function (o) { return Math.abs(o[0] - q[0]) < 1 && Math.abs(o[1] - q[1]) < 1; }); }); if (same) return;
+      var o2 = CAD.clone(r); o2.pts = P; doc.mod(r.id, o2); n++; });
+    return { n: n, open: open };
+  };
+  (function () { var Doc = CAD.Doc; if (!Doc || Doc.prototype._roomsWrap) return; var commit0 = Doc.prototype.commit; Doc.prototype._roomsWrap = true;
+    Doc.prototype.commit = function () { var tx = this.tx; if (tx && tx.ops.length && !this._refitting && B.autoRooms !== false) { var lv = {}, hit = false, self = this; tx.ops.forEach(function (op) { [op.e, op.before, op.after].forEach(function (x) { if (x && (x.t === "wall" || x.t === "column") && x.lvl != null) { lv[x.lvl] = 1; hit = true; } }); });
+        if (hit) { this._refitting = true; try { B.refitRooms(this, lv); } catch (er) { if (window.console) console.warn("rooms not refitted", er); } this._refitting = false; } }
+      return commit0.apply(this, arguments); }; })();
+  cmd("ROOMSFIT", ["ROOMREFIT", "ROOMSUPDATE"], async function (ed) { ed.doc.begin("Fit rooms to walls"); var r = B.refitRooms(ed.doc, null); ed.doc.commit(); ed.say(r.n + " room(s) drawn again from their walls" + (r.open ? "; " + r.open + " left as they were (walls not closed round them, or two rooms have become one)" : "") + ". Rooms now follow by themselves whenever a wall is moved, stretched, added or erased."); });
   cmd("ROOM", ["RM", "SPACE"], async function (ed) {
     ensureBim(ed);
     while (true) {
