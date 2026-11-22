@@ -89,7 +89,7 @@
      Up to 5 per drawing can be shown at once: each takes a picture slot of the 3D view (pattern 20 + slot). ----- */
   B.TEXSLOTS = [];
   B.regTex = function (d) {
-    var T = (d && d.bim && d.bim.texs) || {}, ids = Object.keys(T).slice(0, 5); B.TEXSLOTS = ids.map(function (id) { return T[id].src; });
+    var T = (d && d.bim && d.bim.texs) || {}, ids = Object.keys(T).slice(0, 5); B.TEXSLOTS = ids.map(function (id) { return T[id].src; }); B.TEXR = ids.map(function (id) { var t = T[id], wv = Math.max(50, t.w || 600); return [(+t.rot || 0) * Math.PI / 180, (+t.ox || 0) / wv, (+t.oy || 0) / wv]; });   /* turn and shift of each picture on the surface */
     Object.keys(B.LOOKS).forEach(function (k) { if (/^tex_/.test(k) && ids.indexOf(k.slice(4)) < 0) delete B.LOOKS[k]; });
     ids.forEach(function (id, i) { var t = T[id]; B.LOOKS["tex_" + id] = { n: "My picture — " + t.name, c: t.avg || "#bdbdbd", p: 20 + i, s: Math.max(0.05, (t.w || 600) / 1000), g: t.g == null ? 0.25 : t.g }; });
   };

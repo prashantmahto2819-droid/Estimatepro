@@ -61,6 +61,7 @@ uniform int uPLn;
 uniform float uPLk;
 uniform int uK;
 uniform sampler2D uSM;
+uniform vec3 uTxR[5];   /* turn (radians) and shift (in picture widths) of each picture */
 uniform sampler2D uTx0,uTx1,uTx2,uTx3,uTx4;   /* the user's own material pictures (pattern 20…24) */
 uniform sampler2D uLS; uniform mat4 uLSm; uniform vec4 uLSp;   /* depth seen from the nearest ceiling light looking down, its matrix, its position (w = on) */
 float lampSh(vec3 P){ vec4 c=uLSm*vec4(P,1.0); if(c.w<=0.01) return 1.0; vec3 n=c.xyz/c.w*0.5+0.5; if(n.x<0.01||n.x>0.99||n.y<0.01||n.y>0.99||n.z>1.0) return 1.0;
@@ -218,7 +219,7 @@ void main(){
     if(N.z>0.5) N=normalize(N+vec3((w1-0.5)*0.22,(w2-0.5)*0.22,0.0));
   }
 
-  if(pi>=20){ vec3 t; if(pi==20) t=texture(uTx0,uv).rgb; else if(pi==21) t=texture(uTx1,uv).rgb; else if(pi==22) t=texture(uTx2,uv).rgb; else if(pi==23) t=texture(uTx3,uv).rgb; else t=texture(uTx4,uv).rgb; col=t; }
+  if(pi>=20){ vec3 tr=uTxR[min(pi-20,4)]; float tc=cos(tr.x), ts=sin(tr.x); vec2 tq=uv+tr.yz; uv=vec2(tq.x*tc-tq.y*ts,tq.x*ts+tq.y*tc); vec3 t; if(pi==20) t=texture(uTx0,uv).rgb; else if(pi==21) t=texture(uTx1,uv).rgb; else if(pi==22) t=texture(uTx2,uv).rgb; else if(pi==23) t=texture(uTx3,uv).rgb; else t=texture(uTx4,uv).rgb; col=t; }
 
   /* style override: 1=colors(flat), 2=white model */
   if(uStyle>1.5) col=vec3(0.92);
@@ -1152,7 +1153,8 @@ P.prototype.render=function(pick){
 
   /* own material pictures on units 2…6 */
   { const TS=(EP.bim.TEXSLOTS||[]); if(!this._txLoc) this._txLoc=[0,1,2,3,4].map(i=>gl.getUniformLocation(this.mp,'uTx'+i));
-    for(let i=0;i<5;i++){ const t=TS[i]?this._matTex(TS[i]):this._matTex(null); gl.activeTexture(gl.TEXTURE2+i); gl.bindTexture(gl.TEXTURE_2D,t.tex||this._matTex(null).tex); gl.uniform1i(this._txLoc[i],2+i); } }
+    for(let i=0;i<5;i++){ const t=TS[i]?this._matTex(TS[i]):this._matTex(null); gl.activeTexture(gl.TEXTURE2+i); gl.bindTexture(gl.TEXTURE_2D,t.tex||this._matTex(null).tex); gl.uniform1i(this._txLoc[i],2+i); }
+    if(this._txrLoc===undefined) this._txrLoc=gl.getUniformLocation(this.mp,'uTxR'); const TR=EP.bim.TEXR||[], fr=new Float32Array(15); for(let i=0;i<5;i++){ const r=TR[i]||[0,0,0]; fr[i*3]=r[0]; fr[i*3+1]=r[1]; fr[i*3+2]=r[2]; } if(this._txrLoc) gl.uniform3fv(this._txrLoc,fr); }
   /* bind shadow map */
   gl.activeTexture(gl.TEXTURE0);
   gl.bindTexture(gl.TEXTURE_2D,this.smTex);

@@ -3,6 +3,10 @@
 This file is for the people maintaining the app. It is not published with the site (see `.assetsignore`).
 The text users see is `EP_NOTES` in `js/version.js`.
 
+## 2026.11.21-z40
+- Material pictures (`bim.texs`): `rot` (degrees) and `ox` / `oy` (mm). `assets7.js` `B.regTex` fills `B.TEXR`; `view3d.js` `uTxR[5]` turns and shifts the picture coordinates of patterns 20–24; `ui-assets.js` buttons ⟳ (45° steps, 0–135) and ⇄ (half-width shift on / off). The turn applies to every surface painted with that picture.
+- Harness: a striped tile on the walls, straight and at 45° — frames differ, no GL error.
+
 ## 2026.11.21-z39
 - `view3d.js` movers on a path: a time table along the route (every 0.25 m) — speed falls to 42 % within 3.5 m of a corner over 20°, to 25 % within 4 m of the ends of an open route; position by binary search; wheels turn by the distance covered. Harness: 40 m loop with four corners takes 9.7 s instead of 7.2 s; no GL errors.
 
