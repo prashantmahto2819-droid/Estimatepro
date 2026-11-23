@@ -339,7 +339,22 @@
   function viewExport(d) {
     var miss = [];
     if (!d.header.work) miss.push("name of work"); if (!d.header.org) miss.push("organisation");
-    return '<div class="panel form">' + (miss.length ? '<div class="badge warn" style="white-space:normal;align-self:flex-start">Header is missing: ' + miss.join(", ") + '. Fill it in under “Header, parts & GST”.</div>' : "") + '<div class="xl-grid">' + XL.map(function (x) { return '<div class="xl"><h3>' + x[1] + '</h3><p class="muted">' + x[2] + '</p><button class="btn ' + (x[0] === "all" ? "pri" : "sec") + '" data-xl="' + x[0] + '">Download ' + x[1].toLowerCase() + " (.xlsx)</button></div>"; }).join("") + "</div></div>";
+    return '<div class="panel form">' + (miss.length ? '<div class="badge warn" style="white-space:normal;align-self:flex-start">Header is missing: ' + miss.join(", ") + '. Fill it in under “Header, parts & GST”.</div>' : "") + '<div class="xl-grid">' + XL.map(function (x) { return '<div class="xl"><h3>' + x[1] + '</h3><p class="muted">' + x[2] + '</p><button class="btn ' + (x[0] === "all" ? "pri" : "sec") + '" data-xl="' + x[0] + '">Download ' + x[1].toLowerCase() + " (.xlsx)</button>" + '<button class="btn sec" data-xlwa="' + x[0] + '" style="margin-top:6px;border-color:#25d366;color:#128c4a" title="Makes the same Excel file and opens WhatsApp with it and a short message">🟢 Send on WhatsApp</button></div>'; }).join("") + '</div><p class="muted" style="font-size:12.5px;margin:0">Send on WhatsApp: on a phone, pick WhatsApp in the share sheet and then the chat (your own number, or anyone) — the Excel file goes with a message naming the estimate. On a computer the file is downloaded and WhatsApp opens with the message; attach the downloaded file there.</p></div>';
+  }
+  /* the message that goes with an estimate sent on WhatsApp */
+  function waText(which) { var nm = (S.est.cur && S.est.cur.name) || "estimate", lab = XL.filter(function (x) { return x[0] === which; })[0][1], d = doc(), work = d && d.header && d.header.work ? d.header.work : "";
+    return "✅ *EstimatePro*\n\nआपने एस्टीमेट *“" + nm + "”* सफलतापूर्वक तैयार कर लिया है। " + (which === "all" ? "पूरा एस्टीमेट" : lab) + " (Excel) इस संदेश के साथ है।\nYou have successfully generated the estimate *“" + nm + "”*." + (work && work !== nm ? "\nWork: " + work : "") + "\n\nअगले एस्टीमेट के लिए भी EstimatePro का इस्तेमाल करते रहिए 🙏\nKeep using EstimatePro for your next estimates: " + (/^https?:/.test(location.origin) ? location.origin : "https://estimatepro.prashantmahto2819.workers.dev") + "/app"; }
+  async function sendWa(which) {
+    var d = doc(); if (!d) return; var blob, name = fileName(which), msg = waText(which);
+    try { blob = EP.buildWorkbook(d, which); } catch (err) { console.error(err); U.toast("Couldn't create the Excel file."); return; }
+    var file = null; try { file = new File([blob], name, { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" }); } catch (er) { file = null; }
+    try { if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(msg).catch(function () {}); } catch (er2) {}   /* some phones drop the text when a file is shared: it is on the clipboard to paste */
+    if (file && navigator.canShare && navigator.canShare({ files: [file] })) {
+      try { await navigator.share({ files: [file], text: msg, title: name }); U.toast("Sent to the app you picked. If the message did not go with the file, paste it — it is copied."); return; }
+      catch (err2) { if (err2 && err2.name === "AbortError") return; }
+    }
+    EP.download(blob, name); window.open("https://wa.me/?text=" + encodeURIComponent(msg), "_blank", "noopener");
+    U.toast("Excel file downloaded. WhatsApp is opening with the message — attach the downloaded file there.");
   }
   function fileName(which) { var n = (S.est.cur.name || "estimate").replace(/[^\w\- ]+/g, "").trim().slice(0, 60) || "estimate"; var lab = XL.filter(function (x) { return x[0] === which; })[0][1]; return n + (which === "all" ? "" : " - " + lab) + ".xlsx"; }
 
@@ -432,6 +447,7 @@
     if (ds.sub) { S.est.sub = ds.sub; U.render(); return; }
     if (ds.part) { S.est.part = ds.part; S.est.addQ = ""; U.render(); return; }
     if (t.id === "mk-example") { example(); return; }
+    if (ds.xlwa) { sendWa(ds.xlwa); if (U.logAct) U.logAct("export", (S.est.cur ? S.est.cur.name : "") + " · " + ds.xlwa + " · WhatsApp"); return; }
     if (ds.xl) { exportXl(ds.xl); if (U.logAct) U.logAct("export", (S.est.cur ? S.est.cur.name : "") + " · " + ds.xl); return; }
     if (ds.open) { var was = !!S.est.open[ds.open]; S.est.open = {}; if (!was) S.est.open[ds.open] = true; U.render(); if (!was) setTimeout(function () { var p = document.getElementById("mpanel"); if (p) p.scrollIntoView({ behavior: "smooth", block: "start" }); }, 60); return; }
     if (!d || ro()) return;

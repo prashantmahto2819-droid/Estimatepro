@@ -3,6 +3,11 @@
 This file is for the people maintaining the app. It is not published with the site (see `.assetsignore`).
 The text users see is `EP_NOTES` in `js/version.js`.
 
+## 2026.11.21-z51
+- `ui-est.js` Export: button `data-xlwa` beside each download. `sendWa(which)` builds the same workbook, copies the message to the clipboard, and uses the Web Share sheet with the file and text when the device can share files; otherwise downloads the file and opens `wa.me/?text=`. `waText` — Hindi + English, names the estimate and the work, ends with the app link. Logged as an export.
+- Nothing goes through the server: sending the file by itself to the user's number would need the wa-outbox function to accept media (it sends text only today).
+- Harness: share sheet stubbed → file "…​.xlsx" 29.6 kB with the message; fallback → download + wa.me link.
+
 ## 2026.11.21-z50
 - Phone layout (≤ 820 px), from the owner's screenshot where the plan had shrunk to a strip and the 3D toolbar covered the 3D view: `.cad-host` height 100dvh − 64 px (was 100vh − 150); `.cad-log` one line; split view gives the plan flex 1.25 / min 170 px and 3D flex 1 / min 150 px; `.v3-bar` shows only the new `.v3-more` button until opened (then scrolls inside the pane, above the cube); `.vcube-wrap` scaled to 58 %. `ui-bim.js`: the toggle button and its handler. Wide screens unchanged.
 - Checked at 390 × 760: plan 190 px, 3D 192 px, tools closed / open / full 3D.
