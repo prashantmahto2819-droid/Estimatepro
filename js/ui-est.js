@@ -339,7 +339,7 @@
   function viewExport(d) {
     var miss = [];
     if (!d.header.work) miss.push("name of work"); if (!d.header.org) miss.push("organisation");
-    return '<div class="panel form">' + (miss.length ? '<div class="badge warn" style="white-space:normal;align-self:flex-start">Header is missing: ' + miss.join(", ") + '. Fill it in under “Header, parts & GST”.</div>' : "") + '<div class="xl-grid">' + XL.map(function (x) { return '<div class="xl"><h3>' + x[1] + '</h3><p class="muted">' + x[2] + '</p><button class="btn ' + (x[0] === "all" ? "pri" : "sec") + '" data-xl="' + x[0] + '">Download ' + x[1].toLowerCase() + " (.xlsx)</button>" + '<button class="btn sec" data-xlwa="' + x[0] + '" style="margin-top:6px;border-color:#25d366;color:#128c4a" title="Makes the same Excel file and opens WhatsApp with it and a short message">🟢 Send on WhatsApp</button></div>'; }).join("") + '</div><p class="muted" style="font-size:12.5px;margin:0">Send on WhatsApp: on a phone, pick WhatsApp in the share sheet and then the chat (your own number, or anyone) — the Excel file goes with a message naming the estimate. On a computer the file is downloaded and WhatsApp opens with the message; attach the downloaded file there.</p></div>';
+    return '<div class="panel form">' + (miss.length ? '<div class="badge warn" style="white-space:normal;align-self:flex-start">Header is missing: ' + miss.join(", ") + '. Fill it in under “Header, parts & GST”.</div>' : "") + '<div class="xl-grid">' + XL.map(function (x) { return '<div class="xl"><h3>' + x[1] + '</h3><p class="muted">' + x[2] + '</p><button class="btn ' + (x[0] === "all" ? "pri" : "sec") + '" data-xl="' + x[0] + '">Download ' + x[1].toLowerCase() + " (.xlsx)</button>" + '<button class="btn sec" data-xlwa="' + x[0] + '" style="margin-top:6px;border-color:#25d366;color:#128c4a" title="Sends the same Excel file with a short message to the WhatsApp number in your profile; if that is not possible, opens the share options">🟢 Send on WhatsApp</button></div>'; }).join("") + '</div><p class="muted" style="font-size:12.5px;margin:0">Send on WhatsApp: the Excel file goes to the WhatsApp number in your profile with a message naming the estimate. If it cannot be sent that way, the share options open instead (on a phone pick WhatsApp and the chat; on a computer the file is downloaded and WhatsApp opens with the message — attach the file there).</p></div>';
   }
   /* the message that goes with an estimate sent on WhatsApp */
   function waText(which) { var nm = (S.est.cur && S.est.cur.name) || "estimate", lab = XL.filter(function (x) { return x[0] === which; })[0][1], d = doc(), work = d && d.header && d.header.work ? d.header.work : "";
@@ -347,11 +347,24 @@
   async function sendWa(which) {
     var d = doc(); if (!d) return; var blob, name = fileName(which), msg = waText(which);
     try { blob = EP.buildWorkbook(d, which); } catch (err) { console.error(err); U.toast("Couldn't create the Excel file."); return; }
+    /* first choice: the server sends it through Vivid Relay to the WhatsApp number in the user's profile. If that cannot be done, the share sheet / WhatsApp link below is used (asking for one more tap when the phone needs it). */
+    if (!S.est.waShare && navigator.onLine !== false) {
+      var why = "";
+      try { U.toast("Sending to your WhatsApp…"); var ss = await U.db().auth.getSession(), tok = ss && ss.data && ss.data.session && ss.data.session.access_token;
+        if (tok) { var ctl = window.AbortController ? new AbortController() : null, tm = setTimeout(function () { if (ctl) ctl.abort(); }, 45000);
+          var res = await fetch("/api/wa-estimate", { method: "POST", headers: { authorization: "Bearer " + tok, "x-which": which, "x-name": encodeURIComponent((S.est.cur && S.est.cur.name) || "estimate"), "x-file": encodeURIComponent(name) }, body: blob, signal: ctl ? ctl.signal : undefined }); clearTimeout(tm);
+          var jr = null; try { jr = await res.json(); } catch (e0) { jr = null; }
+          if (jr && jr.ok) { U.toast("Sent to your WhatsApp number " + (jr.to || "") + " with the Excel file ✅"); return; }
+          why = jr && jr.code === "no_phone" ? "Your profile has no WhatsApp number" : jr && jr.code === "limit_reached" ? "Today's limit is reached" : jr && jr.code === "not_configured" ? "" : (jr && jr.error) || "The server could not send it"; }
+      } catch (e1) { why = "The server could not be reached"; }
+      S.est.waShare = true; setTimeout(function () { S.est.waShare = false; }, 120000);   /* for the next two minutes the button goes straight to the share sheet */
+      if (why) U.toast(why + " — using the share option instead.");
+    }
     var file = null; try { file = new File([blob], name, { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" }); } catch (er) { file = null; }
     try { if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(msg).catch(function () {}); } catch (er2) {}   /* some phones drop the text when a file is shared: it is on the clipboard to paste */
     if (file && navigator.canShare && navigator.canShare({ files: [file] })) {
       try { await navigator.share({ files: [file], text: msg, title: name }); U.toast("Sent to the app you picked. If the message did not go with the file, paste it — it is copied."); return; }
-      catch (err2) { if (err2 && err2.name === "AbortError") return; }
+      catch (err2) { if (err2 && err2.name === "AbortError") return; if (err2 && err2.name === "NotAllowedError") { U.toast("Tap Send on WhatsApp once more to open the share options."); return; } }
     }
     EP.download(blob, name); window.open("https://wa.me/?text=" + encodeURIComponent(msg), "_blank", "noopener");
     U.toast("Excel file downloaded. WhatsApp is opening with the message — attach the downloaded file there.");

@@ -3,6 +3,13 @@
 This file is for the people maintaining the app. It is not published with the site (see `.assetsignore`).
 The text users see is `EP_NOTES` in `js/version.js`.
 
+## 2026.11.21-z52
+- The Cloudflare Worker now has a script: `worker.js` (`main` in `wrangler.jsonc`, `assets.binding` ASSETS, `run_worker_first` ["/api/*"], `keep_vars`). Everything outside `/api/*` is still served as static files; `worker.js` and `wrangler.jsonc` are in `.assetsignore`.
+- `POST /api/wa-estimate` (body = the .xlsx; headers `authorization: Bearer <Supabase access token>`, `x-which`, `x-name`, `x-file`): checks the user with Supabase, reads `profiles.phone` with the user's own token, uploads the file to Vivid Relay (`POST /api/media`), sends it as a document with the caption (`POST /api/sessions/{name}/send`, `typing:false`), deletes the library copy. The message is written on the server (name cleaned of links and formatting, 100 characters), the recipient is only the user's own number, files up to 8 MB that start with "PK", about 20 a day per user (edge cache). `GET` answers `{ok, configured}`.
+- Needs in the Cloudflare dashboard: secret `RELAY_KEY` (a Vivid Relay API key); optional text variable `RELAY_SESSION` (else the first connected number of the key). Without the key the endpoint answers `not_configured` and the app quietly uses the share sheet.
+- `ui-est.js` `sendWa`: server first (45 s limit), then share sheet / wa.me as in -z51; after a failure the button goes straight to the share sheet for two minutes.
+- Tested with stand-in services (node for the worker, the harness for the page). Not tested against the real Relay or the real Supabase.
+
 ## 2026.11.21-z51
 - `ui-est.js` Export: button `data-xlwa` beside each download. `sendWa(which)` builds the same workbook, copies the message to the clipboard, and uses the Web Share sheet with the file and text when the device can share files; otherwise downloads the file and opens `wa.me/?text=`. `waText` — Hindi + English, names the estimate and the work, ends with the app link. Logged as an export.
 - Nothing goes through the server: sending the file by itself to the user's number would need the wa-outbox function to accept media (it sends text only today).

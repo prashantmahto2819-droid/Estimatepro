@@ -2,7 +2,18 @@
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "estimatepro",
   "compatibility_date": "2026-11-19",
+  // the small server part (worker.js) answers /api/*; everything else is the static app
+  "main": "worker.js",
   "assets": {
-    "directory": "."
+    "directory": ".",
+    "binding": "ASSETS",
+    "run_worker_first": ["/api/*"]
+  },
+  // variables set in the Cloudflare dashboard (RELAY_SESSION) stay when the app is deployed again
+  "keep_vars": true,
+  "vars": {
+    "RELAY_URL": "https://relay.vividbrandify.com",
+    "SUPABASE_URL": "https://eaygozhjsmohfcuiazfm.supabase.co",
+    "SUPABASE_ANON": "sb_publishable__YgEXvCLi2dyXskdasUwGA_f7njJWiJ"
   }
 }

@@ -8,3 +8,5 @@ CHANGELOG.md
 PENDING.md
 server
 desktop
+worker.js
+wrangler.jsonc
