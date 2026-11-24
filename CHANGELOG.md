@@ -3,6 +3,9 @@
 This file is for the people maintaining the app. It is not published with the site (see `.assetsignore`).
 The text users see is `EP_NOTES` in `js/version.js`.
 
+## 2026.11.21-z56
+- Home page: the Android card no longer mentions Google sign-in (owner's wish). The app itself still explains it when Google's page is opened.
+
 ## 2026.11.21-z55
 - Android app rebuilt as its own WebView app (`android/app/src/main/java/com/vividbrandify/estimatepro/MainActivity.java`); Chrome is no longer needed. Replaces the Trusted Web Activity of -z53. Only dependency: androidx.core 1.13.1 (FileProvider).
   - Downloads: blob/data downloads are passed to `EPAndroid.save` and written to Download/EstimatePro (MediaStore on Android 10+, storage permission on 6–9) with Open / Share; http downloads go to DownloadManager.
