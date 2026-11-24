@@ -10,7 +10,7 @@
   function devId() { var k = "ep_dev", v = null; try { v = localStorage.getItem(k); } catch (e) {} if (!v || v.length < 12) { v = (window.crypto && crypto.randomUUID) ? crypto.randomUUID() : "d" + Date.now().toString(36) + Math.random().toString(36).slice(2, 12) + Math.random().toString(36).slice(2, 8); try { localStorage.setItem(k, v); } catch (e) {} } return v; }
   function label() {
     var ua = navigator.userAgent || "", os = /Windows/i.test(ua) ? "Windows PC" : /Android/i.test(ua) ? (/Mobile/i.test(ua) ? "Android phone" : "Android tablet") : /iPhone/i.test(ua) ? "iPhone" : /iPad/i.test(ua) ? "iPad" : /Mac OS X/i.test(ua) ? "Mac" : /CrOS/i.test(ua) ? "Chromebook" : /Linux/i.test(ua) ? "Linux PC" : "Device";
-    var br = /EstimateProDesktop/i.test(ua) ? "Windows app" : /Edg\//.test(ua) ? "Edge" : /OPR\//.test(ua) ? "Opera" : /SamsungBrowser/.test(ua) ? "Samsung Internet" : /Firefox\//.test(ua) ? "Firefox" : /Chrome\//.test(ua) ? "Chrome" : /Safari\//.test(ua) ? "Safari" : "browser";
+    var br = /EstimateProDesktop/i.test(ua) ? "Windows app" : /EstimateProAndroid/i.test(ua) ? "Android app" : /Edg\//.test(ua) ? "Edge" : /OPR\//.test(ua) ? "Opera" : /SamsungBrowser/.test(ua) ? "Samsung Internet" : /Firefox\//.test(ua) ? "Firefox" : /Chrome\//.test(ua) ? "Chrome" : /Safari\//.test(ua) ? "Safari" : "browser";
     var app = false; try { app = window.matchMedia("(display-mode: standalone)").matches; } catch (e) {}
     return os + " · " + br + (app && br !== "Windows app" ? " (installed app)" : "");
   }

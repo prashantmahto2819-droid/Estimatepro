@@ -2,7 +2,7 @@
 # Runs when anything in android/ changes, or by hand: Actions tab → "Android app" → Run workflow.
 # Needs one repository secret: ANDROID_KEY_PASSWORD (16 characters or more; Settings → Secrets and variables → Actions).
 # On the first run the signing key is made, protected by that password, and saved in android/estimatepro.keystore together with
-# .well-known/assetlinks.json (its fingerprint, so the app opens without the browser bar). Never change the password or delete
+# .well-known/assetlinks.json (its fingerprint, so links to /app open in the app). Never change the password or delete
 # the key afterwards: updates would no longer install over the old app.
 name: Android app
 on:

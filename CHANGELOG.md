@@ -3,6 +3,15 @@
 This file is for the people maintaining the app. It is not published with the site (see `.assetsignore`).
 The text users see is `EP_NOTES` in `js/version.js`.
 
+## 2026.11.21-z55
+- Android app rebuilt as its own WebView app (`android/app/src/main/java/com/vividbrandify/estimatepro/MainActivity.java`); Chrome is no longer needed. Replaces the Trusted Web Activity of -z53. Only dependency: androidx.core 1.13.1 (FileProvider).
+  - Downloads: blob/data downloads are passed to `EPAndroid.save` and written to Download/EstimatePro (MediaStore on Android 10+, storage permission on 6–9) with Open / Share; http downloads go to DownloadManager.
+  - Web Share → Android share sheet (one or many files + text); `window.print()` and print-preview windows (`window.open("")`) → Android printing / Save as PDF. Pop-up windows open in a full-screen layer with Close and Print.
+  - File inputs (filtered by `accept`, camera option when allowed), camera for the in-app camera / scanner, GPS — each asks for the Android permission when first needed, only for the app's own site.
+  - Links: own site and Supabase stay in the app; everything else (wa.me, tel:, mailto:, other sites) opens in the phone's apps. Google's sign-in page is refused inside apps by Google, so the app explains and returns to the sign-in screen (email or WhatsApp code).
+  - Links to `/app` open the app (verified app link via `.well-known/assetlinks.json`, made by the first workflow run). Adaptive icon from `icon-maskable.png`. User agent ends with `EstimateProAndroid/<version>`; Devices shows "Android app".
+- `js/ui-android.js` (loaded right after config.js, cached by the service worker): when `window.EPAndroid` exists, routes `<a download href=blob:…>` clicks, `navigator.share/canShare`, `window.print` and the print hook of opened windows to the app. Tested in a page with a stand-in bridge. The Android code was checked for syntax only — it has not been compiled (no Android SDK here; GitHub Actions blocked by billing).
+
 ## 2026.11.21-z54
 - Home page download buttons ask the GitHub API which files are in the `apps` release; a missing file shows "Available soon" instead of a dead link, a present one shows its size. If the API cannot be reached the links stay as they are.
 - 24 Nov: every GitHub Actions run of this repository fails before starting ("recent account payments have failed or your spending limit needs to be increased"), so neither app has been built since. Owner must fix Billing in GitHub, then run both workflows.

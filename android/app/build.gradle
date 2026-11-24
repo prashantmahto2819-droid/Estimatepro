@@ -1,5 +1,6 @@
-// Estimate Pro for Android: a Trusted Web Activity — the live app shown full screen by the phone's own Chrome.
-// Sign-in, licence and device limit are the app's own (nothing works before signing in). Built by .github/workflows/android-app.yml.
+// Estimate Pro for Android: its own WebView app (no Chrome needed) showing the live app. Downloads, sharing, printing,
+// camera, GPS and file picking are handled by MainActivity. Sign-in, licence and device limit are the app's own
+// (nothing works before signing in). Built by .github/workflows/android-app.yml.
 plugins { id 'com.android.application' }
 def buildNo = (System.getenv("GITHUB_RUN_NUMBER") ?: "1") as Integer
 // The password of the signing key is never written in this repository: it is the GitHub secret ANDROID_KEY_PASSWORD.
@@ -22,4 +23,4 @@ android {
     compileOptions { sourceCompatibility JavaVersion.VERSION_1_8; targetCompatibility JavaVersion.VERSION_1_8 }
     lint { checkReleaseBuilds false; abortOnError false }
 }
-dependencies { implementation 'com.google.androidbrowserhelper:androidbrowserhelper:2.5.0' }
+dependencies { implementation 'androidx.core:core:1.13.1' }
