@@ -3,6 +3,13 @@
 This file is for the people maintaining the app. It is not published with the site (see `.assetsignore`).
 The text users see is `EP_NOTES` in `js/version.js`.
 
+## 2026.11.21-z53
+- Home page (`index.html`): Screens section (slider of real screenshots from `/updates` and `/help`, changes by itself, thumbnails), Download section (Windows, Android, browser; animated devices picture), five new feature cards, "new in 3D" row in the CAD section, Download links in the nav, hero and footer. Download cards use `.dlg` (`.dl` is already an animated part of the "live" strip).
+- Download buttons point to GitHub release `apps`: `EstimatePro-Setup.exe`, `EstimatePro-Portable.exe`, `EstimatePro.apk` (`…/releases/download/apps/<file>`). These links work only while the repository is public; a Worker asset cannot be larger than 25 MiB, so the Windows files cannot be served from the site itself.
+- `android/`: Trusted Web Activity (package `com.vividbrandify.estimatepro`, androidbrowserhelper 2.5.0, AGP 8.5.2, Gradle 8.7, min Android 6) opening `/app?src=android` in the phone's Chrome. `.github/workflows/android-app.yml` builds and publishes it. Needs the repository secret `ANDROID_KEY_PASSWORD` (16+ characters); the first run makes the signing key (PKCS12, protected by that password) and commits `android/estimatepro.keystore` and `.well-known/assetlinks.json`. Not built or run from here.
+- `windows-app.yml` now also publishes the two .exe files to the `apps` release (fixed file names). Publisher "Vivid Brandify", copyright Vividbrandify.
+- `wa-outbox` (Supabase edge function, not in this repository) was changed by the owner on 24 Nov: 2 messages per run, 55 s wait per message, `typing:false` — Relay's API gap (15–25 s) plus typing went past the old 30 s limit.
+
 ## 2026.11.21-z52
 - The Cloudflare Worker now has a script: `worker.js` (`main` in `wrangler.jsonc`, `assets.binding` ASSETS, `run_worker_first` ["/api/*"], `keep_vars`). Everything outside `/api/*` is still served as static files; `worker.js` and `wrangler.jsonc` are in `.assetsignore`.
 - `POST /api/wa-estimate` (body = the .xlsx; headers `authorization: Bearer <Supabase access token>`, `x-which`, `x-name`, `x-file`): checks the user with Supabase, reads `profiles.phone` with the user's own token, uploads the file to Vivid Relay (`POST /api/media`), sends it as a document with the caption (`POST /api/sessions/{name}/send`, `typing:false`), deletes the library copy. The message is written on the server (name cleaned of links and formatting, 100 characters), the recipient is only the user's own number, files up to 8 MB that start with "PK", about 20 a day per user (edge cache). `GET` answers `{ok, configured}`.

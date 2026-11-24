@@ -1,0 +1,56 @@
+# Builds Estimate Pro for Android (.apk) and puts it in the "apps" release, where the home page's download button points.
+# Runs when anything in android/ changes, or by hand: Actions tab → "Android app" → Run workflow.
+# Needs one repository secret: ANDROID_KEY_PASSWORD (16 characters or more; Settings → Secrets and variables → Actions).
+# On the first run the signing key is made, protected by that password, and saved in android/estimatepro.keystore together with
+# .well-known/assetlinks.json (its fingerprint, so the app opens without the browser bar). Never change the password or delete
+# the key afterwards: updates would no longer install over the old app.
+name: Android app
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: ["android/**", ".github/workflows/android-app.yml"]
+permissions:
+  contents: write
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    env:
+      KEY_PASS: ${{ secrets.ANDROID_KEY_PASSWORD }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+      - name: Signing key
+        run: |
+          if [ ${#KEY_PASS} -lt 16 ]; then echo "::error::Add the repository secret ANDROID_KEY_PASSWORD (16 characters or more) and run this workflow again."; exit 1; fi
+          if [ ! -f android/estimatepro.keystore ]; then
+            keytool -genkeypair -keystore android/estimatepro.keystore -storetype PKCS12 -storepass:env KEY_PASS -keypass:env KEY_PASS -alias estimatepro -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=Vivid Brandify, O=Vividbrandify, C=IN"
+            FP=$(keytool -list -v -keystore android/estimatepro.keystore -storepass:env KEY_PASS -alias estimatepro | grep "SHA256:" | sed 's/.*SHA256: //')
+            mkdir -p .well-known
+            printf '[{"relation":["delegate_permission/common.handle_all_urls"],"target":{"namespace":"android_app","package_name":"com.vividbrandify.estimatepro","sha256_cert_fingerprints":["%s"]}}]\n' "$FP" > .well-known/assetlinks.json
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add android/estimatepro.keystore .well-known/assetlinks.json
+            git commit -m "Android signing key (password-protected) and the site link file"
+            git pull --rebase origin main
+            git push origin HEAD:main
+          fi
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "8.7"
+      - run: gradle -p android assembleRelease --no-daemon
+      - run: cp android/app/build/outputs/apk/release/app-release.apk EstimatePro.apk
+      - uses: actions/upload-artifact@v4
+        with:
+          name: EstimatePro-Android
+          path: EstimatePro.apk
+          if-no-files-found: error
+      - uses: softprops/action-gh-release@v2
+        with:
+          tag_name: apps
+          name: Estimate Pro apps (Windows and Android)
+          body: Latest builds of the Estimate Pro apps. The download buttons on the home page point to these files. Sign-in is needed to use the app.
+          files: EstimatePro.apk

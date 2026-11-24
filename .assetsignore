@@ -10,3 +10,4 @@ server
 desktop
 worker.js
 wrangler.jsonc
+android

@@ -1,0 +1,25 @@
+// Estimate Pro for Android: a Trusted Web Activity — the live app shown full screen by the phone's own Chrome.
+// Sign-in, licence and device limit are the app's own (nothing works before signing in). Built by .github/workflows/android-app.yml.
+plugins { id 'com.android.application' }
+def buildNo = (System.getenv("GITHUB_RUN_NUMBER") ?: "1") as Integer
+// The password of the signing key is never written in this repository: it is the GitHub secret ANDROID_KEY_PASSWORD.
+def keyPass = System.getenv("KEY_PASS") ?: ""
+android {
+    namespace 'com.vividbrandify.estimatepro'
+    compileSdk 34
+    defaultConfig {
+        applicationId "com.vividbrandify.estimatepro"
+        minSdk 23
+        targetSdk 34
+        versionCode buildNo
+        versionName "1.0." + buildNo
+    }
+    signingConfigs {
+        // The same key must sign every build (updates install over the old app, and .well-known/assetlinks.json names its fingerprint).
+        release { storeFile file('../estimatepro.keystore'); storePassword keyPass; keyAlias 'estimatepro'; keyPassword keyPass }
+    }
+    buildTypes { release { minifyEnabled false; signingConfig signingConfigs.release } }
+    compileOptions { sourceCompatibility JavaVersion.VERSION_1_8; targetCompatibility JavaVersion.VERSION_1_8 }
+    lint { checkReleaseBuilds false; abortOnError false }
+}
+dependencies { implementation 'com.google.androidbrowserhelper:androidbrowserhelper:2.5.0' }

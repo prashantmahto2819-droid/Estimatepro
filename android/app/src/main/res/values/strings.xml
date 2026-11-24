@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Estimate Pro</string>
+    <string name="launch_url" translatable="false">https://estimatepro.prashantmahto2819.workers.dev/app?src=android</string>
+    <string name="provider_authority" translatable="false">com.vividbrandify.estimatepro.fileprovider</string>
+    <string name="asset_statements" translatable="false">[{ \"relation\": [\"delegate_permission/common.handle_all_urls\"], \"target\": { \"namespace\": \"web\", \"site\": \"https://estimatepro.prashantmahto2819.workers.dev\" } }]</string>
+    <color name="brand">#0F3F62</color>
+    <color name="background">#F5F7FA</color>
+</resources>

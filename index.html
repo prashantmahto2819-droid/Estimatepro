@@ -42,8 +42,11 @@ img{max-width:100%;display:block}
 .logo{display:flex;align-items:center;gap:10px;text-decoration:none;color:var(--brand);font:800 17px/1 var(--display);letter-spacing:.06em}
 .logo img{width:34px;height:34px}
 .logo b{color:var(--accent)}
-.nav nav{display:flex;gap:20px;margin-left:auto}
-.nav nav a{color:var(--muted);text-decoration:none;font-weight:500;font-size:15px}
+.nav nav{display:flex;gap:16px;margin-left:auto}
+.nav nav a{color:var(--muted);text-decoration:none;font-weight:500;font-size:14.5px;white-space:nowrap}
+.nav .acts .btn{white-space:nowrap}
+@media (max-width:1520px){.nav nav a.opt{display:none}}
+@media (max-width:1100px){.nav nav{display:none}.nav .acts{margin-left:auto}}
 .nav nav a:hover{color:var(--ink)}
 .nav .acts{display:flex;gap:8px}
 @media (max-width:860px){.nav nav{display:none}.nav .acts{margin-left:auto}.nav .acts .ghost{display:none}}
@@ -196,6 +199,46 @@ footer a{color:var(--brand-text)}
 .dsfeat>div{border-left:4px solid #1f8a5b;padding:8px 12px;background:rgba(31,138,91,.07);border-radius:6px;display:flex;flex-direction:column;gap:4px;font-size:14.5px}
 .band.shots{grid-template-columns:repeat(auto-fit,minmax(260px,1fr));grid-template-rows:auto;grid-auto-rows:320px}.band.shots figure:first-child{grid-row:auto}.band img.contain{object-fit:contain!important;background:#fff}
 @media (max-width:760px){.band.shots{grid-template-columns:1fr!important;grid-auto-rows:220px}}.band.shots img{object-fit:cover;object-position:top}
+
+/* screens: one large picture that changes by itself, thumbnails below */
+.scr{display:grid;grid-template-columns:1fr;gap:14px;max-width:1000px;margin:0 auto}
+.scr-stage{position:relative;aspect-ratio:16/9;background:var(--sunken);border:1px solid var(--line);border-radius:var(--r);overflow:hidden;box-shadow:var(--shadow)}
+.scr-stage img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:0;transition:opacity .7s,transform 6s linear;transform:scale(1.04)}
+.scr-stage img.fit{object-fit:contain;background:#fff;transform:none}
+.scr-stage img.on{opacity:1;transform:scale(1)}
+.scr-cap{position:absolute;left:0;right:0;bottom:0;padding:26px 18px 14px;background:linear-gradient(transparent,rgba(8,18,30,.82));color:#fff;font:600 16px var(--sans);display:flex;gap:10px;align-items:flex-end;justify-content:space-between}
+.scr-cap small{font:600 12px var(--sans);letter-spacing:.08em;text-transform:uppercase;background:rgba(255,255,255,.18);padding:3px 9px;border-radius:20px;white-space:nowrap}
+.scr-bar{position:absolute;left:0;top:0;height:3px;background:var(--accent);width:0}
+.scr-bar.run{animation:scrbar 4.5s linear forwards}
+@keyframes scrbar{to{width:100%}}
+.scr-nav{position:absolute;top:50%;transform:translateY(-50%);width:42px;height:42px;border-radius:50%;border:0;background:rgba(8,18,30,.55);color:#fff;font-size:22px;cursor:pointer;display:grid;place-items:center}
+.scr-nav:hover{background:rgba(8,18,30,.8)}.scr-nav.p{left:10px}.scr-nav.n{right:10px}
+.scr-th{display:flex;gap:8px;overflow-x:auto;padding:2px 2px 8px;scrollbar-width:thin}
+.scr-th button{flex:0 0 108px;height:62px;border-radius:9px;border:2px solid transparent;padding:0;overflow:hidden;cursor:pointer;background:var(--sunken);opacity:.62;transition:opacity .2s,border-color .2s}
+.scr-th button img{width:100%;height:100%;object-fit:cover;display:block}
+.scr-th button.on,.scr-th button:hover{opacity:1;border-color:var(--accent)}
+/* downloads */
+.dlg{display:grid;grid-template-columns:1.05fr 1fr 1fr 1fr;gap:18px;align-items:stretch}
+@media (max-width:1060px){.dlg{grid-template-columns:1fr 1fr}}
+@media (max-width:560px){.dlg{grid-template-columns:1fr}}
+.dl-art{background:linear-gradient(160deg,var(--brand),var(--brand-2));border-radius:var(--r);padding:18px;display:grid;place-items:center;min-height:230px}
+.dl-art svg{width:100%;max-width:300px;height:auto}
+.dl-card{background:var(--raised);border:1px solid var(--line);border-radius:var(--r);padding:22px;display:flex;flex-direction:column;gap:10px}
+.dl-card h3{font:700 18px/1.3 var(--display);margin:0;display:flex;gap:9px;align-items:center}
+.dl-card h3 svg{width:24px;height:24px;flex:none;color:var(--brand-text)}
+.dl-card p{margin:0;color:var(--muted);font-size:15px;flex:1}
+.dl-card .btn{justify-content:center;text-align:center}
+.dl-card small{color:var(--muted);font-size:12.5px;line-height:1.45}
+.dl-note{margin-top:18px;background:var(--accent-soft);color:var(--ink);border-radius:var(--r);padding:14px 18px;font-size:15px;display:flex;gap:10px;align-items:flex-start}
+.dl-note b{color:var(--accent-text)}
+.dv-sync{transform-box:fill-box;animation:dvsync 2.4s linear infinite}
+.dv-sync.b{animation-delay:.8s}.dv-sync.c{animation-delay:1.6s}
+@keyframes dvsync{0%{opacity:0;transform:translateX(0)}15%{opacity:1}85%{opacity:1}100%{opacity:0;transform:translateX(36px)}}
+.dv-bar{transform-box:fill-box;transform-origin:left center;animation:dvbar 3.2s ease-in-out infinite}
+.dv-bar.b{animation-delay:.4s}.dv-bar.c{animation-delay:.8s}
+@keyframes dvbar{0%,100%{transform:scaleX(.35)}50%{transform:scaleX(1)}}
+.dv-float{animation:bob 4s ease-in-out infinite}
+@media (prefers-reduced-motion:reduce){.scr-stage img{transition:none;transform:none}.scr-bar.run,.dv-sync,.dv-bar,.dv-float{animation:none}.dv-sync{opacity:1}}
 </style>
 </head>
 <body>
@@ -221,7 +264,7 @@ footer a{color:var(--brand-text)}
 <header class="nav">
   <div class="wrap">
     <a class="logo" href="#top"><img src="logo.png" alt="">ESTIMATE <b>PRO</b></a>
-    <nav aria-label="Sections"><a href="#features">Features</a><a href="#cad">CAD &amp; BIM</a><a href="#design">Design Studio</a><a href="#departments">Departments</a><a href="#how">How it works</a><a href="#about">About us</a><a href="#contact">Contact</a><a href="app.html#help">Tutorial</a></nav>
+    <nav aria-label="Sections"><a href="#features">Features</a><a href="#cad">CAD &amp; BIM</a><a href="#screens">Screens</a><a href="#design">Design Studio</a><a class="opt" href="#departments">Departments</a><a class="opt" href="#how">How it works</a><a href="#about">About us</a><a href="#download">Download</a><a href="#contact">Contact</a><a href="app.html#help">Tutorial</a></nav>
     <div class="acts"><a class="btn ghost sm" href="app.html">Sign in</a><a class="btn pri sm" href="app.html">Start free trial</a></div>
   </div>
 </header>
@@ -234,8 +277,8 @@ footer a{color:var(--brand-text)}
         <span class="tag"><i></i>Made by a civil engineer, for civil engineers</span>
         <h1>Estimate, design &amp; draw in <span>minutes</span>, not days.</h1>
         <p class="lead">Measurement sheets, rate analysis, abstracts and BOQ on CPWD DSOR 2023 (with DAR 2023 analysis), CPWD DSR 2021, MPPWD Road &amp; Bridge SOR 2025 (with MoRTH SDB 2019 analysis), MPPWD SOR 2017 and DSR Horticulture 2018. Plus a <b>Design Studio</b> with IS / IRC formulas, a full <b>CAD Studio</b> for 2D drawing and a <b>3D BIM viewer</b> with materials, rendering, rebar visualisation, road alignments, site assets, GLB import and IFC / OBJ / GLB export. Everything exports to Excel in the format your office already uses.</p>
-        <div class="cta"><a class="btn pri" href="app.html">Start 7-day free trial</a><a class="btn ghost" href="#features">See what it does</a></div>
-        <p class="note">No installation · Works in any browser · Your estimates stay private</p>
+        <div class="cta"><a class="btn pri" href="app.html">Start 7-day free trial</a><a class="btn ghost" href="#download">Download the app</a><a class="btn ghost" href="#features">See what it does</a></div>
+        <p class="note">Works in any browser · Apps for Windows and Android · Your estimates stay private</p>
       </div>
       <div class="mock" aria-hidden="true">
         <div class="bar"><i></i><i></i><i></i><span>Repair of control rooms &amp; approach road</span></div>
@@ -343,6 +386,11 @@ footer a{color:var(--brand-text)}
       <article class="card reveal"><div class="ic"><svg width="24" height="24"><use href="#i-tree"/></svg></div><h3>Site &amp; services library <span class="pill">New</span></h3><p>19 asset types — trees, lamps, benches, manholes, sanitary fixtures, electrical fittings and tanks — with SOR mapping. Place them in 3D, preview any SOR item, and draw lawn / paver / gravel areas.</p></article>
       <article class="card reveal"><div class="ic"><svg width="24" height="24"><use href="#i-export"/></svg></div><h3>IFC / GLB / OBJ export <span class="pill">New</span></h3><p>Export your 3D model as IFC 4 (with element quantities), GLB (glTF binary) or OBJ. Import GLB models from any 3D software and place them in the project with auto scaling.</p></article>
       <article class="card reveal"><div class="ic"><svg width="24" height="24"><use href="#i-cam"/></svg></div><h3>GPS photo journal <span class="pill">New</span></h3><p>Capture site photos with GPS coordinates and notes. Photos sync to the cloud and attach to the estimate — a visual record of the work alongside your measurements.</p></article>
+      <article class="card reveal"><div class="ic"><svg width="24" height="24"><use href="#i-phone"/></svg></div><h3>Send on WhatsApp <span class="pill">New</span></h3><p>One tap in Export sends the Excel file — full estimate, measurement, analysis, abstract or BOQ — to your own WhatsApp number with a message naming the estimate. The share sheet opens when it cannot be sent directly.</p></article>
+      <article class="card reveal"><div class="ic"><svg width="24" height="24"><use href="#i-upload"/></svg></div><h3>Document scanner <span class="pill">New</span></h3><p>Scan drawings, MB pages and letters with the phone camera: pages are cropped flat, shadows removed and saved as PDF, JPG or PNG.</p></article>
+      <article class="card reveal"><div class="ic"><svg width="24" height="24"><use href="#i-sheet"/></svg></div><h3>Review &amp; versions <span class="pill">New</span></h3><p>Send an estimate to a checking officer in your group, see every step of the review, and keep earlier versions with the history of changes.</p></article>
+      <article class="card reveal"><div class="ic"><svg width="24" height="24"><use href="#i-export"/></svg></div><h3>Windows &amp; Android apps <span class="pill">New</span></h3><p>Install Estimate Pro on a Windows PC or an Android phone, or use it in the browser. One account, the same estimates everywhere.</p></article>
+      <article class="card reveal"><div class="ic"><svg width="24" height="24"><use href="#i-cube"/></svg></div><h3>Plans, sections &amp; schedules <span class="pill">New</span></h3><p>Sections, four elevations and the plan arranged on a sheet with a title block; door-window and room-finish schedules; DXF and PDF.</p></article>
       <article class="card reveal"><div class="ic"><svg width="24" height="24"><use href="#i-lock"/></svg></div><h3>Secure &amp; private</h3><p>Google or email sign-in, one device at a time, and database rules that keep each user's work private.</p></article>
     </div>
   </div></section>
@@ -366,7 +414,25 @@ footer a{color:var(--brand-text)}
       <div class="reveal"><h3>BIM (3D)</h3><ul><li>Wall, column, beam, slab, roof, stair, door, window, footing</li><li>36 material looks — walls, floors, roofs, glass, steel, ground</li><li>Sun position (NOAA), shadow, sky — save camera scenes</li><li>Render to image with realistic lighting</li><li>Rebar 3D visualisation and x-ray mode</li><li>Quantities (QTO) linked to the estimate with SOR mapping</li></ul></div>
       <div class="reveal"><h3>Roads &amp; earthwork</h3><ul><li>Road alignment with arc chords and stations</li><li>Chainage / RL levels, cut-fill sections</li><li>Earthwork by average end area with mass-haul</li><li>L-section and cross-section drawings</li><li>NP4 pipe culvert (600–1500 mm) &amp; box culvert</li></ul><h3 style="margin-top:14px">Site &amp; services</h3><ul><li>19 asset types with SOR mapping</li><li>Trees, lamps, benches, manholes, sanitary, electrical</li><li>Lawn, paver, gravel and planting-bed areas</li><li>GLB import with auto scale — place any 3D model</li><li>IFC 4 / GLB / OBJ export</li></ul></div>
     </div>
+    <div class="dsfeat">
+      <div class="reveal"><b>🪜 Stairs of every kind</b><span>Straight, dog-leg, L and U shaped with landings or winders, and spiral steel stairs — with railings, stair wells and head-room check.</span></div>
+      <div class="reveal"><b>🏛️ Arches, domes &amp; curved walls</b><span>Round, pointed, segmental and horseshoe arches for doors and windows; domes, parapets, grills, cladding and smooth curved walls.</span></div>
+      <div class="reveal"><b>🌙 Day, night &amp; walk-through</b><span>Sun and sky by time of day, lamps that light the night view, shadows, a walk inside the rooms and a recorded tour that climbs the stairs.</span></div>
+      <div class="reveal"><b>📐 Measure, cut &amp; quantify</b><span>Measure in 3D, cut a section anywhere, x-ray the model, and send every quantity to the estimate with its SOR item.</span></div>
+    </div>
   </div></section>
+  <section class="s" id="screens" style="padding-top:20px"><div class="wrap">
+    <div class="eyebrow">Screens</div>
+    <h2>See the app at work</h2>
+    <p class="sub">Real screens from Estimate Pro — the estimate, the drawings and the 3D model of the same work. They change by themselves; tap a small picture to stop on it.</p>
+    <div class="scr reveal" id="scr" data-shots='[["updates/n-street.jpg", "Street, vehicles, people and trees around the building", "3D", 0], ["updates/t-night.jpg", "Night view: street lamps and room lights", "3D", 0], ["updates/m-walk-inside.jpg", "Walk inside the rooms", "3D", 0], ["updates/t-night-inside.jpg", "Interior with ceiling lights at night", "3D", 0], ["updates/n-fountains.jpg", "Gates, fountains and garden items", "Site", 0], ["updates/k-temple.jpg", "Temple items in 3D", "3D", 0], ["updates/k-parapet.jpg", "Railing and parapet designs", "3D", 0], ["updates/l-measure3d.jpg", "Measure distances in 3D", "3D", 0], ["updates/x-sheet.jpg", "Plan, section and four elevations on one sheet", "Drawings", 1], ["updates/r1-schedule.jpg", "Door-window and room-finish schedules", "Drawings", 1], ["updates/w1-hatch.jpg", "Hatch patterns for materials", "CAD", 0], ["help/08-measurement.png", "Measurement sheet with deductions and sub-totals", "Estimate", 1], ["help/13-abstract.png", "Abstract of cost with estimate and updated rates", "Estimate", 1], ["help/22-design.png", "Design Studio: every formula with its IS clause", "Design", 1]]'>
+      <div class="scr-stage"><img id="scr-a" alt=""><img id="scr-b" alt=""><i class="scr-bar" id="scr-bar"></i>
+        <div class="scr-cap"><span id="scr-cap"></span><small id="scr-tag"></small></div>
+        <button type="button" class="scr-nav p" id="scr-p" aria-label="Previous screen">‹</button><button type="button" class="scr-nav n" id="scr-n" aria-label="Next screen">›</button></div>
+      <div class="scr-th" id="scr-th" role="tablist" aria-label="Screens"></div>
+    </div>
+  </div></section>
+
 
   <section class="s" id="design"><div class="wrap">
     <div class="eyebrow">Design Studio</div>
@@ -410,7 +476,7 @@ footer a{color:var(--brand-text)}
       <div class="step reveal"><h3>Design or draw</h3><p>Size the structure in the Design Studio, or draw walls, slabs and roads in the CAD &amp; BIM Studio. Quantities flow into the estimate automatically.</p></div>
       <div class="step reveal"><h3>Pick your items</h3><p>Search by code or in plain words, even site words like <em>gitti</em>, <em>sariya</em> or <em>khudai</em>, across CPWD, MPPWD, Horticulture and your own SORs.</p></div>
       <div class="step reveal"><h3>Enter measurements</h3><p>Type dimensions the way you write them in the MB, or let the BIM model generate them. Deductions, steel and "same as item" quantities are handled for you.</p></div>
-      <div class="step reveal"><h3>Export everything</h3><p>Download Excel (measurement, analysis, abstracts, BOQ), export the 3D model as IFC / GLB / OBJ, and capture site photos with GPS.</p></div>
+      <div class="step reveal"><h3>Export everything</h3><p>Download Excel (measurement, analysis, abstracts, BOQ), export the 3D model as IFC / GLB / OBJ, send the estimate to your WhatsApp, and capture site photos with GPS.</p></div>
     </div>
   </div></section>
 
@@ -428,6 +494,44 @@ footer a{color:var(--brand-text)}
       <ul class="facts"><li>Civil Engineer</li><li>Overseer, SECL Gevra Project</li><li>Brought to you by Vividbrandify</li></ul>
       <p class="small" style="margin-top:16px">Estimate Pro is an independent product of Vividbrandify. It is not an official software of SECL or of any government department.</p>
     </div>
+  </div></section>
+
+  <section class="s" id="download" style="padding-top:20px"><div class="wrap">
+    <div class="eyebrow">Download</div>
+    <h2>Use it on your computer and your phone</h2>
+    <p class="sub">The same Estimate Pro as an app for Windows and Android, or straight in the browser. Sign in with your account and your estimates are there on every device.</p>
+    <div class="dlg">
+      <div class="dl-art reveal" aria-hidden="true">
+        <svg viewBox="0 0 300 200" fill="none">
+          <g class="dv-float"><rect x="18" y="36" width="170" height="108" rx="8" fill="#0b2740" stroke="#9fd0f5" stroke-width="2"/><rect x="28" y="46" width="150" height="88" rx="3" fill="#f5f7fa"/>
+            <rect x="36" y="54" width="60" height="7" rx="3" fill="#0f3f62"/><rect class="dv-bar" x="36" y="70" width="134" height="6" rx="3" fill="#2da56f"/><rect class="dv-bar b" x="36" y="84" width="110" height="6" rx="3" fill="#145a8c"/><rect class="dv-bar c" x="36" y="98" width="124" height="6" rx="3" fill="#f0b44c"/><rect x="36" y="114" width="40" height="12" rx="4" fill="#0f3f62"/>
+            <path d="M6 150h194l-10 12H16z" fill="#9fd0f5"/></g>
+          <circle class="dv-sync" cx="194" cy="92" r="4" fill="#7be0ad"/><circle class="dv-sync b" cx="194" cy="92" r="4" fill="#7be0ad"/><circle class="dv-sync c" cx="194" cy="92" r="4" fill="#7be0ad"/>
+          <g class="dv-float" style="animation-delay:1.2s"><rect x="232" y="40" width="56" height="112" rx="10" fill="#0b2740" stroke="#9fd0f5" stroke-width="2"/><rect x="238" y="52" width="44" height="86" rx="3" fill="#f5f7fa"/>
+            <rect x="243" y="58" width="24" height="5" rx="2" fill="#0f3f62"/><rect class="dv-bar" x="243" y="70" width="34" height="5" rx="2" fill="#2da56f"/><rect class="dv-bar b" x="243" y="81" width="28" height="5" rx="2" fill="#145a8c"/><rect class="dv-bar c" x="243" y="92" width="32" height="5" rx="2" fill="#f0b44c"/><circle cx="260" cy="145" r="3" fill="#9fd0f5"/></g>
+          <text x="150" y="188" text-anchor="middle" fill="#dcecf8" font-family="IBM Plex Sans,Segoe UI,sans-serif" font-size="12" font-weight="600">One account · every device</text>
+        </svg>
+      </div>
+      <div class="dl-card reveal">
+        <h3><svg viewBox="0 0 24 24" fill="currentColor"><path d="M3 5.5 10.5 4.4v7.1H3zm8.5-1.2L21 3v8.5h-9.5zM3 12.5h7.5v7.1L3 18.5zm8.5 0H21V21l-9.5-1.3z"/></svg>Windows</h3>
+        <p>For Windows 10 and 11 (64-bit). Its own window, Start-menu and desktop shortcut.</p>
+        <a class="btn pri" href="https://github.com/prashantmahto2819-droid/Estimatepro/releases/download/apps/EstimatePro-Setup.exe" rel="noopener">Download for Windows</a>
+        <small><a href="https://github.com/prashantmahto2819-droid/Estimatepro/releases/download/apps/EstimatePro-Portable.exe" rel="noopener">Portable version (no installation)</a> · about 80 MB. Windows may show “unknown publisher”: choose <b>More info → Run anyway</b>.</small>
+      </div>
+      <div class="dl-card reveal">
+        <h3><svg viewBox="0 0 24 24" fill="currentColor"><path d="M7 9h10v8a1 1 0 0 1-1 1h-1v3h-2v-3h-2v3H9v-3H8a1 1 0 0 1-1-1zm-3 0h2v6H4zm14 0h2v6h-2zM8.2 3.6l-1-1.5.5-.3 1 1.6a6 6 0 0 1 6.6 0l1-1.6.5.3-1 1.5A5 5 0 0 1 17 8H7a5 5 0 0 1 1.2-4.4M10 6.3a.6.6 0 1 0 0-1.2.6.6 0 0 0 0 1.2m4 0a.6.6 0 1 0 0-1.2.6.6 0 0 0 0 1.2"/></svg>Android</h3>
+        <p>For Android 6 and newer. Opens full screen and uses the camera, GPS and sharing of your phone.</p>
+        <a class="btn pri" href="https://github.com/prashantmahto2819-droid/Estimatepro/releases/download/apps/EstimatePro.apk" rel="noopener">Download APK</a>
+        <small>After downloading, open the file and allow <b>Install unknown apps</b> for your browser when asked. Needs Google Chrome on the phone.</small>
+      </div>
+      <div class="dl-card reveal">
+        <h3><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c3 3.2 3 14.8 0 18M12 3c-3 3.2-3 14.8 0 18"/></svg>Browser, iPhone &amp; Mac</h3>
+        <p>Nothing to download. On an iPhone or iPad open it in Safari and choose <b>Share → Add to Home Screen</b>.</p>
+        <a class="btn ghost" href="app.html">Open in the browser</a>
+        <small>Works in Chrome, Edge, Safari and Firefox, and keeps working when the internet drops.</small>
+      </div>
+    </div>
+    <div class="dl-note reveal"><span>🔐</span><span><b>Sign-in needed.</b> The apps open only after you sign in with your Estimate Pro account — the same account, licence and device limit as on the web. New accounts get the 7-day free trial. Published by Vivid Brandify (Vividbrandify).</span></div>
   </div></section>
 
   <section class="s" id="contact"><div class="wrap">
@@ -450,7 +554,7 @@ footer a{color:var(--brand-text)}
 
 <footer><div class="wrap">
   <span>© 2026 Vividbrandify · Developed by Prashant Mahto (<a href="mailto:prashantmahto2819@gmail.com">prashantmahto2819@gmail.com</a>)</span>
-  <span><a href="privacy.html">Privacy Policy</a> · <a href="terms.html">Terms of Service</a> · <a href="credits.html">Credits</a> · <a href="app.html">Open the app</a></span>
+  <span><a href="privacy.html">Privacy Policy</a> · <a href="terms.html">Terms of Service</a> · <a href="credits.html">Credits</a> · <a href="#download">Download</a> · <a href="app.html">Open the app</a></span>
   <span class="small" style="flex-basis:100%">Photos: <a href="https://unsplash.com" rel="noopener" target="_blank">Unsplash</a> (free licence).</span>
 </div></footer>
 
@@ -460,6 +564,26 @@ footer a{color:var(--brand-text)}
   if (!("IntersectionObserver" in window)) { els.forEach(function (e) { e.classList.add("in"); }); return; }
   var io = new IntersectionObserver(function (es) { es.forEach(function (e) { if (e.isIntersecting) { e.target.classList.add("in"); io.unobserve(e.target); } }); }, { rootMargin: "0px 0px -8% 0px" });
   els.forEach(function (e) { io.observe(e); });
+})();
+</script>
+<script>
+(function () {
+  var box = document.getElementById("scr"); if (!box) return;
+  var shots = JSON.parse(box.getAttribute("data-shots")), a = document.getElementById("scr-a"), b = document.getElementById("scr-b"), cap = document.getElementById("scr-cap"), tag = document.getElementById("scr-tag"), th = document.getElementById("scr-th"), bar = document.getElementById("scr-bar");
+  var cur = -1, front = a, timer = null, auto = !(window.matchMedia && matchMedia("(prefers-reduced-motion:reduce)").matches), seen = false;
+  shots.forEach(function (s, i) { var t = document.createElement("button"); t.type = "button"; t.setAttribute("role", "tab"); t.setAttribute("aria-label", s[1]); t.title = s[1]; t.innerHTML = "<img loading='lazy' alt='' src='" + s[0] + "'>"; t.onclick = function () { auto = false; show(i); }; th.appendChild(t); });
+  function show(i) {
+    i = (i + shots.length) % shots.length; if (i === cur) return; var s = shots[i], back = front === a ? b : a;
+    back.onload = function () { back.className = (s[3] ? "fit " : "") + "on"; front.classList.remove("on"); front = back; };
+    back.className = s[3] ? "fit" : ""; back.alt = s[1]; back.src = s[0]; cap.textContent = s[1]; tag.textContent = s[2];
+    [].forEach.call(th.children, function (t, k) { t.classList.toggle("on", k === i); t.setAttribute("aria-selected", k === i); });
+    var on = th.children[i]; if (on && seen && th.scrollTo) th.scrollTo({ left: on.offsetLeft - th.clientWidth / 2 + 54, behavior: "smooth" });
+    cur = i; clearTimeout(timer); bar.classList.remove("run"); void bar.offsetWidth;
+    if (auto) { bar.classList.add("run"); timer = setTimeout(function () { show(cur + 1); }, 4500); }
+  }
+  document.getElementById("scr-p").onclick = function () { auto = false; show(cur - 1); };
+  document.getElementById("scr-n").onclick = function () { auto = false; show(cur + 1); };
+  if ("IntersectionObserver" in window) new IntersectionObserver(function (es, io) { if (es[0].isIntersecting) { seen = true; show(0); io.disconnect(); } }, { rootMargin: "200px" }).observe(box); else { seen = true; show(0); }
 })();
 </script>
 <script>if("serviceWorker"in navigator&&location.protocol==="https:")addEventListener("load",function(){navigator.serviceWorker.register("sw.js").catch(function(){})});</script>

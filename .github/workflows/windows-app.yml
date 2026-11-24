@@ -1,5 +1,5 @@
 # Builds Estimate Pro for Windows (installer + portable .exe). Run it from the Actions tab → "Windows app" → Run workflow;
-# it also runs when anything in desktop/ changes. The files are under the run's "Artifacts".
+# it also runs when anything in desktop/ changes. The files go to the "apps" release, where the home page's download buttons point.
 name: Windows app
 on:
   workflow_dispatch:
@@ -7,7 +7,7 @@ on:
     branches: [main]
     paths: ["desktop/**", ".github/workflows/windows-app.yml"]
 permissions:
-  contents: read
+  contents: write
 jobs:
   build:
     runs-on: windows-latest
@@ -28,3 +28,9 @@ jobs:
           name: EstimatePro-Windows
           path: desktop/dist/*.exe
           if-no-files-found: error
+      - uses: softprops/action-gh-release@v2
+        with:
+          tag_name: apps
+          name: Estimate Pro apps (Windows and Android)
+          body: Latest builds of the Estimate Pro apps. The download buttons on the home page point to these files. Sign-in is needed to use the app.
+          files: desktop/dist/*.exe
