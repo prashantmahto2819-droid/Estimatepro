@@ -231,6 +231,7 @@ footer a{color:var(--brand-text)}
 .dl-card small{color:var(--muted);font-size:12.5px;line-height:1.45}
 .dl-note{margin-top:18px;background:var(--accent-soft);color:var(--ink);border-radius:var(--r);padding:14px 18px;font-size:15px;display:flex;gap:10px;align-items:flex-start}
 .dl-note b{color:var(--accent-text)}
+.dl-card a.soon{pointer-events:none;opacity:.55;box-shadow:none}
 .dv-sync{transform-box:fill-box;animation:dvsync 2.4s linear infinite}
 .dv-sync.b{animation-delay:.8s}.dv-sync.c{animation-delay:1.6s}
 @keyframes dvsync{0%{opacity:0;transform:translateX(0)}15%{opacity:1}85%{opacity:1}100%{opacity:0;transform:translateX(36px)}}
@@ -515,13 +516,13 @@ footer a{color:var(--brand-text)}
       <div class="dl-card reveal">
         <h3><svg viewBox="0 0 24 24" fill="currentColor"><path d="M3 5.5 10.5 4.4v7.1H3zm8.5-1.2L21 3v8.5h-9.5zM3 12.5h7.5v7.1L3 18.5zm8.5 0H21V21l-9.5-1.3z"/></svg>Windows</h3>
         <p>For Windows 10 and 11 (64-bit). Its own window, Start-menu and desktop shortcut.</p>
-        <a class="btn pri" href="https://github.com/prashantmahto2819-droid/Estimatepro/releases/download/apps/EstimatePro-Setup.exe" rel="noopener">Download for Windows</a>
-        <small><a href="https://github.com/prashantmahto2819-droid/Estimatepro/releases/download/apps/EstimatePro-Portable.exe" rel="noopener">Portable version (no installation)</a> · about 80 MB. Windows may show “unknown publisher”: choose <b>More info → Run anyway</b>.</small>
+        <a class="btn pri" data-app="EstimatePro-Setup.exe" data-label="Download for Windows" href="https://github.com/prashantmahto2819-droid/Estimatepro/releases/download/apps/EstimatePro-Setup.exe" rel="noopener">Download for Windows</a>
+        <small><a data-app="EstimatePro-Portable.exe" href="https://github.com/prashantmahto2819-droid/Estimatepro/releases/download/apps/EstimatePro-Portable.exe" rel="noopener">Portable version (no installation)</a> · about 80 MB. Windows may show “unknown publisher”: choose <b>More info → Run anyway</b>.</small>
       </div>
       <div class="dl-card reveal">
         <h3><svg viewBox="0 0 24 24" fill="currentColor"><path d="M7 9h10v8a1 1 0 0 1-1 1h-1v3h-2v-3h-2v3H9v-3H8a1 1 0 0 1-1-1zm-3 0h2v6H4zm14 0h2v6h-2zM8.2 3.6l-1-1.5.5-.3 1 1.6a6 6 0 0 1 6.6 0l1-1.6.5.3-1 1.5A5 5 0 0 1 17 8H7a5 5 0 0 1 1.2-4.4M10 6.3a.6.6 0 1 0 0-1.2.6.6 0 0 0 0 1.2m4 0a.6.6 0 1 0 0-1.2.6.6 0 0 0 0 1.2"/></svg>Android</h3>
         <p>For Android 6 and newer. Opens full screen and uses the camera, GPS and sharing of your phone.</p>
-        <a class="btn pri" href="https://github.com/prashantmahto2819-droid/Estimatepro/releases/download/apps/EstimatePro.apk" rel="noopener">Download APK</a>
+        <a class="btn pri" data-app="EstimatePro.apk" data-label="Download APK" href="https://github.com/prashantmahto2819-droid/Estimatepro/releases/download/apps/EstimatePro.apk" rel="noopener">Download APK</a>
         <small>After downloading, open the file and allow <b>Install unknown apps</b> for your browser when asked. Needs Google Chrome on the phone.</small>
       </div>
       <div class="dl-card reveal">
@@ -584,6 +585,18 @@ footer a{color:var(--brand-text)}
   document.getElementById("scr-p").onclick = function () { auto = false; show(cur - 1); };
   document.getElementById("scr-n").onclick = function () { auto = false; show(cur + 1); };
   if ("IntersectionObserver" in window) new IntersectionObserver(function (es, io) { if (es[0].isIntersecting) { seen = true; show(0); io.disconnect(); } }, { rootMargin: "200px" }).observe(box); else { seen = true; show(0); }
+})();
+</script>
+<script>
+/* download buttons: a file that is not in the "apps" release yet is shown as "Available soon" instead of a dead link */
+(function () {
+  var links = document.querySelectorAll("a[data-app]"); if (!links.length || !window.fetch) return;
+  fetch("https://api.github.com/repos/prashantmahto2819-droid/Estimatepro/releases/tags/apps").then(function (r) { if (r.status === 404) return { assets: [] }; if (!r.ok) throw 0; return r.json(); }).then(function (rel) {
+    var have = {}; (rel.assets || []).forEach(function (a) { have[a.name] = a; });
+    [].forEach.call(links, function (l) { var a = have[l.getAttribute("data-app")];
+      if (a) { if (l.getAttribute("data-label")) l.textContent = l.getAttribute("data-label") + " (" + Math.max(1, Math.round(a.size / 1048576)) + " MB)"; }
+      else { l.classList.add("soon"); l.removeAttribute("href"); l.setAttribute("aria-disabled", "true"); l.textContent = l.getAttribute("data-label") ? "Available soon" : "Portable version: soon"; } });
+  }).catch(function () {});
 })();
 </script>
 <script>if("serviceWorker"in navigator&&location.protocol==="https:")addEventListener("load",function(){navigator.serviceWorker.register("sw.js").catch(function(){})});</script>

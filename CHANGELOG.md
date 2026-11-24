@@ -3,6 +3,10 @@
 This file is for the people maintaining the app. It is not published with the site (see `.assetsignore`).
 The text users see is `EP_NOTES` in `js/version.js`.
 
+## 2026.11.21-z54
+- Home page download buttons ask the GitHub API which files are in the `apps` release; a missing file shows "Available soon" instead of a dead link, a present one shows its size. If the API cannot be reached the links stay as they are.
+- 24 Nov: every GitHub Actions run of this repository fails before starting ("recent account payments have failed or your spending limit needs to be increased"), so neither app has been built since. Owner must fix Billing in GitHub, then run both workflows.
+
 ## 2026.11.21-z53
 - Home page (`index.html`): Screens section (slider of real screenshots from `/updates` and `/help`, changes by itself, thumbnails), Download section (Windows, Android, browser; animated devices picture), five new feature cards, "new in 3D" row in the CAD section, Download links in the nav, hero and footer. Download cards use `.dlg` (`.dl` is already an animated part of the "live" strip).
 - Download buttons point to GitHub release `apps`: `EstimatePro-Setup.exe`, `EstimatePro-Portable.exe`, `EstimatePro.apk` (`…/releases/download/apps/<file>`). These links work only while the repository is public; a Worker asset cannot be larger than 25 MiB, so the Windows files cannot be served from the site itself.
