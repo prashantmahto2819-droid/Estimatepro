@@ -3,6 +3,13 @@
 This file is for the people maintaining the app. It is not published with the site (see `.assetsignore`).
 The text users see is `EP_NOTES` in `js/version.js`.
 
+## 2026.11.21-z78
+- js/plan/design.js: PL.DES (27 design items in 5 groups, every option an existing CAD library entry), PL.STYLES (8 styles), PL.desDefault, PL.PREMIUM furniture map.
+- build.js uses cfg.des: wall material / thickness (brick 230, block 200, stone 300 outer), main / room / toilet door presets, arch heads on the main door and road-side windows, window preset + grill, balcony railing style, parapet style, floors by room kind, wall finishes per wall piece (toilet tile / dado, kitchen band 850–1450, front cladding on the outside face, s0 / s1 limited to the room), czone false ceilings in living / dining / master / halls, sloping roofs (RCC gable / hip without the flat slab; tile roofs over the flat slab; no terrace stair / mumty / parapet), porches in the front setback (slab or curved slab, round / square / octagonal columns with footings, gable porch roof, dome), curved or three-sided bay windows (straight wall split, curved / faceted chain with windows, floor + ceiling bulge slabs), curved balcony railing + slab, columns at the free corners of open rooms, compound wall height / no wall, sliding gate (opening + asset) or opening, garden assets; premium furniture swaps, modular kitchen, IWC / EWC mix, shower cubicles; deleted entities (_del) dropped at the end.
+- FIX placeOn: scans from the preferred spot in 50 mm steps for the nearest free position (columns at the piece ends and mid-span used to block every candidate → main doors missing on front walls over 4.5 m).
+- FIX main entrance: falls back main room → corridor → hall → any front room; school office, hostel visitors' room and HWC waiting marked as the entry.
+- ui-plan.js: section 5 "Design and items" (style buttons + grouped selects saved per building type), design summary on each option card.
+
 ## 2026.11.21-z77
 - PL.moveEdge(plan, floor, uid, side, δ): moves one grid line of a room; every room touching that line within the connected run moves with it (closure over overlapping spans), attached-toilet cuts follow, refuses outer walls, the stair / lift on multi-floor plans, and rooms going under 0.9 m. UI: selection panel with ◀ ▶ ▲ ▼ wall buttons (15 cm), score / checks / stats recomputed.
 - PL.rulesFor("cg", "res"): ≤ 90 m² F 1.5 / 0 / 0 / 0, cov 75 %, FAR 1.5; 90–250 F 2.0 R 1.5 one side 1.0, 65 %, 1.5; 250–500 F 3.0 R 2.4 sides 1.5, 50 %, 1.25; > 500 kept from the earlier table — source: published Raipur summary of CG BVN 1984 (amended Dec 2024); to be checked against the gazette.

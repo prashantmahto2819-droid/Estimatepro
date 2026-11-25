@@ -274,7 +274,7 @@
       L.push(it("classroom", rooms, { area: Math.max(48, v.students * 1.0) }));
       if (v.senior) { L.push(it("phy_lab")); L.push(it("chem_lab")); L.push(it("bio_lab")); } else L.push(it("sci_lab"));
       L.push(it("comp_lab", Math.max(1, Math.ceil(st / 800)))); L.push(it("math_lab")); L.push(it("library"));
-      L.push(it("principal")); L.push(it("sch_office")); L.push(it("staffroom", 1, { area: Math.max(20, Math.round(v.teachers * 2.5)) })); L.push(it("sick")); L.push(it("counsel"));
+      L.push(it("principal")); L.push(it("sch_office", 1, { main: 1 })); L.push(it("staffroom", 1, { area: Math.max(20, Math.round(v.teachers * 2.5)) })); L.push(it("sick")); L.push(it("counsel"));
       L.push(it("activity")); L.push(it("artroom", 1, { opt: 1 })); L.push(it("store_g")); L.push(it("mphall", 1, { off: 1 }));
       blocks(L, { k: "school", m: b, f: g }, true, ["toilet_b", "toilet_g"], true, nf); L.push(it("water"));
       L.push(it("stair", 1, { opt: 1 })); L.push(it("lift", 1, { auto: "lift" }));
@@ -344,7 +344,7 @@
     ],
     program: function (v, fl) {
       var L = [], rooms = Math.ceil(v.boarders / Math.max(1, v.per)), nf = Math.max(1, fl || 1), occ = { k: "hostel", m: v.girls ? 0 : v.boarders, f: v.girls ? v.boarders : 0 }, bb = PL.blockFor(occ, v.girls ? "f" : "m", nf);
-      L.push(it("warden")); L.push(it("visitors")); L.push(it("hroom", rooms, { area: Math.max(9.5, 4.5 + v.per * 4.0), beds: v.per }));
+      L.push(it("warden")); L.push(it("visitors", 1, { main: 1 })); L.push(it("hroom", rooms, { area: Math.max(9.5, 4.5 + v.per * 4.0), beds: v.per }));
       L.push(it("mess", 1, { area: Math.max(30, Math.round(v.boarders * 0.5 * 1.0)) })); L.push(it("ckitchen", 1, { area: Math.max(20, Math.round(v.boarders * 0.2)), name: "Mess kitchen" })); L.push(it("dstore"));
       L.push(it("commonr")); L.push(it("sick")); L.push(it("laundry")); L.push(it("store_g"));
       L.push(it("bath_blk", 1, { area: bb.area, fix: bb.fix, occ: occ, side: v.girls ? "f" : "m", fl: "all", name: (v.girls ? "Girls'" : "Boys'") + " bath & toilet block" }));
@@ -402,7 +402,7 @@
       blocks(L, { k: "assembly", m: Math.ceil(v.seats * 0.6), f: Math.ceil(v.seats * 0.4) }, false); return L; } };
   T.hwc = { plot: [20, 25], n: "Sub-health centre (HWC)", hi: "उप-स्वास्थ्य केंद्र (HWC)", icon: "⚕", mode: "band", h: 3300, occ: 15, stairW: 1.2, grp: "C", rate: 24000, rules: "inst", single: 1,
     inputs: [{ k: "labour", n: "Labour room", hi: "प्रसव कक्ष", def: 1, bool: 1 }, { k: "qtr", n: "Staff quarter", hi: "स्टाफ क्वार्टर", def: 1, bool: 1 }],
-    program: function (v) { var L = []; L.push(it("verandah")); L.push(it("opd_wait", 1, { area: 20, name: "Waiting" })); L.push(it("exam_r", 2)); if (v.labour) L.push(it("labour", 1, { area: 20 })); L.push(it("pharmacy", 1, { area: 9, name: "Medicine store" })); L.push(it("hlab", 1, { area: 9, name: "Lab / sample collection" }));
+    program: function (v) { var L = []; L.push(it("verandah")); L.push(it("opd_wait", 1, { area: 20, name: "Waiting", main: 1 })); L.push(it("exam_r", 2)); if (v.labour) L.push(it("labour", 1, { area: 20 })); L.push(it("pharmacy", 1, { area: 9, name: "Medicine store" })); L.push(it("hlab", 1, { area: 9, name: "Lab / sample collection" }));
       L.push(it("toilet", 2)); if (v.qtr) L.push(it("staffq")); return L; } };
   PL.ORDER = ["house", "apartment", "office", "shops", "school", "college", "hospital", "hwc", "hotel", "hostel", "canteen", "hall", "factory", "anganwadi", "panchayat"];
 
