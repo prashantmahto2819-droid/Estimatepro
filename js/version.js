@@ -1,5 +1,5 @@
 /* App version + "what's new" — the super admin is offered to send this on WhatsApp after each upload. Change both with every release. */
-window.EP_VER = "2026.11.21-z76";
-window.EP_NOTES = "• Building Planner — 6 new building types: apartments / flats (each flat planned inside, stilt parking), shops / commercial complex (rolling shutters), factory / godown (GI sheet roof), Anganwadi, Panchayat bhawan, sub-health centre (HWC)\n• U-shaped buildings with a court when even an L does not fit\n• Fire check (NBC Part 4): walk to the stair, second staircase, 15 m rule; daylight check: cross ventilation and west-only rooms\n• Tap two rooms on a plan to swap them — the score updates\n• Report / PDF for each option: plans, room schedule with NBC minimums, Vastu table, rules, checks, one floor less / more cost\n• Frame sized by load: column, footing (from soil bearing) and beam sizes; column schedule\n• Sanction details: owner, khasra, ward, architect on the drawing, setback dimensions on the site plan\n• Fixed: passages and corridors now open into the hall / lobby they join";
+window.EP_VER = "2026.11.21-z77";
+window.EP_NOTES = "• Building Planner: tap a room and move its walls by 15 cm (neighbouring rooms follow), or tap two rooms to swap them — the score, checks and cost update\n• Rules: Chhattisgarh Bhumi Vikas Niyam (amended Dec 2024, Raipur summary) — setbacks, coverage, FAR and height by plot size for houses";
 /* pictures of this update: [file in /updates, caption]. Shown to the owner with the WhatsApp "what's new" message. */
 window.EP_PICS = [];

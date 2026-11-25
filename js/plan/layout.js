@@ -399,6 +399,25 @@
     return { fire: fire, travel: Math.round(maxT), cross: hab ? Math.round(cross / hab * 100) : null, west: west };
   };
 
+  /* move one wall line of a room (side l / r / f / b) by delta metres: every room on that line within the run moves with it, so rooms stay closed */
+  PL.moveEdge = function (p, fi, uid, side, delta) {
+    var rooms = p.floors[fi], R = rooms.filter(function (r) { return r.uid === uid; })[0], e = 1e-3; if (!R) return "Room not found";
+    var vert = side === "l" || side === "r", c = side === "l" ? R.x : side === "r" ? R.x + R.w : side === "f" ? R.y : R.y + R.d;
+    if (p.outline ? false : (vert ? (Math.abs(c) < e || Math.abs(c - p.W) < e) : (Math.abs(c) < e || Math.abs(c - p.D) < e))) return "That is an outer wall — change the plot or the building size instead.";
+    var lo = vert ? R.y : R.x, hi = vert ? R.y + R.d : R.x + R.w, S = [], grow = true;
+    var on = function (r) { var a = vert ? r.x : r.y, b = vert ? r.x + r.w : r.y + r.d; return Math.abs(a - c) < e ? "start" : Math.abs(b - c) < e ? "end" : null; };
+    var span = function (r) { return vert ? [r.y, r.y + r.d] : [r.x, r.x + r.w]; };
+    while (grow) { grow = false; rooms.forEach(function (r) { if (S.indexOf(r) >= 0 || !on(r)) return; var sp2 = span(r); if (Math.min(sp2[1], hi) - Math.max(sp2[0], lo) > e) { S.push(r); if (sp2[0] < lo - e) { lo = sp2[0]; grow = true; } if (sp2[1] > hi + e) { hi = sp2[1]; grow = true; } } }); }
+    if (p.floors.length > 1 && S.some(function (r) { return r.inst && r.inst.sp && (r.inst.sp.stair || r.inst.sp.lift); })) return "The stair / lift is the same on every floor — move another wall.";
+    var bad = null;
+    S.forEach(function (r) { var o = on(r), w = vert ? r.w : r.d; if ((o === "end" ? w + delta : w - delta) < 0.9) bad = r.name; });
+    if (bad) return bad + " would become too narrow.";
+    S.forEach(function (r) { var o = on(r); if (vert) { if (o === "end") r.w = r2(r.w + delta); else { r.x = r2(r.x + delta); r.w = r2(r.w - delta); } } else { if (o === "end") r.d = r2(r.d + delta); else { r.y = r2(r.y + delta); r.d = r2(r.d - delta); } } });
+    rooms.forEach(function (r) { var C = r.cut; if (!C) return; var a = vert ? C.x : C.y, b = vert ? C.x + C.w : C.y + C.d, sp3 = vert ? [C.y, C.y + C.d] : [C.x, C.x + C.w]; if (Math.min(sp3[1], hi) - Math.max(sp3[0], lo) <= e) return;
+      if (Math.abs(b - c) < e) { if (vert) C.w = r2(C.w + delta); else C.d = r2(C.d + delta); } else if (Math.abs(a - c) < e) { if (vert) { C.x = r2(C.x + delta); C.w = r2(C.w - delta); } else { C.y = r2(C.y + delta); C.d = r2(C.d - delta); } } });
+    return null;
+  };
+
   /* ---------------- scoring ---------------- */
   var OCT = ["E", "NE", "N", "NW", "W", "SW", "S", "SE"];
   PL.dirOf = function (dx, dy, facing) { /* local (x, y) offset → compass octant, given the side the road is on */

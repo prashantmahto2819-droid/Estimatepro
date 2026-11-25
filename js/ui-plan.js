@@ -108,10 +108,13 @@
       if (o.floors.length > 1) h += '<div class="seg" role="group" aria-label="Floor">' + o.floors.map(function (_, k) { return '<button type="button" data-plfl="' + o.id + ":" + k + '" aria-pressed="' + (k === f) + '">' + (k === 0 ? "Ground" : k === 1 ? "First" : k === 2 ? "Second" : "Floor " + k) + "</button>"; }).join("") + "</div>";
       h += '<div style="border:1px solid var(--line);border-radius:6px;overflow:hidden;background:#fff">' + PL.svg(o, f, { facing: P.facing, scale: Math.max(10, Math.min(28, 360 / (o.W + 2.4))), pick: o.id, sel: P.swap && P.swap.opt === o.id && P.swap.fi === f ? P.swap.uid : null }) + "</div>";
       if (ck.cross != null) h += '<div class="small muted">Cross ventilation in ' + ck.cross + " % of the living rooms" + (o.floors.length > 1 ? " · longest walk to a stair ≈ " + ck.travel + " m" : "") + (o.shape ? " · " + o.shape + "-shaped building" : "") + "</div>";
+      if (P.swap && P.swap.opt === o.id && P.swap.fi === f) { var selR = o.floors[f].filter(function (x) { return x.uid === P.swap.uid; })[0];
+        if (selR) h += '<div style="border:1px dashed #c0392b;border-radius:6px;padding:6px;display:flex;flex-direction:column;gap:4px"><div class="small"><b>' + esc(selR.name) + "</b> " + (selR.w - 0.23).toFixed(2) + " × " + (selR.d - 0.23).toFixed(2) + ' m — move a wall by 15 cm, or tap another room to swap</div><div class="row" style="gap:4px;flex-wrap:wrap">' +
+          [["l", -1, "◀ left wall"], ["l", 1, "left wall ▶"], ["r", -1, "◀ right wall"], ["r", 1, "right wall ▶"], ["f", -1, "▼ road-side wall"], ["f", 1, "road-side wall ▲"], ["b", -1, "▼ back wall"], ["b", 1, "back wall ▲"]].map(function (m) { return '<button type="button" class="btn sec small" data-plmv="' + m[0] + ":" + m[1] + '">' + m[2] + "</button>"; }).join("") + '<button type="button" class="btn sec small" data-plmv="x">Done</button></div></div>'; }
       h += '<div class="small">Rooms ' + st.rooms + " · carpet ≈ " + n1(st.carpet) + " m² · built-up ≈ " + n1(st.built) + " m² · efficiency " + st.eff + " % · rough cost <b>" + inr(st.cost) + "</b></div>";
       if (notes.length) h += '<ul class="muted small" style="margin:0;padding-left:18px">' + notes.map(function (n) { return "<li>" + esc(n) + "</li>"; }).join("") + "</ul>";
       h += '<div class="row" style="gap:6px;flex-wrap:wrap"><button type="button" class="btn pri grow" data-plbuild="' + i + '">Build ' + esc(o.label) + ' in CAD — 2D, 3D, estimate</button><button type="button" class="btn sec" data-plrep="' + i + '" title="Planning report with room list, norms, Vastu, fire and cost comparison — print or save as PDF">Report / PDF</button></div>';
-      h += '<p class="muted small" style="margin:0">Tip: tap one room, then another of the same kind, to swap them.</p></div>';
+      h += '<p class="muted small" style="margin:0">Tip: tap a room to move its walls, or tap two rooms to swap them.</p></div>';
     });
     return h + "</div>";
   }
@@ -162,7 +165,7 @@
     var el = e.target.closest && e.target.closest("[data-plroom]"); if (!el || !el.closest(".pl") || !P.res || !P.res.opts) return; var a = el.getAttribute("data-plroom").split("|"), o = P.res.opts.filter(function (x) { return x.id === a[0]; })[0]; if (!o) return; var fi = +a[1], rooms = o.floors[fi], r = rooms.filter(function (x) { return x.uid === a[2]; })[0]; if (!r) return;
     var bad = function (x) { var s2 = x.inst && x.inst.sp; return !s2 || s2.stair || s2.lift || s2.open || s2.unit || x.parent; };
     if (bad(r)) { U.toast("This one cannot be swapped (stair, lift, open space or attached toilet)"); return; }
-    if (!P.swap || P.swap.opt !== o.id || P.swap.fi !== fi) { P.swap = { opt: o.id, fi: fi, uid: r.uid }; U.toast(r.name + " picked — now tap the room to swap it with"); U.render(); return; }
+    if (!P.swap || P.swap.opt !== o.id || P.swap.fi !== fi) { P.swap = { opt: o.id, fi: fi, uid: r.uid }; U.toast(r.name + " picked — move its walls with the buttons, or tap another room to swap"); U.render(); return; }
     if (P.swap.uid === r.uid) { P.swap = null; U.render(); return; }
     var q = rooms.filter(function (x) { return x.uid === P.swap.uid; })[0], kid = function (x) { return rooms.some(function (y) { return y.parent === x.uid; }); };
     if (!q || kid(q) !== kid(r)) { U.toast("Pick two rooms that both have (or both do not have) an attached toilet"); P.swap = null; U.render(); return; }
@@ -218,5 +221,7 @@
     if (ds.plfl) { var kv = ds.plfl.split(":"); P.sel[kv[0]] = +kv[1]; U.render(); return; }
     if (ds.plbuild != null) { build(+ds.plbuild); return; }
     if (ds.plrep != null) { report(+ds.plrep); return; }
+    if (ds.plmv) { if (ds.plmv === "x" || !P.swap) { P.swap = null; U.render(); return; } var mv = ds.plmv.split(":"), o2 = P.res.opts.filter(function (x) { return x.id === P.swap.opt; })[0]; if (!o2) return;
+      var err = PL.moveEdge(o2, P.swap.fi, P.swap.uid, mv[0], 0.15 * +mv[1]); if (err) { U.toast(err); return; } var cfg2 = cfgNow(); o2.sc = PL.score(T(), o2, cfg2); o2.chk = PL.checks(T(), o2, cfg2); o2.stats = PL.stats(T(), o2, cfg2); U.render(); return; }
   });
 })();

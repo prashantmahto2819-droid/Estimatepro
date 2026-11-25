@@ -409,11 +409,17 @@
   /* ---------- rules (indicative defaults — always check with the local authority) ---------- */
   PL.RULESETS = {
     mbbl: { n: "Model Building Bye-laws 2016 (indicative)", hi: "मॉडल बिल्डिंग बाय-लॉज़ 2016 (अनुमानित)" },
-    cg: { n: "Chhattisgarh Bhumi Vikas Niyam 1984 (indicative — check with T&CP)", hi: "छत्तीसगढ़ भूमि विकास नियम 1984 (अनुमानित)" },
+    cg: { n: "Chhattisgarh Bhumi Vikas Niyam 1984, amended Dec 2024 (Raipur summary — confirm locally)", hi: "छत्तीसगढ़ भूमि विकास नियम 1984 (अनुमानित)" },
     custom: { n: "Custom — type your own", hi: "अपने नियम डालें" }
   };
   /* setbacks front / rear / left / right (m), coverage %, FAR, height (m) by plot area */
   PL.rulesFor = function (set, kind, A) {
+    if (kind === "res" && set === "cg") {   /* Chhattisgarh Bhumi Vikas Niyam 1984 (amended Dec 2024) as summarised for Raipur — confirm with the local body */
+      if (A <= 90) return { f: 1.5, r: 0, l: 0, rt: 0, cov: 75, far: 1.5, h: 12 };
+      if (A <= 250) return { f: 2.0, r: 1.5, l: 1.0, rt: 0, cov: 65, far: 1.5, h: 12 };
+      if (A <= 500) return { f: 3.0, r: 2.4, l: 1.5, rt: 1.5, cov: 50, far: 1.25, h: 12.5 };
+      return { f: 4.5, r: 3.0, l: 3.0, rt: 3.0, cov: 40, far: 1.25, h: 15 };
+    }
     if (kind === "res") {
       if (A <= 100) return { f: 2.0, r: 1.0, l: 0, rt: 0, cov: 75, far: 1.75, h: 12 };
       if (A <= 250) return { f: 3.0, r: 1.5, l: 1.0, rt: 0, cov: set === "cg" ? 60 : 66, far: set === "cg" ? 1.5 : 1.75, h: 12 };

@@ -3,6 +3,10 @@
 This file is for the people maintaining the app. It is not published with the site (see `.assetsignore`).
 The text users see is `EP_NOTES` in `js/version.js`.
 
+## 2026.11.21-z77
+- PL.moveEdge(plan, floor, uid, side, δ): moves one grid line of a room; every room touching that line within the connected run moves with it (closure over overlapping spans), attached-toilet cuts follow, refuses outer walls, the stair / lift on multi-floor plans, and rooms going under 0.9 m. UI: selection panel with ◀ ▶ ▲ ▼ wall buttons (15 cm), score / checks / stats recomputed.
+- PL.rulesFor("cg", "res"): ≤ 90 m² F 1.5 / 0 / 0 / 0, cov 75 %, FAR 1.5; 90–250 F 2.0 R 1.5 one side 1.0, 65 %, 1.5; 250–500 F 3.0 R 2.4 sides 1.5, 50 %, 1.25; > 500 kept from the earlier table — source: published Raipur summary of CG BVN 1984 (amended Dec 2024); to be checked against the gazette.
+
 ## 2026.11.21-z76
 - spaces.js: types apartment (flat units {unit:{beds,attached}}, stilt), shops (sp.shop → RS shutter on the road side, scored like parking), factory (T.roof "gi": gable GI roof instead of the top slab, no parapet), anganwadi, panchayat, hwc; rules kind "ind"; ~20 new spaces.
 - layout.js: PL.corrU (wings at both ends, six bands) + PL.uNeed, chosen when L does not fit; PL.expandUnits lays every flat out with the house programme inside its rectangle (band search, unitExt "b" scoring, cached per size, entry from the corridor), apartment ground-floor leftovers → stilt parking; 'up' rooms spread over all upper floors; floors loop keeps the least-bad result when nothing fits; PL.checks: travel to stair (30 m, 45 factory), 2 stairs over 500 m² or 15 m, 15 m fire NOC, hospital ramp / bed lift, cross ventilation %, west-only bed rooms; LR core offered from 24 m; svg: data-plroom + selection.
