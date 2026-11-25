@@ -3,6 +3,14 @@
 This file is for the people maintaining the app. It is not published with the site (see `.assetsignore`).
 The text users see is `EP_NOTES` in `js/version.js`.
 
+## 2026.11.21-z61
+- New `js/ds/extras.js` (after all modules in ui-design FILES; in the service-worker cache): "Along with the design (साथ के काम)" — a last input group added to chosen modules; after the module runs its quantities are appended and a summary line "Along with the design" is added. `DS.extras.EXTRA[id] = { params, add(inp, res) → { q, s } }`; spec.params mutated in place so defaults include the new keys; errors become a warning, never a failed design.
+  - cycle_shed: floor (paver 60 mm M35 + GSB 100 → 16.91.1 / 16.78.2; paver 80 mm M30 + GSB 150 → 16.91.2; PCC 1:2:4 100 → 4.1.3; CC flooring 40 mm on PCC 1:4:8 → 11.3.1 + 4.1.8; hardener floor 52 mm → 11.4 + 4.1.8; excavation 2.8.1), precast kerb 100 × 300 round the floor (16.69), PCC saucer drain 450 × 75 along the open side, two-wheeler stands (one per 0.9 m, two rows when W ≥ 4 m, non-SOR ₹1,500), LED battens one per bay (E&M 1.10.3 point wiring, 1.35 installation, fitting non-SOR ₹900, circuit wiring 1.14.1). Defaults on: paver 60, kerb, drain, stands, lights.
+  - steel_shed, steel_portal, steel_truss: floor (same list, default none), plinth protection 900 wide (4.17), LED high-bay 100 W about 1 per 50 m² (non-SOR ₹6,500 + E&M items).
+  - boundary_wall: main gate width (default 4 m) and wicket gate — MS gate ≈ 30 kg/m² (10.25.2) + painting both faces (13.61.1).
+- ui-design `mapItem`: links to "DSR_EM_2022" / "em22" go to the E&M 2022 book.
+- Checked in the app: parking shed shows the group, the summary line and the items in Quantities → Estimate.
+
 ## 2026.11.21-z60
 - `POINTSAUTO` (Site & services → Electrical → Points by room): for every room of the floor without electrical items — by name: toilet / bath (1 light, exhaust, 16 A geyser point), kitchen (lights by area, 2 × 6 A, 16 A, exhaust), store / passage (1 light, 1 socket), others (1 light per 10 m² on a grid, 1 fan or 2 over 20 m², 6 A sockets 1 per 8 m² min 2, 16 A over 12 m²); switch board beside the door (door found on the room edge), wall items on the other edges facing in; a DB beside the switch board of the largest room if the floor has none. `B.mepRoomPlan(doc, room)`.
 - `SCHEDULE` → "Single line": per DB — supply, DP incomer, RCCB (if set), busbar, outgoing MCBs with circuit, rating, cable, load and points; connected load, demand factor 0.75, current at pf 0.9, incomer 32 / 40 / 63 / 80 A and cable 2 × 6 / 10 / 16 / 25 Cu; three-phase advice over 7 kW. `B.mepCircuits(doc, db)`.

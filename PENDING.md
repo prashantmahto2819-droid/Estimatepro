@@ -1,6 +1,6 @@
 # Estimate Pro — pending work (kept with the code; not published)
 
-Last updated at version 2026.11.21-z60.
+Last updated at version 2026.11.21-z61.
 
 ## A. Waiting for the owner
 1. Server work: (-z21) module switches and a shared library of blocks and hatch patterns are built — the owner has to run `server/shared.sql` once in Supabase, then check that a switched-off module disappears for a normal user. Still open: shared 3D models / cut-outs / material pictures (large files — need Supabase Storage), WhatsApp update messages with real pictures attached (needs a sending gateway; links to the pictures are already added).
