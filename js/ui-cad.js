@@ -149,7 +149,7 @@
   }
   CAD.ACTIONS.fullscr = function (ed, C2) {
     var on = !document.body.classList.contains("cadmax"); document.body.classList.toggle("cadmax", on);
-    try { if (on && document.documentElement.requestFullscreen && !document.fullscreenElement) document.documentElement.requestFullscreen().catch(function () {}); if (!on && document.fullscreenElement && document.exitFullscreen) document.exitFullscreen().catch(function () {}); } catch (e) {}
+    try { if (on && document.documentElement.requestFullscreen && !document.fullscreenElement) document.documentElement.requestFullscreen().then(function () { /* Esc stays with the drawing (cancels the command); holding Esc or "Exit full screen" leaves full screen */ try { if (navigator.keyboard && navigator.keyboard.lock) navigator.keyboard.lock(["Escape"]).catch(function () {}); } catch (eK) {} }).catch(function () {}); if (!on) { try { if (navigator.keyboard && navigator.keyboard.unlock) navigator.keyboard.unlock(); } catch (eU) {} } if (!on && document.fullscreenElement && document.exitFullscreen) document.exitFullscreen().catch(function () {}); } catch (e) {}
     var b = C.root && C.root.querySelector("[data-cad=fullscr]"); if (b) { b.setAttribute("aria-pressed", String(on)); b.innerHTML = on ? "⤡ Exit full screen" : "⛶ Full screen"; }
     fitHost(); setTimeout(function () { if (C.ed) { C.ed.resize(); C.ed.dirty = true; } }, 60);
   };

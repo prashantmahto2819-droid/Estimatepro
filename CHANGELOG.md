@@ -3,6 +3,9 @@
 This file is for the people maintaining the app. It is not published with the site (see `.assetsignore`).
 The text users see is `EP_NOTES` in `js/version.js`.
 
+## 2026.11.21-z68
+- CAD full screen: after requestFullscreen, `navigator.keyboard.lock(["Escape"])` (Chrome / Edge) so Esc reaches the command line; unlocked when leaving. Other browsers: the Esc button on the status bar.
+
 ## 2026.11.21-z67
 - Own material pictures: 8 slots (shader uTx0…uTx7, uTxR[8], patterns 20…27; units 2–6 and 13–15); `B.regTex` / `B.addTex` limits 8; unique picture ids (two added in the same millisecond overwrote each other).
 - `B.EXT.model3d.plan`: convex hull of the model's points from above (cached `g._hull`, ≤ 64 corners, sampled to ~40 000 points) with a small centre cross; the box remains only while the model is loading.
