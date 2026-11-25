@@ -3,6 +3,9 @@
 This file is for the people maintaining the app. It is not published with the site (see `.assetsignore`).
 The text users see is `EP_NOTES` in `js/version.js`.
 
+## 2026.11.21-z82
+- Planner: meter board at the gate + 2 earth pits (≥ 5 m apart, IS 3043); parking bays 2.5 × 5 m with cars, aisle, two-wheeler bays; terrace drainage — RWPs at convex corners (1 per 40 m²) and SLOPE 1:100 leaders. Options: meter, roofDrain, park.
+
 ## 2026.11.21-z81
 - Planner: Water & services group — RWH recharge pits (MBBL 2016, plots ≥ 100 m²), septic tank + soak pit (IS 2470) or sewer manhole, underground sump, bore well away from the septic tank, solar water heater; notes in the sanction text. New assets rwh_pit and solar_water_heater.
 

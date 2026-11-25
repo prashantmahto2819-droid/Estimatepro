@@ -129,7 +129,7 @@
     });
     return h + "</div>";
   }
-  function cfgNow() { var t = T(); return { type: t.id, items: items().map(function (x) { var y = Object.assign({}, x); if (y.fl === "") delete y.fl; return y; }), plot: { w: +P.plot.w, d: +P.plot.d }, rules: rulesNow(), floors: +P.floors || 0, facing: P.facing, vastu: !!P.vastu, rate: +(P.rate[t.id] || t.rate), frame: P.frame, furn: P.furn, sbc: P.sbc || 150, persons: t.id === "house" ? (+vals().persons || 5) : Math.max(5, (P.res && P.res.info && P.res.info.occ) || 10), sanction: P.sanc || {}, des: Object.assign({}, des()), name: t.n + " " + P.plot.w + "×" + P.plot.d + " m" }; }
+  function cfgNow() { var t = T(); return { type: t.id, items: items().map(function (x) { var y = Object.assign({}, x); if (y.fl === "") delete y.fl; return y; }), plot: { w: +P.plot.w, d: +P.plot.d }, rules: rulesNow(), floors: +P.floors || 0, facing: P.facing, vastu: !!P.vastu, rate: +(P.rate[t.id] || t.rate), frame: P.frame, furn: P.furn, sbc: P.sbc || 150, cars: t.id === "house" ? (+vals().cars || 0) : null, persons: t.id === "house" ? (+vals().persons || 5) : Math.max(5, (P.res && P.res.info && P.res.info.occ) || 10), sanction: P.sanc || {}, des: Object.assign({}, des()), name: t.n + " " + P.plot.w + "×" + P.plot.d + " m" }; }
   function make() { P.busy = true; U.render(); setTimeout(function () { try { P.res = PL.generate(cfgNow()); P.sel = {}; } catch (er) { console.error(er); P.res = { err: "Could not make the layouts: " + (er && er.message) }; } P.busy = false; U.render(); }, 30); }
   async function build(i) {
     var o = P.res && P.res.opts[i]; if (!o) return; var cfg = cfgNow(), t = T(), d;

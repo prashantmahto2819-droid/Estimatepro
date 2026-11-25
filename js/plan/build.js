@@ -395,7 +395,46 @@
         if (c4) { put("sump_underground", c4, { name: "Underground sump", sc: smH / 1000 }); take(c4, smH, smH); svcNote.push("Underground sump " + (smH / 500).toFixed(1) + " × " + (smH / 500).toFixed(1) + " m, " + (Math.ceil(pers * 135 / 500) * 500) + " L for " + pers + " persons at 135 L/day (NBC 2016)" + (septicAt && dist(c4, septicAt) < 3000 ? " — closer than 3 m to the septic tank, check" : "")); } else svcNote.push("Underground sump: no free space in the yards"); }
       if (des.bore === "yes") { var c5 = spots(250, 250).sort(far)[0];
         if (c5) { put("borewell", c5, { name: "Bore well" }); take(c5, 250, 250); var dd = septicAt ? dist(c5, septicAt) / 1000 : 0; svcNote.push("Bore well" + (septicAt ? " " + dd.toFixed(1) + " m from the septic tank" + (dd < 15 && des.sewer === "septic" ? " (15 m is advised — keep it as far as the plot allows)" : "") : "")); } }
+      /* meter board on the inside face of the front compound wall beside the gate (read from the road), two earth pits
+         (IS 3043: electrodes about twice their length apart — 5 m for 2.5 m pipes) in the yard near it */
+      if (des.meter === "gate" && +des.cwH !== 0 && B.ASSET_LIB.meter_board) {
+        var mbx = [gx + 2100, gx - 2100, (typeof wx === "number" ? wx + 900 : gx + 3000)].filter(function (x) { return x > 600 && x < pw - 600 && (typeof wx !== "number" || Math.abs(x - wx) > 700); })[0];
+        if (mbx) { var mbp = [r1(mbx), 330]; add({ t: "asset", kind: "meter_board", p: mbp, rot: 180, sc: 1, lvl: "L0", layer: "E-POINT", eauto: 1, name: "MB" }); sbusy.push([mbx - 500, 0, mbx + 500, 900]);
+          var e1 = spots(225, 225).sort(function (a, b) { return dist(a, mbp) - dist(b, mbp); })[0], e2 = null;
+          if (e1) { take(e1, 225, 225); var c7 = spots(225, 225); e2 = c7.filter(function (q) { return dist(q, e1) >= 5000; }).sort(function (a, b) { return dist(a, mbp) - dist(b, mbp); })[0] || c7.sort(function (a, b) { return dist(b, e1) - dist(a, e1); })[0]; }
+          [e1, e2].forEach(function (q) { if (q) { add({ t: "asset", kind: "earth_pit", p: [r1(q[0]), r1(q[1])], rot: 0, sc: 1, lvl: "L0", layer: "E-POINT", eauto: 1 }); take(q, 225, 225); } });
+          svcNote.push("Meter board on the front compound wall beside the gate; " + ((e1 ? 1 : 0) + (e2 ? 1 : 0)) + " earth pits" + (e1 && e2 ? " " + (dist(e1, e2) / 1000).toFixed(1) + " m apart" + (dist(e1, e2) < 5000 ? " (5 m advised — check)" : "") : "")); }
+      }
       if (swhN) svcNote.push("Solar water heater: " + swhN + " × 200 L on the terrace (about 25 L per person)");
+    }
+    /* parking: marked bays 2.5 × 5.0 m (NBC / MBBL car space) in every parking area, a 6 m aisle when two rows fit, two-wheeler bays
+       in the strip that is left; cars drawn in as many bays as the owner has cars */
+    if (des.park !== "none" && B.ASSET_LIB && B.ASSET_LIB.parking_bay_car) {
+      var nCar = 0, nBike = 0, carsWant = des.park === "cars" ? (cfg.cars != null ? +cfg.cars : 99) : 0, carsPut = 0;
+      plan.floors[0].forEach(function (r) { var s1 = sp(r); if (!s1 || s1.open !== "park") return; var pr = r.cut ? parts(r).sort(function (a, b) { return b.w * b.d - a.w * a.d; })[0] : r, x0 = pr.x + 0.15, y0 = pr.y + 0.15, w0 = pr.w - 0.3, d0 = pr.d - 0.3;
+        var bay = function (cx, cy, rot) { add({ t: "asset", kind: "parking_bay_car", p: P(cx, cy), rot: rot, lvl: "L0", layer: "A-PARK" }); nCar++; if (carsPut < carsWant && B.ASSET_LIB.car_sedan) { add({ t: "asset", kind: carsPut % 2 ? "car_suv" : "car_sedan", p: P(cx, cy), rot: rot + 90, lvl: "L0", layer: "A-PARK" }); carsPut++; } };
+        var bike = function (cx, cy, rot) { add({ t: "asset", kind: "parking_bay_bike", p: P(cx, cy), rot: rot, lvl: "L0", layer: "A-PARK" }); nBike++; };
+        if (d0 >= 5.0 && w0 >= 2.5) { var rows = d0 >= 16 ? 2 : 1, nx = Math.floor(w0 / 2.5), mx0 = x0 + (w0 - nx * 2.5) / 2;
+          for (var ix = 0; ix < nx; ix++) { bay(mx0 + 1.25 + ix * 2.5, y0 + 2.5, 0); if (rows === 2) bay(mx0 + 1.25 + ix * 2.5, y0 + d0 - 2.5, 0); }
+          var left = rows === 2 ? d0 - 16 : d0 - 5.0, by0 = rows === 2 ? y0 + 5 + 6 : y0 + 5.0; if (rows === 1 && left >= 2.2 && d0 < 11) for (var ib = 0; ib < Math.floor(w0 / 1.0); ib++) bike(x0 + 0.5 + ib * 1.0, by0 + 1.1, 0); }
+        else if (w0 >= 5.0 && d0 >= 2.5) { var ny = Math.floor(d0 / 2.5); for (var iy = 0; iy < ny; iy++) bay(x0 + 2.5, y0 + 1.25 + iy * 2.5, 90); }
+        else if (d0 >= 2.2 && w0 >= 1.0) for (var ib2 = 0; ib2 < Math.floor(w0 / 1.0); ib2++) bike(x0 + 0.5 + ib2 * 1.0, y0 + 1.1, 0);
+      });
+      if (nCar || nBike) { svcNote.push("Parking: " + nCar + " car bay" + (nCar === 1 ? "" : "s") + " 2.5 × 5.0 m" + (nBike ? " + " + nBike + " two-wheeler bays 1.0 × 2.2 m" : "")); if (!d.layers["A-PARK"]) d.layers["A-PARK"] = { color: 8, lw: 0.18, lt: "CONTINUOUS", on: true, lock: false, frz: false }; }
+    }
+    /* roof drainage on a flat terrace: rain-water pipes at the outer corners (about one 110 mm pipe for 40 m² of roof) and slope arrows 1:100 to them */
+    if (!sloped && T.roof !== "gi" && des.roofDrain !== "no") {
+      var ol = olM, ar = 0, cxm = 0, cym = 0; ol.forEach(function (q, j) { var r2 = ol[(j + 1) % ol.length], c = q[0] * r2[1] - r2[0] * q[1]; ar += c / 2; cxm += q[0] / ol.length; cym += q[1] / ol.length; });
+      var sg = ar > 0 ? 1 : -1, cnr = [];
+      ol.forEach(function (q, j) { var a2 = ol[(j - 1 + ol.length) % ol.length], b2 = ol[(j + 1) % ol.length], cr = (q[0] - a2[0]) * (b2[1] - q[1]) - (q[1] - a2[1]) * (b2[0] - q[0]); if (cr * sg > 0) { var u1 = [q[0] - a2[0], q[1] - a2[1]], u2 = [q[0] - b2[0], q[1] - b2[1]], l1 = Math.hypot(u1[0], u1[1]), l2 = Math.hypot(u2[0], u2[1]); cnr.push({ q: q, o: [u1[0] / l1 + u2[0] / l2, u1[1] / l1 + u2[1] / l2] }); } });
+      var nR = Math.max(2, Math.ceil(Math.abs(ar) / 1e6 / 40)), pick = cnr.slice().sort(function (a, b) { return (b.q[1] - a.q[1]) || 0; });
+      /* back corners first (water away from the entrance), then the front ones */
+      pick = pick.slice(0, Math.min(pick.length, nR));
+      pick.forEach(function (c) { var lo = Math.hypot(c.o[0], c.o[1]) || 1, o = [c.o[0] / lo, c.o[1] / lo], rp = [r1(c.q[0] + o[0] * 210), r1(c.q[1] + o[1] * 210)], inr = [c.q[0] - o[0] * 700, c.q[1] - o[1] * 700], tail = [inr[0] + (cxm - inr[0]) * 0.35, inr[1] + (cym - inr[1]) * 0.35];
+        add({ t: "asset", kind: "rwp_110", p: rp, rot: 0, lvl: "L0", layer: "P-FIX", rwp: true, mauto: 1, name: "RWP" });
+        add({ t: "leader", pts: [[r1(inr[0]), r1(inr[1])], [r1(tail[0]), r1(tail[1])]], s: "SLOPE 1:100", lvl: "LT", layer: "A-ANNO" }); });
+      if (!d.layers["A-ANNO"]) d.layers["A-ANNO"] = { color: 7, lw: 0.18, lt: "CONTINUOUS", on: true, lock: false, frz: false };
+      if (pick.length) svcNote.push("Terrace drainage: " + pick.length + " rain-water pipes 110 mm" + (pick.length < nR ? " (" + nR + " needed for " + Math.round(Math.abs(ar) / 1e6) + " m² — add more on the long sides)" : "") + ", roof sloped 1:100 to them" + (des.rwh !== "no" ? "; lead them to the recharge pits" : ""));
     }
     d.planner_svc = svcNote;
     /* frame sizing by load (rule of thumb, IS 456 / IS 875): load on each column from the floor area it carries (half way to the next columns),
