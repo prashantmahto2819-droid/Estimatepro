@@ -3,6 +3,12 @@
 This file is for the people maintaining the app. It is not published with the site (see `.assetsignore`).
 The text users see is `EP_NOTES` in `js/version.js`.
 
+## 2026.11.21-z70
+- New `js/bim/ceil.js`: element `czone` (CEILZONE) — kinds gypsum / grid / wpc / wood / acp / baffle / louvre (`B.CZ_KINDS`), underside `z` (else `B.fceilH` of the room), `dir`, `pw`, `gap`, `start` corner, `slope` (planks step up across it), fascia to the soffit where it steps (not when sloping); plan dashed outline + layout lines; qty area ÷ cos(slope) + fascia; keys grid_ceiling (12.45.3), wpc_ceiling, wood_ceiling, baffle_ceiling, louvre_ceiling (non-SOR), acp_panel, false_ceiling. Properties in ui-assets. `ALIGNWALL`: selected assets turned square to the nearest wall (front = local +y away from it) and set against its face (any angle; one-face walls handled).
+- view3d: "More shadows" 16 more fittings (4 × 4 tiles of 512 in 2048²) — 17 shadowed fittings; SSR rays that leave the screen return the blurred edge colour at 0.35 (horizontal reflections only); drive paths: `mv.stops` (gates gate_ms / sliding / collapsible / rolling within 3 m of the route, mesh.js) — slows and waits 3 s 3.5 m before.
+- runs.js: open kitchen base runs show a corner carousel (pole, two wire trays) at inside corners.
+- ui-assets: material picture "⧉↻" = copy turned 90° (8 slots allow both); My 3D models get a 112 px flat-shaded iso thumbnail when added (`B.glbThumb`).
+
 ## 2026.11.21-z69
 - to3d_b3: builder `cycle_shed` (the only Design Studio module that had none): all three schemes (two rows mono-slope, T with ridge on the post line, cantilever Γ with knee braces), tubular (SHS / RHS boxes) or rolled (ISMB I-sections, ISMC as boxes) read from the result summary, base plates, pedestals and footings from the summary, purlins at the designed spacing, roof sheet; extras: floor slab (paver look), kerb, stands. Checked: Design Studio → Open in CAD gives one dsmodel with 308 parts and renders.
 

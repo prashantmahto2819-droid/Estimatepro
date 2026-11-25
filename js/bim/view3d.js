@@ -64,10 +64,10 @@ uniform sampler2D uSM;
 uniform vec3 uTxR[8];   /* turn (radians) and shift (in picture widths) of each picture */
 uniform sampler2D uTx0,uTx1,uTx2,uTx3,uTx4,uTx5,uTx6,uTx7;   /* the user's own material pictures (pattern 20…27) */
 uniform sampler2D uLS; uniform mat4 uLSm; uniform vec4 uLSp;   /* depth seen from the nearest ceiling light looking down, its matrix, its position (w = on) */
-uniform sampler2D uLS4; uniform mat4 uLS4m[8]; uniform vec4 uLS4p[8];   /* the next eight fittings ("More shadows"): 4 × 2 tiles of one depth picture */
+uniform sampler2D uLS4; uniform mat4 uLS4m[16]; uniform vec4 uLS4p[16];   /* the next sixteen fittings ("More shadows"): 4 × 4 tiles of one depth picture */
 uniform vec4 uPLd[32];  /* direction a fitting shines (xyz) and the cosine of its beam edge (w); w < -1.5 = all round */
 float lampSh4(vec3 P,int k){ vec4 c=uLS4m[k]*vec4(P,1.0); if(c.w<=0.01) return 1.0; vec3 n=c.xyz/c.w*0.5+0.5; if(n.x<0.012||n.x>0.988||n.y<0.012||n.y>0.988||n.z>1.0) return 1.0;
-  vec2 b=n.xy*vec2(0.25,0.5)+vec2(float(k-(k/4)*4)*0.25,float(k/4)*0.5); float s=0.0; vec2 t=vec2(1.0/2048.0,1.0/1024.0); for(int i=0;i<9;i++){ vec2 o=vec2(float(i-(i/3)*3)-1.0,float(i/3)-1.0)*t*1.25; s+=step(n.z-0.0012,texture(uLS4,b+o).r); } return s/9.0; }
+  vec2 b=n.xy*0.25+vec2(float(k-(k/4)*4),float(k/4))*0.25; float s=0.0; vec2 t=vec2(1.0/2048.0); for(int i=0;i<9;i++){ vec2 o=vec2(float(i-(i/3)*3)-1.0,float(i/3)-1.0)*t*1.25; s+=step(n.z-0.0012,texture(uLS4,b+o).r); } return s/9.0; }
 float lampSh(vec3 P){ vec4 c=uLSm*vec4(P,1.0); if(c.w<=0.01) return 1.0; vec3 n=c.xyz/c.w*0.5+0.5; if(n.x<0.01||n.x>0.99||n.y<0.01||n.y>0.99||n.z>1.0) return 1.0;
   float s=0.0, t=1.0/1024.0; for(int i=0;i<4;i++){ vec2 o=vec2(float(i-(i/2)*2)-0.5,float(i/2)-0.5)*t*1.5; s+=step(n.z-0.0009,texture(uLS,n.xy+o).r); } return s*0.25; }
 uniform sampler2D uRC,uRD;  /* the frame before this one — colour and depth — for reflections on water */
@@ -75,10 +75,12 @@ uniform mat4 uVPf; uniform vec3 uRf;   /* uRf: on, near, far */
 float rLin(float d){ return 2.0*uRf.y*uRf.z/(uRf.z+uRf.y-(d*2.0-1.0)*(uRf.z-uRf.y)); }
 /* what a ray from P along R meets on the screen: colour and how sure (0…1) */
 vec4 ssr(vec3 P,vec3 R){
-  float stp=0.25; vec3 p=P+R*0.1;
-  for(int i=0;i<26;i++){ p+=R*stp; stp*=1.16; vec4 c=uVPf*vec4(p,1.0); if(c.w<=0.001) break; vec3 n=c.xyz/c.w; vec2 uv=n.xy*0.5+0.5; if(uv.x<0.0||uv.x>1.0||uv.y<0.0||uv.y>1.0) break;
+  float stp=0.25; vec3 p=P+R*0.1; vec2 lastUV=vec2(-1.0); int out_=0;
+  for(int i=0;i<26;i++){ p+=R*stp; stp*=1.16; vec4 c=uVPf*vec4(p,1.0); if(c.w<=0.001) break; vec3 n=c.xyz/c.w; vec2 uv=n.xy*0.5+0.5; if(uv.x<0.0||uv.x>1.0||uv.y<0.0||uv.y>1.0){ out_=1; break; } lastUV=uv;
     float d=texture(uRD,uv).r; if(d>0.99999) continue; float ls=rLin(d), lr=rLin(n.z*0.5+0.5), df=lr-ls;
     if(df>0.0 && df<max(0.6,stp*2.5)){ vec2 e=min(uv,1.0-uv); float fade=clamp(min(e.x,e.y)*12.0,0.0,1.0)*clamp(1.0-float(i)/26.0,0.0,1.0); return vec4(texture(uRC,uv).rgb,fade); } }
+  /* the ray left the screen: what lies beyond is not known, so the colours at the edge it left by are stretched (blurred) as a faint reflection */
+  if(out_==1 && lastUV.x>=0.0 && R.z<0.35){ vec2 q=clamp(lastUV,0.02,0.98); vec3 sc=(texture(uRC,q).rgb+texture(uRC,q+vec2(0.03,0.0)).rgb+texture(uRC,q-vec2(0.03,0.0)).rgb+texture(uRC,q+vec2(0.0,0.03)).rgb+texture(uRC,q-vec2(0.0,0.03)).rgb)*0.2; return vec4(sc,0.35); }
   return vec4(0.0);
 }
 uniform sampler2D uWM;      /* plan of the walls and columns, one tile per storey (3 × 3): light from fittings stops at them */
@@ -235,7 +237,7 @@ void main(){
   vec3 amb=mix(uGnd,uSky,N.z*0.5+0.5)*uAmb;
   vec3 lit=amb + uSunCol*diff*sh;
   /* light fittings (no shadows): warm point lights that fall off with distance */
-  for(int i=0;i<32;i++){ if(i>=uPLn) break; vec3 toL=uPL[i].xyz-vP; float dL=length(toL); float nl=max(dot(N,toL/max(dL,1e-4)),0.0); float att=uPL[i].w*uPLk*(0.18+0.82*nl)/(1.0+dL*dL*0.16); if(uPLd[i].w>-1.5){ float cs=dot(-toL/max(dL,1e-4),uPLd[i].xyz); att*=smoothstep(uPLd[i].w,min(1.0,uPLd[i].w+0.22),cs); } if(att>0.012){ att*=wmSee(vP+N*0.16,uPL[i].xyz); if(uLSp.w>0.5 && abs(uPL[i].x-uLSp.x)+abs(uPL[i].y-uLSp.y)+abs(uPL[i].z-uLSp.z)<0.02) att*=0.25+0.75*lampSh(vP+N*0.02); else for(int k=0;k<8;k++){ if(uLS4p[k].w>0.5 && abs(uPL[i].x-uLS4p[k].x)+abs(uPL[i].y-uLS4p[k].y)+abs(uPL[i].z-uLS4p[k].z)<0.02){ att*=0.25+0.75*lampSh4(vP+N*0.02,k); break; } } } lit+=uPLc[i]*att; }
+  for(int i=0;i<32;i++){ if(i>=uPLn) break; vec3 toL=uPL[i].xyz-vP; float dL=length(toL); float nl=max(dot(N,toL/max(dL,1e-4)),0.0); float att=uPL[i].w*uPLk*(0.18+0.82*nl)/(1.0+dL*dL*0.16); if(uPLd[i].w>-1.5){ float cs=dot(-toL/max(dL,1e-4),uPLd[i].xyz); att*=smoothstep(uPLd[i].w,min(1.0,uPLd[i].w+0.22),cs); } if(att>0.012){ att*=wmSee(vP+N*0.16,uPL[i].xyz); if(uLSp.w>0.5 && abs(uPL[i].x-uLSp.x)+abs(uPL[i].y-uLSp.y)+abs(uPL[i].z-uLSp.z)<0.02) att*=0.25+0.75*lampSh(vP+N*0.02); else for(int k=0;k<16;k++){ if(uLS4p[k].w>0.5 && abs(uPL[i].x-uLS4p[k].x)+abs(uPL[i].y-uLS4p[k].y)+abs(uPL[i].z-uLS4p[k].z)<0.02){ att*=0.25+0.75*lampSh4(vP+N*0.02,k); break; } } } lit+=uPLc[i]*att; }
   /* walk-through: a soft warm light carried by the viewer, so rooms the sun does not reach are still readable */
   if(uHead>0.01){ vec3 toE=uEye-vP; float dE=length(toE); lit+=vec3(1.0,0.95,0.86)*uHead*(0.35+0.65*max(dot(N,toE/max(dE,1e-4)),0.0))/(1.0+dE*dE*0.012); }
 
@@ -1057,12 +1059,12 @@ P.prototype.render=function(pick){
     gl.colorMask(true,true,true,true); gl.bindFramebuffer(gl.FRAMEBUFFER,null); this._ls={m:lvm,p:Lg};
     this._ls4=null;
     if(this.lampShadowAll && this.lights.length>1){   /* "More shadows": the next three fittings nearest to the view throw shadows too */
-      const tC2=this.walk&&this.we?this.we:this.t, d2=function(a){ return (a[0]-tC2[0])*(a[0]-tC2[0])+(a[1]-tC2[1])*(a[1]-tC2[1])+(a[2]-tC2[2])*(a[2]-tC2[2]); }, more=this.lights.slice().sort(function(a,b){ return d2(a)-d2(b); }).slice(1,9);
-      if(!this.ls4FB){ const tex=gl.createTexture(); gl.activeTexture(gl.TEXTURE12); gl.bindTexture(gl.TEXTURE_2D,tex); gl.texImage2D(gl.TEXTURE_2D,0,gl.DEPTH_COMPONENT24,2048,1024,0,gl.DEPTH_COMPONENT,gl.UNSIGNED_INT,null);
+      const tC2=this.walk&&this.we?this.we:this.t, d2=function(a){ return (a[0]-tC2[0])*(a[0]-tC2[0])+(a[1]-tC2[1])*(a[1]-tC2[1])+(a[2]-tC2[2])*(a[2]-tC2[2]); }, more=this.lights.slice().sort(function(a,b){ return d2(a)-d2(b); }).slice(1,17);
+      if(!this.ls4FB){ const tex=gl.createTexture(); gl.activeTexture(gl.TEXTURE12); gl.bindTexture(gl.TEXTURE_2D,tex); gl.texImage2D(gl.TEXTURE_2D,0,gl.DEPTH_COMPONENT24,2048,2048,0,gl.DEPTH_COMPONENT,gl.UNSIGNED_INT,null);
         gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.NEAREST); gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,gl.NEAREST); gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_COMPARE_MODE,gl.NONE); gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE); gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE);
         const fb=gl.createFramebuffer(); gl.bindFramebuffer(gl.FRAMEBUFFER,fb); gl.framebufferTexture2D(gl.FRAMEBUFFER,gl.DEPTH_ATTACHMENT,gl.TEXTURE_2D,tex,0); gl.drawBuffers([gl.NONE]); gl.readBuffer(gl.NONE); gl.bindTexture(gl.TEXTURE_2D,null); gl.activeTexture(gl.TEXTURE0); this.ls4FB=fb; this.ls4Tex=tex; }
       gl.activeTexture(gl.TEXTURE12); gl.bindTexture(gl.TEXTURE_2D,null); gl.activeTexture(gl.TEXTURE0);
-      gl.bindFramebuffer(gl.FRAMEBUFFER,this.ls4FB); gl.viewport(0,0,2048,1024); gl.colorMask(false,false,false,false); gl.depthMask(true); gl.clear(gl.DEPTH_BUFFER_BIT); gl.enable(gl.DEPTH_TEST); gl.depthFunc(gl.LESS); gl.useProgram(this.sp); gl.bindVertexArray(this.vaoOpS);
+      gl.bindFramebuffer(gl.FRAMEBUFFER,this.ls4FB); gl.viewport(0,0,2048,2048); gl.colorMask(false,false,false,false); gl.depthMask(true); gl.clear(gl.DEPTH_BUFFER_BIT); gl.enable(gl.DEPTH_TEST); gl.depthFunc(gl.LESS); gl.useProgram(this.sp); gl.bindVertexArray(this.vaoOpS);
       const out4=[]; for(let k=0;k<more.length;k++){ const q=more[k], m4=lampVP(q); gl.viewport((k%4)*512,Math.floor(k/4)*512,512,512); gl.uniformMatrix4fv(this.sp.u.uVP,false,m4); gl.drawArrays(gl.TRIANGLES,0,this.opN); out4.push({m:m4,p:q}); }
       gl.bindVertexArray(null); gl.colorMask(true,true,true,true); gl.bindFramebuffer(gl.FRAMEBUFFER,null); this._ls4=out4; }
   }catch(eL){ this._ls4=null; this.lampShadow=false; this._ls=null; gl.colorMask(true,true,true,true); gl.bindFramebuffer(gl.FRAMEBUFFER,null); } }
@@ -1138,7 +1140,7 @@ P.prototype.render=function(pick){
   const u=this.mp.u;
   gl.uniformMatrix4fv(u.uVP,false,vp);
   gl.uniformMatrix4fv(u.uL,false,lvp);
-  { if(!this._ls4Loc) this._ls4Loc={s:gl.getUniformLocation(this.mp,'uLS4'),m:gl.getUniformLocation(this.mp,'uLS4m'),p:gl.getUniformLocation(this.mp,'uLS4p')}; const L4=this._ls4||[], pm=new Float32Array(128), pp=new Float32Array(32); for(let k=0;k<8;k++){ if(L4[k]){ pm.set(L4[k].m,k*16); pp[k*4]=L4[k].p[0]; pp[k*4+1]=L4[k].p[1]; pp[k*4+2]=L4[k].p[2]; pp[k*4+3]=1; } }
+  { if(!this._ls4Loc) this._ls4Loc={s:gl.getUniformLocation(this.mp,'uLS4'),m:gl.getUniformLocation(this.mp,'uLS4m'),p:gl.getUniformLocation(this.mp,'uLS4p')}; const L4=this._ls4||[], pm=new Float32Array(256), pp=new Float32Array(64); for(let k=0;k<16;k++){ if(L4[k]){ pm.set(L4[k].m,k*16); pp[k*4]=L4[k].p[0]; pp[k*4+1]=L4[k].p[1]; pp[k*4+2]=L4[k].p[2]; pp[k*4+3]=1; } }
     gl.activeTexture(gl.TEXTURE12); gl.bindTexture(gl.TEXTURE_2D,L4.length?this.ls4Tex:null); gl.activeTexture(gl.TEXTURE0); gl.uniform1i(this._ls4Loc.s,12); if(this._ls4Loc.m) gl.uniformMatrix4fv(this._ls4Loc.m,false,pm); if(this._ls4Loc.p) gl.uniform4fv(this._ls4Loc.p,pp); }
   { if(!this._lsLoc) this._lsLoc={s:gl.getUniformLocation(this.mp,'uLS'),m:gl.getUniformLocation(this.mp,'uLSm'),p:gl.getUniformLocation(this.mp,'uLSp')}; const LS=this._ls;
     gl.activeTexture(gl.TEXTURE11); gl.bindTexture(gl.TEXTURE_2D,LS?this.lsTex:null); gl.activeTexture(gl.TEXTURE0); gl.uniform1i(this._lsLoc.s,11);
@@ -1597,7 +1599,7 @@ P.prototype._drawMovers=function(prog,full){
       if(!m.mv.tt){   /* it slows for the corners (and to turn round at the ends of an open route): time along the route, every quarter metre */
         const cs=[]; for(let i=1;i<PT.length-1;i++){ const a1=Math.atan2(PT[i][1]-PT[i-1][1],PT[i][0]-PT[i-1][0]), a2=Math.atan2(PT[i+1][1]-PT[i][1],PT[i+1][0]-PT[i][0]); let da=Math.abs(a2-a1); if(da>Math.PI) da=2*Math.PI-da; if(da>0.35) cs.push(cum[i]); }
         if(m.mv.loop){ cs.push(0); cs.push(Lp); } const ends=m.mv.loop?[]:[0,Lp], n=Math.max(2,Math.ceil(Lp/0.25)), tt=new Float32Array(n+1); let T=0;
-        for(let i=0;i<n;i++){ const sm=(i+0.5)*Lp/n; let f=1; cs.forEach(c=>{ f=Math.min(f,0.42+0.58*Math.min(1,Math.abs(sm-c)/3.5)); }); ends.forEach(c=>{ f=Math.min(f,0.25+0.75*Math.min(1,Math.abs(sm-c)/4)); }); T+=(Lp/n)/(v*f); tt[i+1]=T; }
+        for(let i=0;i<n;i++){ const sm=(i+0.5)*Lp/n; let f=1; cs.forEach(c=>{ f=Math.min(f,0.42+0.58*Math.min(1,Math.abs(sm-c)/3.5)); }); (m.mv.stops||[]).forEach(c=>{ f=Math.min(f,0.2+0.8*Math.min(1,Math.abs(sm-(c-3.5))/5)); }); ends.forEach(c=>{ f=Math.min(f,0.25+0.75*Math.min(1,Math.abs(sm-c)/4)); }); T+=(Lp/n)/(v*f); (m.mv.stops||[]).forEach(c=>{ const st=Math.max(0,c-3.5), s0=i*Lp/n, s1=(i+1)*Lp/n; if(st>=s0&&st<s1) T+=3; }); tt[i+1]=T; }
         m.mv.tt=tt; m.mv.T=T; }
       const tt=m.mv.tt, TT=m.mv.T, cyc=m.mv.loop?TT:2*TT; let tc=t%cyc, back=false; if(tc>TT){ back=true; tc=2*TT-tc; }
       let lo=0, hi=tt.length-1; while(hi-lo>1){ const md=(lo+hi)>>1; if(tt[md]<=tc) lo=md; else hi=md; } const seg=Lp/(tt.length-1); let s=(lo+(tc-tt[lo])/((tt[hi]-tt[lo])||1))*seg;

@@ -145,6 +145,9 @@
       var segsAll = segsOf(p, e.closed), prevS = sIdx > 0 ? segsAll[sIdx - 1] : null, cut0 = 0;
       if (prevS) { var pu = G.norm(G.sub(prevS[1], prevS[0])), pn = [pu[1] * side, -pu[0] * side]; if (pn[0] * u[0] + pn[1] * u[1] > 0.5) cut0 = Math.min(dp, len0 - 100); }
       var a0 = a; a = [a[0] + u[0] * cut0, a[1] + u[1] * cut0]; var len = len0 - cut0; if (len < 50) return;
+      /* shutters open on a kitchen base run: the corner carousel (two round wire trays on a pole) shows in the inside corner */
+      if (cut0 > 0 && e.open && /kitchen/.test(e.kind || "") && (D.z || 0) < 400 && H.cyl) { var cc = [a0[0] + u[0] * dp * 0.5 + nv[0] * dp * 0.5, a0[1] + u[1] * dp * 0.5 + nv[1] * dp * 0.5], rr = dp * 0.42, wl = B.look("steel_ss");
+        H.cyl(M, cc, 12, z0 + 30, z0 + Hh - 40, wl, 8); [0.18, 0.58].forEach(function (f) { var zt = z0 + Hh * f; H.cyl(M, cc, rr, zt, zt + 6, wl, 24); for (var wi = 0; wi < 10; wi++) { var wa = wi / 10 * Math.PI * 2; H.cyl(M, [cc[0] + Math.cos(wa) * rr, cc[1] + Math.sin(wa) * rr], 3, zt + 6, zt + 70, wl, 4); } }); }
       var at = function (d, off) { return [a[0] + u[0] * d + nv[0] * off, a[1] + u[1] * d + nv[1] * off]; }, st = function (d0, d1, o0, o1, za, zb, look) { if (d1 - d0 < 0.5 || zb - za < 0.5 || o1 - o0 < 0.5) return; H.boxAlong(M, at(d0, (o0 + o1) / 2), at(d1, (o0 + o1) / 2), o1 - o0, z0 + za, z0 + zb, look); };
       var n = Math.max(1, Math.round(len / mw)), cw = len / n, F = dp - 18;
       if (D.back) { st(0, len, 0, 18, -D.z + 100 > 0 ? 0 : 0, D.back, own); st(len * 0.12, len * 0.88, 18, 22, Hh + 40, Hh + 52, led); st(len * 0.1, len * 0.9, 18, 240, Hh + 950, Hh + 980, own); }
