@@ -157,6 +157,24 @@
     stage: s({ n: "Stage", hi: "मंच", z: 2, S: [6, 4], M: [8, 4.5], L: [10, 5], minW: 3.6, win: "none", fl: "G", furn: "none", asp: 3 }),
     green: s({ n: "Green room", hi: "ग्रीन रूम", z: 4, S: [3.0, 3.3], M: [3.0, 3.6], L: [3.6, 4.2], minW: 2.7, win: "hab", att: "toilet_att", fl: "G", furn: "cabin" }),
     hall_kit: s({ n: "Kitchen", hi: "रसोई", z: 3, S: [3.6, 4.2], M: [4.2, 5.4], L: [5.4, 6.0], minW: 3.0, wet: 1, win: "kit", fl: "G", furn: "ckitchen", fin: "ceramic", door: "D4" }),
+    /* ---------- apartments, shops, factory, government buildings ---------- */
+    flat: s({ n: "Flat", hi: "फ़्लैट", z: 4, S: [7.2, 9.0], M: [7.8, 9.0], L: [9.6, 9.6], minW: 6.0, win: "hab", unit: 1, furn: "none", asp: 2.2 }),
+    flobby: s({ n: "Entrance lobby", hi: "प्रवेश लॉबी", z: 1, S: [3.6, 4.2], M: [4.5, 6.0], L: [6.0, 7.2], minW: 3.0, win: "hab", circ: 1, fl: "G", furn: "lobby", main: 1, asp: 2.6 }),
+    stilt: s({ n: "Stilt parking", hi: "स्टिल्ट पार्किंग", z: 0, S: [10, 10], M: [12, 12], L: [15, 15], minW: 5.0, open: "park", fl: "G", fin: "kota", win: "none", asp: 4 }),
+    shop: s({ n: "Shop", hi: "दुकान", z: 1, S: [3.0, 4.5], M: [3.6, 6.0], L: [4.5, 7.5], minW: 2.7, win: "none", fl: "G", shop: 1, furn: "shop", fin: "vitrified", asp: 2.6 }),
+    showroom: s({ n: "Showroom / office hall", hi: "शोरूम / ऑफ़िस हॉल", z: 2, S: [6, 8], M: [8, 10], L: [10, 12], minW: 5.0, win: "hall", furn: "work", asp: 2.6 }),
+    prodhall: s({ n: "Production hall", hi: "प्रोडक्शन हॉल", z: 2, S: [15, 20], M: [20, 30], L: [24, 40], minW: 12, win: "hall", circ: 1, fl: "G", furn: "none", main: 1, fin: "ips", asp: 3 }),
+    godown: s({ n: "Godown / store", hi: "गोदाम", z: 3, S: [10, 15], M: [12, 20], L: [15, 25], minW: 8, win: "store", fl: "G", furn: "none", fin: "ips", door: "RS1", asp: 3 }),
+    loading: s({ n: "Loading / unloading bay", hi: "लोडिंग बे", z: 0, S: [4, 8], M: [5, 10], L: [6, 12], minW: 3.6, open: "park", fl: "G", fin: "ips", win: "none", asp: 3 }),
+    fofice: s({ n: "Factory office", hi: "फ़ैक्ट्री ऑफ़िस", z: 1, S: [3.6, 4.2], M: [4.2, 6.0], L: [6, 7.2], minW: 3.0, win: "hab", fl: "G", furn: "office" }),
+    awhall: s({ n: "Activity room (children)", hi: "गतिविधि कक्ष", z: 1, S: [5.0, 6.0], M: [6.0, 6.0], L: [6.0, 7.5], minW: 4.5, win: "hall", circ: 1, fl: "G", furn: "none", main: 1, asp: 2 }),
+    awkit: s({ n: "Kitchen (anganwadi)", hi: "रसोई", z: 3, S: [2.4, 3.0], M: [3.0, 3.0], L: [3.0, 3.6], minW: 2.1, wet: 1, win: "kit", fl: "G", furn: "kitchen", fin: "ceramic", door: "D2" }),
+    verandah: s({ n: "Verandah", hi: "बरामदा", z: 0, S: [2.0, 6.0], M: [2.4, 8.0], L: [3.0, 10.0], minW: 1.8, open: "park", fl: "G", fin: "kota", win: "none", asp: 6 }),
+    meeting: s({ n: "Meeting hall", hi: "बैठक हॉल", z: 1, S: [6, 8], M: [7.2, 10], L: [9, 12], minW: 5.4, win: "hall", circ: 1, fl: "G", furn: "seminar", main: 1, asp: 2.4 }),
+    sarpanch: s({ n: "Sarpanch room", hi: "सरपंच कक्ष", z: 2, S: [3.0, 3.6], M: [3.6, 4.2], L: [4.2, 4.8], minW: 2.7, win: "hab", fl: "G", furn: "cabin_big" }),
+    secretary: s({ n: "Secretary / office", hi: "सचिव / कार्यालय", z: 2, S: [3.0, 3.6], M: [3.6, 4.2], L: [4.2, 4.8], minW: 2.7, win: "hab", fl: "G", furn: "office" }),
+    exam_r: s({ n: "Examination room", hi: "जाँच कक्ष", z: 2, S: [3.0, 3.6], M: [3.6, 4.2], L: [4.2, 4.8], minW: 2.7, win: "hab", fl: "G", furn: "opd" }),
+    staffq: s({ n: "Staff quarter (1 room + kitchen + toilet)", hi: "स्टाफ क्वार्टर", z: 4, S: [3.6, 6.0], M: [4.2, 6.6], L: [4.8, 7.2], minW: 3.3, win: "hab", att: "toilet_att", fl: "G", furn: "bed2" }),
     corridor: s({ n: "Corridor", hi: "गलियारा", z: 2, S: [1.8, 10], M: [2.4, 10], L: [3.0, 10], minW: 1.5, circ: 1, win: "none", asp: 99, auto: 1, corr: 1 })
   };
 
@@ -346,7 +364,47 @@
       blocks(L, { k: "assembly", m: Math.ceil(s * 0.55), f: Math.ceil(s * 0.45) }, false); L.push(it("toilet_pwd", 1, { fl: "G" }));
       return L;
     } };
-  PL.ORDER = ["house", "office", "school", "college", "hospital", "hotel", "hostel", "canteen", "hall"];
+  T.apartment = { plot: [30, 40], n: "Apartment / flats", hi: "अपार्टमेंट / फ़्लैट", icon: "🏬", mode: "corr", h: 3000, occ: 12.5, stairW: 1.25, band: 9.0, cw: 1.8, grp: "A", rate: 24000, rules: "res",
+    inputs: [
+      { k: "flats", n: "Total flats", hi: "कुल फ़्लैट", def: 16, min: 2, max: 400 },
+      { k: "bhk", n: "Flat type (bed rooms 1–4)", hi: "फ़्लैट का प्रकार (BHK)", def: 2, min: 1, max: 4 },
+      { k: "stilt", n: "Stilt parking on the ground floor", hi: "नीचे स्टिल्ट पार्किंग", def: 1, bool: 1 }
+    ],
+    program: function (v) {
+      var L = [], bhk = Math.max(1, Math.min(4, v.bhk | 0)), area = [0, 48, 72, 98, 125][bhk];
+      L.push(it("flobby")); L.push(it("security", 1, { opt: 1 })); L.push(it("elec", 1, { opt: 1 }));
+      if (v.stilt) L.push(it("stilt", 1, { area: 40 }));
+      L.push(it("flat", v.flats, { area: area, unit: { beds: bhk, attached: Math.max(1, bhk - 1) }, fl: v.stilt ? "up" : "any" }));
+      L.push(it("stair", 1, { opt: 1 })); L.push(it("lift", 1, { auto: "lift" }));
+      return L;
+    } };
+  T.shops = { plot: [20, 25], n: "Shops / commercial complex", hi: "दुकानें / कॉम्प्लेक्स", icon: "🏪", mode: "band", h: 3600, occ: 3, stairW: 1.5, grp: "C", rate: 22000, rules: "com", fixk: "office",
+    inputs: [
+      { k: "shops", n: "Shops on the ground floor", hi: "दुकानें", def: 6, min: 1, max: 60 },
+      { k: "halls", n: "Office / showroom halls above", hi: "ऊपर हॉल", def: 2, min: 0, max: 20 }
+    ],
+    program: function (v) { var L = []; L.push(it("shop", v.shops, { main: 1 })); if (v.halls) L.push(it("showroom", v.halls, { fl: "up" })); L.push(it("store_g"));
+      blocks(L, { k: "office", m: Math.ceil(v.shops * 2 + v.halls * 8), f: Math.ceil(v.shops + v.halls * 5) }, false); L.push(it("stair", 1, { opt: 1 })); return L; } };
+  T.factory = { plot: [40, 60], n: "Factory / godown", hi: "फ़ैक्ट्री / गोदाम", icon: "🏭", mode: "band", h: 6000, occ: 10, stairW: 1.5, grp: "C", rate: 16000, rules: "ind", single: 1, roof: "gi", fixk: "office",
+    inputs: [
+      { k: "hall", n: "Production hall area m²", hi: "हॉल क्षेत्रफल", def: 600, min: 50, max: 20000 },
+      { k: "godown", n: "Godown area m²", hi: "गोदाम क्षेत्रफल", def: 200, min: 0, max: 20000 },
+      { k: "workers", n: "Workers", hi: "मज़दूर", def: 40, min: 2, max: 2000 }
+    ],
+    program: function (v) { var L = []; L.push(it("prodhall", 1, { area: v.hall })); if (v.godown) L.push(it("godown", 1, { area: v.godown })); L.push(it("loading")); L.push(it("fofice")); L.push(it("security"));
+      L.push(it("ckitchen", 1, { area: Math.max(12, Math.round(v.workers * 0.25)), name: "Canteen / rest room" })); blocks(L, { k: "office", m: Math.ceil(v.workers * 0.7), f: Math.ceil(v.workers * 0.3) }, false); return L; } };
+  T.anganwadi = { plot: [15, 20], n: "Anganwadi centre", hi: "आंगनबाड़ी केंद्र", icon: "🧒", mode: "band", h: 3300, occ: 4, stairW: 1.0, grp: "C", rate: 20000, rules: "inst", single: 1,
+    inputs: [{ k: "kids", n: "Children", hi: "बच्चे", def: 40, min: 10, max: 120 }],
+    program: function (v) { var L = []; L.push(it("verandah")); L.push(it("awhall", 1, { area: Math.max(25, Math.round(v.kids * 0.8)) })); L.push(it("awkit")); L.push(it("store")); L.push(it("toilet", 2, { name: "Child-friendly toilet" })); L.push(it("handwash", 1, { area: 3 })); return L; } };
+  T.panchayat = { plot: [20, 25], n: "Panchayat bhawan", hi: "पंचायत भवन", icon: "🏛", mode: "band", h: 3600, occ: 1.5, stairW: 1.2, grp: "C", rate: 20000, rules: "inst", single: 1,
+    inputs: [{ k: "seats", n: "Meeting hall seats", hi: "बैठक सीट", def: 60, min: 10, max: 300 }],
+    program: function (v) { var L = []; L.push(it("verandah")); L.push(it("meeting", 1, { area: Math.max(40, Math.round(v.seats * 1.0)) })); L.push(it("sarpanch")); L.push(it("secretary")); L.push(it("records")); L.push(it("store"));
+      blocks(L, { k: "assembly", m: Math.ceil(v.seats * 0.6), f: Math.ceil(v.seats * 0.4) }, false); return L; } };
+  T.hwc = { plot: [20, 25], n: "Sub-health centre (HWC)", hi: "उप-स्वास्थ्य केंद्र (HWC)", icon: "⚕", mode: "band", h: 3300, occ: 15, stairW: 1.2, grp: "C", rate: 24000, rules: "inst", single: 1,
+    inputs: [{ k: "labour", n: "Labour room", hi: "प्रसव कक्ष", def: 1, bool: 1 }, { k: "qtr", n: "Staff quarter", hi: "स्टाफ क्वार्टर", def: 1, bool: 1 }],
+    program: function (v) { var L = []; L.push(it("verandah")); L.push(it("opd_wait", 1, { area: 20, name: "Waiting" })); L.push(it("exam_r", 2)); if (v.labour) L.push(it("labour", 1, { area: 20 })); L.push(it("pharmacy", 1, { area: 9, name: "Medicine store" })); L.push(it("hlab", 1, { area: 9, name: "Lab / sample collection" }));
+      L.push(it("toilet", 2)); if (v.qtr) L.push(it("staffq")); return L; } };
+  PL.ORDER = ["house", "apartment", "office", "shops", "school", "college", "hospital", "hwc", "hotel", "hostel", "canteen", "hall", "factory", "anganwadi", "panchayat"];
 
   /* ---------- rules (indicative defaults — always check with the local authority) ---------- */
   PL.RULESETS = {
@@ -362,6 +420,7 @@
       if (A <= 500) return { f: 4.5, r: 2.0, l: 1.5, rt: 1.5, cov: set === "cg" ? 50 : 55, far: 1.5, h: 15 };
       return { f: 6.0, r: 3.0, l: 3.0, rt: 3.0, cov: 40, far: 1.25, h: 15 };
     }
+    if (kind === "ind") return { f: 6.0, r: 3.0, l: 3.0, rt: 3.0, cov: 60, far: 1.5, h: 15 };
     if (kind === "com") { if (A <= 500) return { f: 4.5, r: 3.0, l: 1.5, rt: 1.5, cov: 50, far: 1.5, h: 15 }; return { f: 6.0, r: 3.0, l: 3.0, rt: 3.0, cov: 40, far: 1.5, h: 18 }; }
     if (A <= 2000) return { f: 6.0, r: 3.0, l: 3.0, rt: 3.0, cov: 35, far: 1.0, h: 15 };
     return { f: 9.0, r: 6.0, l: 6.0, rt: 6.0, cov: 30, far: 1.0, h: 18 };

@@ -3,6 +3,12 @@
 This file is for the people maintaining the app. It is not published with the site (see `.assetsignore`).
 The text users see is `EP_NOTES` in `js/version.js`.
 
+## 2026.11.21-z76
+- spaces.js: types apartment (flat units {unit:{beds,attached}}, stilt), shops (sp.shop → RS shutter on the road side, scored like parking), factory (T.roof "gi": gable GI roof instead of the top slab, no parapet), anganwadi, panchayat, hwc; rules kind "ind"; ~20 new spaces.
+- layout.js: PL.corrU (wings at both ends, six bands) + PL.uNeed, chosen when L does not fit; PL.expandUnits lays every flat out with the house programme inside its rectangle (band search, unitExt "b" scoring, cached per size, entry from the corridor), apartment ground-floor leftovers → stilt parking; 'up' rooms spread over all upper floors; floors loop keeps the least-bad result when nothing fits; PL.checks: travel to stair (30 m, 45 factory), 2 stairs over 500 m² or 15 m, 15 m fire NOC, hospital ramp / bed lift, cross ventilation %, west-only bed rooms; LR core offered from 24 m; svg: data-plroom + selection.
+- build.js: openings from passages / lobbies / corridors into the circulation they join (houses had passages with no way in); shop shutters; frame sizing (tributary area to the nearest columns, 11 / 13 / 8 kN/m² per floor, M20 Fe500 0.8 %, footing from SBC, D ≥ B/4, beam D ≥ span/12) → d.planner_frame; sanction text block (owner, address / khasra, ward, architect, reg) + setback dims on layer DIM.
+- ui-plan.js: presets for apartment / shops / factory; SBC field; sanction details; swap two rooms by tapping; Report / PDF (window.open, else .html download) with plans, room schedule vs NBC minimums, Vastu table, rules, checks, floors −1 / +1 comparison; column schedule in the drawing set.
+
 ## 2026.11.21-z75
 - FIX: js/version.js EP_NOTES of z74 had raw newlines (re.sub turned "\\n" into a line break) → the file threw a syntax error on load; notes written with escaped \n again.
 - Planner L-shaped corridor buildings (PL.corrL, PL.lNeed): wing A along the road + wing B at the right / left end, core at the corner, four bands (front A, back A, wing B both sides, corridor A continues into wing B); chosen when a straight block does not fit the plot width but the L fits depth and coverage. plan.outline polygon → slabs, parapet, SVG outline, built-up area (PL.footArea); score uses true outer-wall length (PL.extLen) for shaped plans; mumty door side tested against the outline.

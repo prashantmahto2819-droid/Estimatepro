@@ -55,7 +55,8 @@
     var target = sum(rest, size) / nF;
     /* ground-floor rooms that do not fit on the ground floor go up first (entry and public rooms stay down) */
     if (nF > 1 && cap > 0) { G.sort(function (a, b) { return (b.main ? 1 : 0) - (a.main ? 1 : 0) || a.z - b.z; }); var acc = 0, keep = [], over = []; G.forEach(function (x) { if (acc + size(x) <= cap * 1.02 || !keep.length) { keep.push(x); acc += size(x); } else over.push(x); }); G = keep; any = over.concat(any); target = Math.max(target, 0); }
-    G.forEach(function (x) { F[0].push(x); }); up.forEach(function (x) { F[nF > 1 ? 1 : 0].push(x); });
+    G.forEach(function (x) { F[0].push(x); });
+    if (nF > 1 && up.length) { var tU = (sum(up, size) + sum(any, size)) / (nF - 1), fu = 1; up.forEach(function (x) { while (fu < nF - 1 && sum(F[fu], size) + size(x) / 2 > tU) fu++; F[fu].push(x); }); } else up.forEach(function (x) { F[0].push(x); });
     any = any.filter(function (x) { return x.fl === "G"; }).concat(any.filter(function (x) { return x.fl !== "G"; }).sort(function (a, b) { return a.z - b.z; }));
     var fi = 0, A = function (k) { return sum(F[k], size); };
     /* same rooms (e.g. class rooms) stay together; fill floor by floor */
@@ -232,7 +233,7 @@
   function coreItems(list) { return list.filter(function (x) { return x.fl === "all"; }); }
   PL.corrPlans = function (T, F, W, D, cfg, dbl) {
     var db = T.band, cw = T.cw, out = [];
-    var poss = W > 32 ? ["L", "R", "C", "LR"] : ["L", "R", "C"];
+    var poss = W > 24 ? ["L", "R", "C", "LR"] : ["L", "R", "C"];
     poss.forEach(function (cp) { [false, true].forEach(function (mirror) { var p = corrVariant(T, F, W, D, db, cw, dbl, { core: cp, mirror: mirror }, cfg); if (p) out.push(p); }); });
     return out;
   };
@@ -324,6 +325,80 @@
     F.forEach(function (l) { var core = coreLen(coreItems(l), db), L = sum(l.filter(function (x) { return x.fl !== "all"; }), function (x) { return colW(x, db); }) * 1.04; var rem = L - La - Math.max(0, xc - db - core); need = Math.max(need, rem > 0 ? (rem - cw) / 2 : 0); });
     return r2(Math.max(db + 2, need)); };
 
+  /* ---------------- U-shaped corridor building (wings at both ends, open court at the back) ---------------- */
+  PL.corrU = function (T, F, La, Ytop, cfg) {
+    var db = T.band, cw = T.cw, Dd = 2 * db + cw, xl = db, xr = r2(La - db - cw), floors = [], ok = true, Lb = r2(Ytop - (db + cw));
+    var bx0 = 2 * db + cw, bx1 = xr - db; if (bx1 - bx0 < 6 || Ytop < Dd + db + 2) return null;
+    F.forEach(function (list) {
+      var core = coreItems(list), rest = list.filter(function (x) { return x.fl !== "all"; }), rooms = [], C = coreLayout(core, db, "L", 0, T)[0].cols, cwid = sum(C, function (k) { return k.w; }), cx = bx1 - cwid; if (cx - bx0 < 3) { ok = false; return; }
+      var x = cx; C.forEach(function (k) { if (k.it.sp.lift) { var ld = Math.min(db, (k.it.sp.M[1] || 2.2) + (k.it.wid ? 0.6 : 0)); rooms.push(room(k.it, x, db + cw, k.w, ld, { z: 3 })); if (db - ld > 0.9) rooms.push(room(null, x, db + cw + ld, k.w, db - ld, { z: 3, key: "duct", name: "Duct / store", fill: 1 })); } else rooms.push(room(k.it, x, db + cw, k.w, db, { z: 3 })); x += k.w; });
+      var ord = rest.slice().sort(function (a, b) { return (b.main ? 1 : 0) - (a.main ? 1 : 0) || a.z - b.z; }), caps = [La, cx - bx0, Lb, Lb + cw, Lb, Lb + cw], bands = [[], [], [], [], [], []], acc = [0, 0, 0, 0, 0, 0], bi = 0;
+      ord.forEach(function (it) { var w = colW(it, db); while (bi < 5 && acc[bi] + w / 2 > caps[bi]) bi++; bands[bi].push(it); acc[bi] += w; });
+      var main = bands[0].filter(function (q) { return q.main; })[0]; if (main) { bands[0] = bands[0].filter(function (q) { return q !== main; }); bands[0].splice(Math.floor(bands[0].length / 2), 0, main); }
+      rooms = rooms.concat(bandRooms(bands[0], La, db, "top", function (r) { return { x: r.x, y: r.y, w: r.w, d: r.d }; }));
+      rooms = rooms.concat(bandRooms(bands[1], cx - bx0, db, "bottom", function (r) { return { x: bx0 + r.x, y: db + cw + r.y, w: r.w, d: r.d }; }));
+      rooms = rooms.concat(bandRooms(bands[2], Lb, db, "bottom", function (r) { return { x: xr - r.y - r.d, y: db + cw + r.x, w: r.d, d: r.w }; }));
+      rooms = rooms.concat(bandRooms(bands[3], Lb + cw, db, "bottom", function (r) { return { x: xr + cw + r.y, y: db + r.x, w: r.d, d: r.w }; }));
+      rooms = rooms.concat(bandRooms(bands[4], Lb, db, "bottom", function (r) { return { x: xl + cw + r.y, y: db + cw + r.x, w: r.d, d: r.w }; }));
+      rooms = rooms.concat(bandRooms(bands[5], Lb + cw, db, "bottom", function (r) { return { x: xl - r.y - r.d, y: db + r.x, w: r.d, d: r.w }; }));
+      rooms.push(room(null, xl, db, xr + cw - xl, cw, { z: 2, pass: 1, corr: 1, name: "Corridor", key: "corridor" }));
+      rooms.push(room(null, xr, db + cw, cw, Lb, { z: 2, pass: 1, corr: 1, name: "Corridor (right wing)", key: "corridor" }));
+      rooms.push(room(null, xl, db + cw, cw, Lb, { z: 2, pass: 1, corr: 1, name: "Corridor (left wing)", key: "corridor" }));
+      rooms.forEach(function (r) { ["x", "y", "w", "d"].forEach(function (k) { r[k] = r2(r[k]); }); if (r.cut) ["x", "y", "w", "d"].forEach(function (k) { r.cut[k] = r2(r.cut[k]); }); });
+      floors.push(rooms);
+    });
+    if (!ok) return null;
+    return { mode: "corr", shape: "U", dbl: true, W: La, D: Ytop, cw: cw, db: db, floors: floors, outline: [[0, 0], [La, 0], [La, Ytop], [xr - db, Ytop], [xr - db, Dd], [bx0, Dd], [bx0, Ytop], [0, Ytop]], v: { core: "J", mirror: false }, sig: "cU" };
+  };
+  PL.uNeed = function (T, F, La) { var db = T.band, cw = T.cw, inner = La - 2 * (2 * db + cw) - 2 * db, need = 0;
+    F.forEach(function (l) { var core = coreLen(coreItems(l), db), L = sum(l.filter(function (x) { return x.fl !== "all"; }), function (x) { return colW(x, db); }) * 1.04, rem = L - La - Math.max(0, inner + 2 * db - core); need = Math.max(need, rem > 0 ? (rem - 2 * cw) / 4 : 0); });
+    return r2(Math.max(db + 2, need)); };
+
+  /* ---------------- flats: each flat is laid out inside like a small house, entered from the corridor ---------------- */
+  PL.expandUnits = function (p, cfg) {
+    if (p.shape) return; var H = PL.TYPES.house; H.id = "house"; var cache = {};
+    p.floors.forEach(function (rooms, fi) {
+      var corr = rooms.filter(function (r) { return r.corr; })[0], out = [], k = 0;
+      rooms.forEach(function (r) {
+        var sp = r.inst && r.inst.sp; if (!sp || !sp.unit) { out.push(r); return; } k++;
+        var u = r.inst.unit || { beds: 2, attached: 1 }, key = u.beds + "|" + r.w + "|" + r.d, best = cache[key];
+        if (!best) {
+          var items = H.program({ beds: u.beds, attached: u.attached, persons: u.beds + 2, cars: 0, kitchenOpen: 0 }).filter(function (x) { return !x.off && !/^(car_park|stair|lounge|balcony|pooja|bike_park)$/.test(x.key) && !(u.beds < 2 && x.key === "store"); }).map(function (x) { return Object.assign({}, x, { size: u.beds <= 2 ? "S" : "M", fl: "G" }); });
+          var ins = PL.expand(H, items, 1); ins.forEach(function (x) { x.fl = "G"; });
+          var cand = PL.bandPlans(H, [ins], r.w, r.d, { unitExt: "b" }); cand.forEach(function (c) { c.sc = PL.score(H, c, { unitExt: "b" }); }); cand.sort(function (a, b) { return b.sc.score - a.sc.score; }); best = cache[key] = cand[0] || null;
+        }
+        if (!best) { out.push(r); return; }
+        var top = corr ? corr.y > r.y : false, no = (fi + 1) * 100 + k, nm = "Flat " + no;
+        best.floors[0].forEach(function (q) {
+          var y = top ? r.y + r.d - q.y - q.d : r.y + q.y, o = Object.assign({}, q, { uid: q.uid + "_" + fi + "_" + k, x: r2(r.x + q.x), y: r2(y), name: nm + " – " + q.name, flat: nm, parent: q.parent ? q.parent + "_" + fi + "_" + k : undefined });
+          if (q.inst) o.inst = Object.assign({}, q.inst, { main: false });
+          if (q.cut) o.cut = { x: r2(r.x + q.cut.x), y: r2(top ? r.y + r.d - q.cut.y - q.cut.d : r.y + q.cut.y), w: q.cut.w, d: q.cut.d };
+          if (q.pass) o.name = nm + " – " + q.name;
+          out.push(o);
+        });
+      });
+      p.floors[fi] = out;
+    });
+  };
+
+  /* ---------------- fire exits (NBC 2016 Part 4) and daylight / cross ventilation ---------------- */
+  PL.checks = function (T, p, cfg) {
+    var fire = [], lim = T.id === "factory" ? 45 : 30, maxT = 0, H = p.floors.length * T.h / 1000, nSt = 0;
+    p.floors.forEach(function (rooms, fi) {
+      var st = rooms.filter(function (r) { return r.inst && r.inst.sp && r.inst.sp.stair; }); if (!fi) nSt = st.length;
+      if (!st.length) return; rooms.forEach(function (r) { if (!r.inst || r.pass) return; var cx = r.x + r.w / 2, cy = r.y + r.d / 2, d = Math.min.apply(null, st.map(function (s) { return Math.abs(cx - s.x - s.w / 2) + Math.abs(cy - s.y - s.d / 2); })); maxT = Math.max(maxT, d); });
+    });
+    var area = PL.footArea(p);
+    if (p.floors.length > 1 && maxT > lim) fire.push("Longest walk to a stair ≈ " + Math.round(maxT) + " m — more than " + lim + " m: a second staircase at the other end is needed (NBC 2016 Part 4).");
+    if (p.floors.length > 1 && nSt < 2 && (area > 500 || H > 15)) fire.push("Floor area " + Math.round(area) + " m²" + (H > 15 ? ", height " + H.toFixed(1) + " m" : "") + " — two staircases are usually required (NBC 2016 Part 4).");
+    if (H >= 15) fire.push("15 m or taller: fire NOC, wet riser / hydrant, sprinklers and fire-check doors on the stairs are required.");
+    if (T.id === "hospital" && p.floors.length > 1 && !p.floors[0].some(function (r) { return r.inst && r.inst.sp && r.inst.sp.lift; })) fire.push("Upper hospital floors: provide a ramp (1:12) or a bed lift.");
+    var hab = 0, cross = 0, west = [], fdir = { r: PL.dirOf(1, 0, cfg.facing), l: PL.dirOf(-1, 0, cfg.facing), f: PL.dirOf(0, -1, cfg.facing), b: PL.dirOf(0, 1, cfg.facing) };
+    p.floors.forEach(function (rooms) { rooms.forEach(function (r) { var sp = r.inst && r.inst.sp; if (!sp || (sp.win !== "hab" && sp.win !== "hall") || sp.unit) return; hab++; var e = edgeLen(r, p.W, p.D), sides = ["f", "b", "l", "r"].filter(function (k) { return e[k] > 0.9; }); if (sides.length >= 2) cross++;
+      if (/bed|guest|ward|room/i.test(r.name) && sides.length && sides.every(function (k) { return /W/.test(fdir[k]); })) west.push(r.name); }); });
+    return { fire: fire, travel: Math.round(maxT), cross: hab ? Math.round(cross / hab * 100) : null, west: west };
+  };
+
   /* ---------------- scoring ---------------- */
   var OCT = ["E", "NE", "N", "NW", "W", "SW", "S", "SE"];
   PL.dirOf = function (dx, dy, facing) { /* local (x, y) offset → compass octant, given the side the road is on */
@@ -345,14 +420,16 @@
         if (sp.minA && A < sp.minA * 0.97) { pen += 8; if (notes.small.indexOf(r.name) < 0) notes.small.push(r.name); }
         if (sp.stair && r.inst.stair) { var s = r.inst.stair; var fits = (r.w >= s.w - 0.05 && r.d >= s.d - 0.05) || (r.d >= s.w - 0.05 && r.w >= s.d - 0.05); if (!fits) { pen += 25; notes.tight.push(r.name); } }
         var el = edgeLen(r, W, D); if (plan.shape) el.all = extLen(r, rooms);
-        if ((sp.win === "hab" || sp.win === "hall") && el.all < 1.0) { pen += 14; notes.win.push(r.name); }
+        if (sp.unit) { /* a flat needs an outer wall for its rooms */ if (el.all < 3) { pen += 20; notes.win.push(r.name); } }
+        else if ((sp.win === "hab" || sp.win === "hall") && el.all < 1.0) { pen += 14; notes.win.push(r.name); }
         else if (sp.win === "kit" && el.all < 0.9) { pen += 15; notes.win.push(r.name); }
         else if (sp.win === "wet" && el.all < 0.5) { pen += 2.5; }
         if (sp.open && el.all < 1) pen += 15;
-        if (sp.open === "park" && el.f < 2.4) pen += 12;
+        if ((sp.open === "park" || sp.shop) && el.f < 2.4) pen += sp.shop ? 20 : 12;
+        if (cfg.unitExt) el.all = el.b;
         if (r.inst.main && fi === 0 && el.f < 1.0) { pen += 14; notes.acc.push(r.name + " (not on the road side)"); }
         /* access: shares a wall with a hall / passage / corridor / lobby (or is the entry, or its parent room) */
-        if (!r.inst.main && !sp.open) {
+        if (!r.inst.main && !sp.open && !sp.shop) {
           var ok = rooms.some(function (q) { if (q === r) return false; var circ = (q.pass && (q.live || q.corr)) || q.corr || (q.inst && q.inst.sp && q.inst.sp.circ) || (r.parent && q.uid === r.parent); return circ && shared(r, q) >= (r.parent ? 0.7 : 0.95); });
           if (!ok) { pen += sp.stair ? 25 : sp.wet ? 16 : 30; notes.acc.push(r.name); }
         }
@@ -388,11 +465,12 @@
       Fl2.forEach(function (l) { var c = coreLen(coreItems(l), db); Wn = Math.max(Wn, splitBands(l.filter(function (x) { return x.fl !== "all"; }), db, c, dbl).L); });
       Wn = r2(Math.ceil(Math.max(Wn, 9) * 10) / 10);
       var fitS = Wn <= bw + 0.01 && Wn * Dd <= maxFoot + 0.01, Lsh = null;
-      if (!fitS && dbl && bd >= Dd + db + 2 && bw >= Dd + db + 6) { var Lb = PL.lNeed(T, Fl2, bw), Yt = r2(Math.ceil((Lb + db + cw) * 10) / 10), foot = bw * Dd + (Yt - Dd) * Dd; if (Yt <= bd + 0.01 && foot <= maxFoot + 0.01) Lsh = { La: bw, Ytop: Math.max(Yt, Dd + db + 2) }; }
+      if (!fitS && dbl && bd >= Dd + db + 2 && bw >= Dd + db + 6) { var Lb = PL.lNeed(T, Fl2, bw), Yt = r2(Math.ceil((Lb + db + cw) * 10) / 10), foot = bw * Dd + (Yt - Dd) * Dd; if (Yt <= bd + 0.01 && foot <= maxFoot + 0.01) Lsh = { La: bw, Ytop: Math.max(Yt, Dd + db + 2) };
+        else if (bw >= 2 * (2 * db + cw) + db + 6) { var Lu = PL.uNeed(T, Fl2, bw), Yu = r2(Math.ceil((Lu + db + cw) * 10) / 10), fu = bw * Dd + 2 * (Yu - Dd) * Dd; if (Yu <= bd + 0.01 && fu <= maxFoot + 0.01) Lsh = { La: bw, Ytop: Math.max(Yu, Dd + db + 2), U: 1 }; } }
       return { ins: ins, F: Fl2, W: Wn, D: r2(Dd), dbl: dbl, fit: fitS || !!Lsh, L: fitS ? null : Lsh, need: Wn * Dd };
     }
     var maxF = T.single ? 1 : 8, fixed = cfg.floors > 0 ? Math.min(maxF, cfg.floors | 0) : 0, res = null;
-    if (fixed) res = tryFloors(fixed); else for (var n = 1; n <= maxF; n++) { res = tryFloors(n); if (res.fit) break; }
+    if (fixed) res = tryFloors(fixed); else { var bestR = null; for (var n = 1; n <= maxF; n++) { res = tryFloors(n); if (res.fit) break; if (!bestR || res.need < bestR.need - 0.5) bestR = res; } if (!res.fit && bestR) res = bestR; }
     nF = res.F.length; F = res.F; W = res.W; D = res.D;
     if (T.mode === "corr" && W > bw + 0.01 && !res.L) { warn.push("The rooms need a building " + W + " m long, but only " + bw + " m is free across the plot — add floors, a larger plot, or fewer rooms."); W = Math.max(W, 9); }
     if (T.mode === "band" && !res.fit) warn.push("The rooms chosen need about " + Math.round(res.need) + " m² per floor but only " + Math.round(W * D) + " m² can be built (setbacks / coverage) — rooms come out smaller; add a floor or choose smaller sizes.");
@@ -404,7 +482,7 @@
       /* also narrower and deeper footprints of the same area (a house on a wide plot is often better two rooms deep) */
       var Ws = [W]; [0.88, 0.76, 0.66].forEach(function (k) { var w2 = r2(W * k), d2 = r2(Math.min(bd, W * D / w2)); if (w2 >= 6 && d2 > D + 0.5 && w2 * d2 >= W * D * 0.97) Ws.push(w2); });
       Ws.forEach(function (w2) { var d2 = w2 === W ? D : r2(Math.min(bd, W * D / w2)); opts = opts.concat(PL.bandPlans(T, F, w2, d2, cfg)); });
-    } else if (res.L) { [false, true].forEach(function (fl) { var pL = PL.corrL(T, F, res.L.La, res.L.Ytop, cfg, fl); if (pL) opts.push(pL); }); if (!opts.length) { opts = PL.corrPlans(T, F, W, D, cfg, res.dbl); if (W > bw + 0.01) warn.push("The rooms need a building " + W + " m long, but only " + bw + " m is free across the plot — add floors, a larger plot, or fewer rooms."); } }
+    } else if (res.L) { if (res.L.U) { var pU = PL.corrU(T, F, res.L.La, res.L.Ytop, cfg); if (pU) opts.push(pU); } else [false, true].forEach(function (fl) { var pL = PL.corrL(T, F, res.L.La, res.L.Ytop, cfg, fl); if (pL) opts.push(pL); }); if (!opts.length) { opts = PL.corrPlans(T, F, W, D, cfg, res.dbl); if (W > bw + 0.01) warn.push("The rooms need a building " + W + " m long, but only " + bw + " m is free across the plot — add floors, a larger plot, or fewer rooms."); } }
     else opts = PL.corrPlans(T, F, W, D, cfg, res.dbl);
     opts.forEach(function (p) { p.sc = PL.score(T, p, cfg); });
     opts.sort(function (a, b) { return b.sc.score - a.sc.score; });
@@ -412,7 +490,8 @@
     var pick = [], seen = {};
     opts.forEach(function (p) { if (pick.length >= 4) return; var key = T.mode === "band" ? p.sig.replace(/[LR]$/, "").slice(0, 4) + p.floors[0].map(function (r) { return r.key; }).slice(0, 6).join() : p.sig; if (seen[key]) return; seen[key] = 1; pick.push(p); });
     if (pick.length < Math.min(4, opts.length)) opts.forEach(function (p) { if (pick.length < 4 && pick.indexOf(p) < 0) pick.push(p); });
-    pick.forEach(function (p, i) { p.id = "opt" + (i + 1); p.label = "Option " + "ABCD"[i]; p.nF = nF; p.T = T; p.off = [R.l, R.f]; p.stats = PL.stats(T, p, cfg); });
+    pick.forEach(function (p, i) { p.id = "opt" + (i + 1); p.label = "Option " + "ABCD"[i]; p.nF = nF; p.T = T; p.off = [R.l, R.f]; if (T.id === "apartment") p.floors[0].forEach(function (r) { if (r.pass && !r.corr) { r.pass = 0; r.name = "Stilt parking"; r.key = "stilt"; r.z = 0; r.inst = { key: "stilt", sp: SP.stilt, name: "Stilt parking", a: PL.areaOf(r), z: 0, minW: 5 }; } });
+      PL.expandUnits(p, cfg); p.chk = PL.checks(T, p, cfg); p.stats = PL.stats(T, p, cfg); });
     if (pick[0]) { W = pick[0].W; D = pick[0].D; var fa = PL.footArea(pick[0]); built = fa * nF; far = built / plotA; cov = fa / plotA * 100; }
     info = { bw: bw, bd: bd, maxFoot: r2(maxFoot), plotA: r2(plotA), nF: nF, W: W, D: D, built: r2(built), far: r2(far), cov: r2(cov), height: r2(height), occ: Math.round(built / T.occ), dbl: res.dbl };
     return { opts: pick, info: info, warn: warn, T: T };
@@ -424,16 +503,17 @@
     var h = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ' + Wp.toFixed(1) + " " + Hp.toFixed(1) + '" width="100%" style="max-width:' + Math.round(Wp) + 'px;font-family:system-ui,sans-serif" role="img" aria-label="Floor plan">';
     h += '<rect x="0" y="0" width="' + Wp + '" height="' + Hp + '" fill="#fff"/>';
     rooms.forEach(function (r) { var sp = r.inst && r.inst.sp, fill = r.corr || r.pass ? "#f2f2f2" : sp && sp.open ? "#ececec" : sp && sp.stair ? "#e9e3f5" : COL[r.z != null ? r.z : 2] || "#fff";
-      parts(r).forEach(function (q) { h += '<rect x="' + X(q.x).toFixed(1) + '" y="' + Y(q.y + q.d).toFixed(1) + '" width="' + (q.w * sc).toFixed(1) + '" height="' + (q.d * sc).toFixed(1) + '" fill="' + fill + '" stroke="none"/>'; });
+      var pk = o.pick && !r.pass && !r.corr && !r.fill ? ' data-plroom="' + o.pick + "|" + fi + "|" + r.uid + '" style="cursor:pointer"' : "", sel = o.sel === r.uid;
+      parts(r).forEach(function (q) { h += '<rect x="' + X(q.x).toFixed(1) + '" y="' + Y(q.y + q.d).toFixed(1) + '" width="' + (q.w * sc).toFixed(1) + '" height="' + (q.d * sc).toFixed(1) + '" fill="' + (sel ? "#ffd7d2" : fill) + '" stroke="none"' + pk + "/>"; });
       if (sp && sp.stair) { var n = 7; for (var i = 1; i < n; i++) { var xx = r.w >= r.d ? r.x + r.w * i / n : null; if (xx != null) h += '<line x1="' + X(xx).toFixed(1) + '" y1="' + Y(r.y).toFixed(1) + '" x2="' + X(xx).toFixed(1) + '" y2="' + Y(r.y + r.d).toFixed(1) + '" stroke="#b9a9d6" stroke-width="1"/>'; else { var yy = r.y + r.d * i / n; h += '<line x1="' + X(r.x).toFixed(1) + '" y1="' + Y(yy).toFixed(1) + '" x2="' + X(r.x + r.w).toFixed(1) + '" y2="' + Y(yy).toFixed(1) + '" stroke="#b9a9d6" stroke-width="1"/>'; } } }
     });
-    rooms.forEach(function (r) { parts(r).forEach(function (q) { h += '<rect x="' + X(q.x).toFixed(1) + '" y="' + Y(q.y + q.d).toFixed(1) + '" width="' + (q.w * sc).toFixed(1) + '" height="' + (q.d * sc).toFixed(1) + '" fill="none" stroke="#555" stroke-width="' + (r.pass || r.corr ? 0.6 : 1.4) + '"/>'; }); });
+    rooms.forEach(function (r) { parts(r).forEach(function (q) { h += '<rect pointer-events="none" x="' + X(q.x).toFixed(1) + '" y="' + Y(q.y + q.d).toFixed(1) + '" width="' + (q.w * sc).toFixed(1) + '" height="' + (q.d * sc).toFixed(1) + '" fill="none" stroke="#555" stroke-width="' + (r.pass || r.corr ? 0.6 : 1.4) + '"/>'; }); });
     if (p.outline) h += '<polygon points="' + p.outline.map(function (q) { return X(q[0]).toFixed(1) + "," + Y(q[1]).toFixed(1); }).join(" ") + '" fill="none" stroke="#222" stroke-width="3"/>';
     else h += '<rect x="' + X(0) + '" y="' + Y(D) + '" width="' + (W * sc) + '" height="' + (D * sc) + '" fill="none" stroke="#222" stroke-width="3"/>';
     rooms.forEach(function (r) { var big = parts(r).sort(function (a, b) { return Math.min(b.w, b.d) * Math.sqrt(b.w * b.d) - Math.min(a.w, a.d) * Math.sqrt(a.w * a.d); })[0], cx = X(big.x + big.w / 2), cy = Y(big.y + big.d / 2), fs = Math.max(7, Math.min(12, sc * Math.min(big.w, big.d) / 4.2)), nm = r.name || "", esc = function (t) { return t.replace(/&/g, "&amp;").replace(/</g, "&lt;"); };
       if (big.w * sc < 26 || big.d * sc < 16) return; var short = nm.length * fs * 0.55 > big.w * sc - 4 ? nm.replace(/ \(.*\)/, "").replace(/ room| hall| area/i, "") : nm; if (short.length * fs * 0.55 > big.w * sc - 4) short = short.slice(0, Math.max(3, Math.floor((big.w * sc - 4) / (fs * 0.55)))) + "…";
-      h += '<text x="' + cx.toFixed(1) + '" y="' + (cy - 1).toFixed(1) + '" font-size="' + fs.toFixed(1) + '" text-anchor="middle" fill="#222">' + esc(short) + '</text>';
-      if (!r.corr && big.d * sc > 30) h += '<text x="' + cx.toFixed(1) + '" y="' + (cy + fs + 1).toFixed(1) + '" font-size="' + (fs * 0.85).toFixed(1) + '" text-anchor="middle" fill="#666">' + (r.w - 0.23).toFixed(2) + "×" + (r.d - 0.23).toFixed(2) + "</text>"; });
+      h += '<text pointer-events="none" x="' + cx.toFixed(1) + '" y="' + (cy - 1).toFixed(1) + '" font-size="' + fs.toFixed(1) + '" text-anchor="middle" fill="#222">' + esc(short) + '</text>';
+      if (!r.corr && big.d * sc > 30) h += '<text pointer-events="none" x="' + cx.toFixed(1) + '" y="' + (cy + fs + 1).toFixed(1) + '" font-size="' + (fs * 0.85).toFixed(1) + '" text-anchor="middle" fill="#666">' + (r.w - 0.23).toFixed(2) + "×" + (r.d - 0.23).toFixed(2) + "</text>"; });
     h += '<text x="' + X(W / 2).toFixed(1) + '" y="' + (Hp - 0.25 * sc).toFixed(1) + '" font-size="' + Math.max(9, sc * 0.5).toFixed(1) + '" text-anchor="middle" fill="#888">ROAD SIDE ▼ (' + W.toFixed(2) + " m)</text>";
     if (o.facing) { var ang = { N: 180, E: 90, S: 0, W: 270 }[o.facing] || 0, ax = Wp - 0.7 * sc, ay = 0.8 * sc; h += '<g transform="translate(' + ax.toFixed(1) + "," + ay.toFixed(1) + ") rotate(" + ang + ')"><path d="M0,-' + (0.5 * sc).toFixed(1) + " L" + (0.18 * sc).toFixed(1) + "," + (0.3 * sc).toFixed(1) + " L0," + (0.15 * sc).toFixed(1) + " L-" + (0.18 * sc).toFixed(1) + "," + (0.3 * sc).toFixed(1) + ' Z" fill="#c0392b"/></g><text x="' + ax.toFixed(1) + '" y="' + (ay + 0.75 * sc).toFixed(1) + '" font-size="' + (sc * 0.42).toFixed(1) + '" text-anchor="middle" fill="#c0392b">N</text>'; }
     return h + "</svg>";
