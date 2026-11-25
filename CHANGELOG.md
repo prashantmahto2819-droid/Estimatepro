@@ -3,6 +3,9 @@
 This file is for the people maintaining the app. It is not published with the site (see `.assetsignore`).
 The text users see is `EP_NOTES` in `js/version.js`.
 
+## 2026.11.21-z81
+- Planner: Water & services group — RWH recharge pits (MBBL 2016, plots ≥ 100 m²), septic tank + soak pit (IS 2470) or sewer manhole, underground sump, bore well away from the septic tank, solar water heater; notes in the sanction text. New assets rwh_pit and solar_water_heater.
+
 ## 2026.11.21-z80
 - Planner: paint colour schemes (outside/inside), front screens (louvre, fins, charcoal, stone), compound wall grill and gate pillars, premium interior panels.
 

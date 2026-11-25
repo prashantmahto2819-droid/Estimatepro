@@ -298,6 +298,19 @@
       if (/pergola|both/.test(des.terrace)) { var done1 = false; [[W - 3.6, D - 3.6], [0.6, D - 3.6], [W - 3.6, 0.6], [0.6, 0.6]].forEach(function (q) { if (done1 || !free(q[0], q[1], q[0] + 3, q[1] + 3)) return; add({ t: "asset", kind: "pergola", p: P(q[0] + 1.5, q[1] + 1.5), rot: 0, lvl: "LT", layer: "L-LAND" }); busy.push([q[0] - 0.3, q[1] - 0.3, q[0] + 3.3, q[1] + 3.3]); done1 = true; }); }
       if (/solar|both/.test(des.terrace)) { var nA = 0, maxA = house ? 2 : 8; for (var yy = 0.6; yy + 2.0 <= D - 0.4 && nA < maxA; yy += 2.6) for (var xx = 0.6; xx + 3.4 <= W - 0.4 && nA < maxA; xx += 3.8) if (free(xx, yy, xx + 3.4, yy + 2.0)) { add({ t: "asset", kind: "solar_array_4", p: P(xx + 1.7, yy + 1.0), rot: 0, lvl: "LT", layer: "E-ELEC" }); busy.push([xx, yy, xx + 3.4, yy + 2.0]); nA++; } }
     }
+    /* solar water heater on a flat terrace: about 25 L per person (IS 12933 practice), one unit per 200 L */
+    var pers = Math.max(1, +cfg.persons || 5), swhN = 0;
+    if (des.swh === "auto" && !sloped && T.roof !== "gi" && B.ASSET_LIB && B.ASSET_LIB.solar_water_heater && (house || /hostel|hotel|hospital|canteen/.test(T.id))) {
+      var bz = []; plan.floors[nF - 1].forEach(function (r) { if (sp(r) && (sp(r).stair || sp(r).open === "court" || sp(r).lift)) bz.push([r.x - 0.6, r.y - 0.6, r.x + r.w + 0.6, r.y + r.d + 0.6]); });
+      ents.forEach(function (e) { if (e.t === "asset" && e.lvl === "LT") { var A2 = B.ASSET_LIB[e.kind] || { w: 1000, d: 1000 }, cx = (e.p[0] - ox) / 1000, cy = (e.p[1] - oy) / 1000; bz.push([cx - A2.w / 2000 - 0.3, cy - A2.d / 2000 - 0.3, cx + A2.w / 2000 + 0.3, cy + A2.d / 2000 + 0.3]); } });
+      var need = Math.min(house ? 2 : 6, Math.max(1, Math.ceil(pers * 25 / 200)));
+      for (var yy2 = D - 2.0; yy2 >= 0.5 && swhN < need; yy2 -= 2.0) for (var xx2 = 0.5; xx2 + 1.9 <= W - 0.4 && swhN < need; xx2 += 2.3) {
+        var q4 = [xx2, yy2, xx2 + 1.9, yy2 + 1.5]; if (q4[3] > D - 0.4) continue;
+        if (bz.some(function (b) { return q4[0] < b[2] && q4[2] > b[0] && q4[1] < b[3] && q4[3] > b[1]; })) continue;
+        if (plan.outline && ![[q4[0], q4[1]], [q4[2], q4[1]], [q4[2], q4[3]], [q4[0], q4[3]]].every(function (q) { return G.inPoly(q, plan.outline); })) continue;
+        add({ t: "asset", kind: "solar_water_heater", p: P(xx2 + 0.95, yy2 + 0.75), rot: 180, lvl: "LT", layer: "P-FIX", name: "Solar water heater 200 L" }); bz.push([q4[0] - 0.3, q4[1] - 0.3, q4[2] + 0.3, q4[3] + 0.3]); swhN++;
+      }
+    }
     /* porch / portico in front of the main door (into the front setback) */
     var md = perFloor[0] && perFloor[0].mainDoor, fset = cfg.rules.f || 0;
     if (md && des.porch && des.porch !== "none" && md.p.hz && Math.abs(md.p.c) < 1e-3 && fset >= 2.0) {
@@ -342,6 +355,49 @@
         if (pd - oy - D * 1000 >= 2500) { ga("tree", 1500, pd - 1500); ga("tree", pw - 1500, pd - 1500); } }
       }
     }
+    /* water and services in the open yards: rain-water recharge pits (MBBL 2016: plots of 100 m² or more; about 6 m³ of pit for
+       every 100 m² of roof), septic tank + soak pit or a sewer manhole, underground sump and bore well kept as far as possible from the septic tank */
+    var svcNote = [];
+    if (cfg.site !== false && B.ASSET_LIB) {
+      var plotA = cfg.plot.w * cfg.plot.d, roofA = W * D, bb = [ox - 450, oy - 450, ox + W * 1000 + 450, oy + D * 1000 + 450], sbusy = [], soft = [];
+      sbusy.push([gx - 1900, 0, gx + 1900, 2600]); if (typeof wx === "number") sbusy.push([wx - 600, 0, wx + 600, 1200]);
+      ents.forEach(function (e) { if (e.t === "asset" && e.lvl === "L0" && /L-LAND|A-SITE/.test(e.layer || "")) { if (/shrub|lamp_post/.test(e.kind)) soft.push(e); else sbusy.push([e.p[0] - 600, e.p[1] - 600, e.p[0] + 600, e.p[1] + 600]); } });
+      ents.forEach(function (e) { var out = function (q) { return q[1] < oy - 100 || q[0] < ox - 100 || q[0] > ox + W * 1000 + 100 || q[1] > oy + D * 1000 + 100; };
+        if (e.t === "steps" || e.t === "ramp" || (e.t === "column" && e.lvl === "L0" && e.site !== 1 && out(e.p))) { var a1 = e.a || e.p, b1 = e.b || a1; if (!a1) return; sbusy.push([Math.min(a1[0], b1[0]) - 900, Math.min(a1[1], b1[1]) - 900, Math.max(a1[0], b1[0]) + 900, Math.max(a1[1], b1[1]) + 900]); }
+        if (e.t === "slab" && e.lvl === "L0" && e.pts && e.pts.some(out)) { var xs = e.pts.map(function (q) { return q[0]; }), ys = e.pts.map(function (q) { return q[1]; }); sbusy.push([Math.min.apply(null, xs) - 300, Math.min.apply(null, ys) - 300, Math.max.apply(null, xs) + 300, Math.max.apply(null, ys) + 300]); } });
+      var ok = function (cx, cy, hx, hy) { var r = [cx - hx, cy - hy, cx + hx, cy + hy]; if (r[0] < 300 || r[1] < 300 || r[2] > pw - 300 || r[3] > pd - 300) return false; var hit = function (b) { return r[0] < b[2] && r[2] > b[0] && r[1] < b[3] && r[3] > b[1]; }; return !hit(bb) && !sbusy.some(hit); };
+      var spots = function (hx, hy) { var L2 = []; for (var yy3 = 300 + hy; yy3 <= pd - 300 - hy; yy3 += 250) for (var xx3 = 300 + hx; xx3 <= pw - 300 - hx; xx3 += 250) if (ok(xx3, yy3, hx, hy)) L2.push([xx3, yy3]); return L2; };
+      var take = function (q, hx, hy) { var r = [q[0] - hx, q[1] - hy, q[0] + hx, q[1] + hy]; sbusy.push([r[0] - 400, r[1] - 400, r[2] + 400, r[3] + 400]); soft.forEach(function (e) { if (e.p[0] > r[0] - 500 && e.p[0] < r[2] + 500 && e.p[1] > r[1] - 500 && e.p[1] < r[3] + 500) e._del = 1; }); };
+      var dist = function (a, b) { return Math.hypot(a[0] - b[0], a[1] - b[1]); }, front = function (q) { return q[1] < oy ? 0 : 1; }, rear = function (q) { return q[1] > oy + D * 1000 ? 0 : 1; };
+      var put = function (kind, q, o) { add(Object.assign({ t: "asset", kind: kind, p: [r1(q[0]), r1(q[1])], rot: 0, lvl: "L0", layer: "P-FIX" }, o || {})); };
+      /* sewage first (it decides where the water sources may go): septic tank + soak pit (IS 2470) or an outfall manhole to the town sewer */
+      var SEP = [[5, 1.5, 0.75, 1.0], [10, 2.0, 0.9, 1.0], [15, 2.0, 0.9, 1.3], [20, 2.3, 1.1, 1.3], [50, 5.0, 1.6, 1.3], [100, 7.5, 2.0, 1.4], [150, 10.0, 2.4, 1.4], [200, 12.0, 2.75, 1.4], [300, 15.0, 3.5, 1.4]];
+      var septicAt = null;
+      if (des.sewer === "sewer") { var c6 = spots(450, 450).sort(function (a, b) { return a[1] - b[1]; })[0]; if (c6) { put("manhole", c6, { name: "Outfall manhole to the town sewer" }); take(c6, 450, 450); septicAt = c6; svcNote.push("Sewage: outfall manhole at the road, connected to the town sewer"); } }
+      else if (des.sewer === "septic" && B.ASSET_LIB.septic_tank) {
+        var st = SEP.filter(function (r) { return r[0] >= pers; })[0] || SEP[SEP.length - 1], sl = Math.max(2400, st[1] * 1000 + 700), sb = Math.max(1200, st[2] * 1000 + 700);
+        var tryS = function (rot) { var hx = (rot ? sb : sl) / 2 + 100, hy = (rot ? sl : sb) / 2 + 100; return spots(hx, hy).sort(function (a, b) { return front(a) - front(b) || a[1] - b[1] || Math.abs(a[0] - pw / 2) - Math.abs(b[0] - pw / 2); }).map(function (q) { return { q: q, rot: rot, hx: hx, hy: hy }; })[0]; };
+        var cs = tryS(0) || tryS(1);
+        if (cs) { put("septic_tank", cs.q, { rot: cs.rot ? 90 : 0, sep: [st[1], st[2], st[3]], mauto: 1, name: "Septic tank " + st[0] + " users" }); take(cs.q, cs.hx, cs.hy); septicAt = cs.q;
+          var kq = spots(800, 800).sort(function (a, b) { return dist(a, cs.q) - dist(b, cs.q); })[0];
+          if (kq) { put("soak_pit", kq, { mauto: 1, name: "Soak pit" }); take(kq, 800, 800); }
+          svcNote.push("Septic tank (IS 2470) for " + st[0] + " users: " + st[1].toFixed(2) + " × " + st[2].toFixed(2) + " m, liquid depth " + st[3].toFixed(2) + " m" + (kq ? ", with a soak pit" : " — no room left for the soak pit, place it by hand")); }
+        else svcNote.push("Septic tank: no free space in the yards — MEPAUTO will put it in front; check it on the site plan");
+      }
+      var far = function (a, b) { return septicAt ? dist(b, septicAt) - dist(a, septicAt) : 0; };
+      if (des.rwh === "yes" || (des.rwh === "auto" && plotA >= 100)) {
+        var nP = Math.max(1, Math.min(3, Math.ceil(roofA * 0.06 / 5.6))), got = 0;
+        for (var k3 = 0; k3 < nP; k3++) { var c3 = spots(750, 750).sort(function (a, b) { return rear(a) - rear(b) || far(a, b); })[0]; if (!c3) break; put("rwh_pit", c3, { name: "RWH recharge pit" }); take(c3, 750, 750); got++; }
+        svcNote.push(got ? "Rain-water harvesting: " + got + " recharge pit" + (got > 1 ? "s" : "") + " 1.5 × 1.5 × 2.5 m with filter for " + Math.round(roofA) + " m² of roof (MBBL 2016: plots of 100 m² or more)" : "Rain-water harvesting: no free space in the yards — place the recharge pit by hand");
+      }
+      var smH = pers > 10 ? 1000 : 700;
+      if (des.sump === "yes") { var c4 = spots(smH, smH).sort(function (a, b) { return front(a) - front(b) || far(a, b); })[0];
+        if (c4) { put("sump_underground", c4, { name: "Underground sump", sc: smH / 1000 }); take(c4, smH, smH); svcNote.push("Underground sump " + (smH / 500).toFixed(1) + " × " + (smH / 500).toFixed(1) + " m, " + (Math.ceil(pers * 135 / 500) * 500) + " L for " + pers + " persons at 135 L/day (NBC 2016)" + (septicAt && dist(c4, septicAt) < 3000 ? " — closer than 3 m to the septic tank, check" : "")); } else svcNote.push("Underground sump: no free space in the yards"); }
+      if (des.bore === "yes") { var c5 = spots(250, 250).sort(far)[0];
+        if (c5) { put("borewell", c5, { name: "Bore well" }); take(c5, 250, 250); var dd = septicAt ? dist(c5, septicAt) / 1000 : 0; svcNote.push("Bore well" + (septicAt ? " " + dd.toFixed(1) + " m from the septic tank" + (dd < 15 && des.sewer === "septic" ? " (15 m is advised — keep it as far as the plot allows)" : "") : "")); } }
+      if (swhN) svcNote.push("Solar water heater: " + swhN + " × 200 L on the terrace (about 25 L per person)");
+    }
+    d.planner_svc = svcNote;
     /* frame sizing by load (rule of thumb, IS 456 / IS 875): load on each column from the floor area it carries (half way to the next columns),
        w kN/m² per floor (slab + finishes + walls + live load), M20 / Fe500 column with 0.8 % steel, footing on the safe bearing capacity */
     if (frame) {
@@ -360,7 +416,7 @@
     }
     /* sanction details and site-plan dimensions (setbacks) */
     var sd = cfg.sanction || {}, lines = ["PROPOSED " + (T.n || "").toUpperCase(), "Owner: " + (sd.owner || "…………………………"), "Address / Khasra no.: " + (sd.addr || "…………………………"), "Ward / village: " + (sd.ward || "…………"), "Plot " + cfg.plot.w + " × " + cfg.plot.d + " m = " + (cfg.plot.w * cfg.plot.d).toFixed(2) + " m²", "Architect / engineer: " + (sd.arch || "…………………………") + (sd.reg ? " (Reg. " + sd.reg + ")" : ""), "Signature of owner ……………      Signature of architect / engineer ……………"];
-    add({ t: "text", p: [pw + 3000, -1500], s: lines.join("\n"), h: 300, rot: 0, al: "l", layer: "C-PROP-TXT" });
+    lines = lines.slice(0, -2).concat(svcNote, lines.slice(-2)); add({ t: "text", p: [pw + 3000, -1500], s: lines.join("\n"), h: 300, rot: 0, al: "l", layer: "C-PROP-TXT" });
     var dimL = "DIM"; if (!d.layers[dimL]) d.layers[dimL] = { color: 2, lw: 0.18, lt: "CONTINUOUS", on: true, lock: false, frz: false };
     var bx0 = ox, by0 = oy, bx1 = ox + W * 1000, by1 = oy + D * 1000, mx = (bx0 + bx1) / 2, my = (by0 + by1) / 2;
     [[[mx, 0], [mx, by0], [mx + 600, by0 / 2]], [[mx, pd], [mx, by1], [mx + 600, (pd + by1) / 2]], [[0, my], [bx0, my], [bx0 / 2, my + 600]], [[pw, my], [bx1, my], [(pw + bx1) / 2, my + 600]]].forEach(function (q) { if (Math.abs(q[0][0] - q[1][0]) + Math.abs(q[0][1] - q[1][1]) > 100) add({ t: "dim", kind: "ali", a: q[0], b: q[1], p: q[2], layer: dimL }); });
