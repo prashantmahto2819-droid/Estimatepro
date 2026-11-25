@@ -3,6 +3,14 @@
 This file is for the people maintaining the app. It is not published with the site (see `.assetsignore`).
 The text users see is `EP_NOTES` in `js/version.js`.
 
+## 2026.11.21-z73
+- cycle_shed (modules_extra6): schemes + "Two rows – duo-pitch (gable)" (K gable: two-post rafter, ridge, Hp = H) and "One row – Y / butterfly" (K Y: like T, valley at the posts); flags TWO / BOTH; duo-pitch canopies cpu 1.2.
+- New checks: largest purlin spacing for the sheet under edge uplift (limits the purlin spacing); rafter–post joint (two rows: seat + 2-M16 / weld vs uplift + shear; one row / cantilever: rigid joint — rolled: cap plate bolts 4.6 → 8.8 and plate thickness, flange welds; tubular: weld ring with 4 stiffeners when the wall is too thin); post–base weld (same; tubular posts are picked so the weld fits the wall; IS 800 cl 10.5.2.3 min 5 mm but ≤ wall); anchor bolts 4 × 4.6 → 4 / 6 / 8 × 8.8; base plate grows for bearing; bracing rods from longitudinal wind (friction + end frame) and SHS eave tie as a strut; screw pull-over / pull-out at the edges (every crest if needed); footing one-way and punching shear; pedestal steel 0.5 % gross (IS 456 26.5.3.1(h)).
+- Larger tubes: SHS 180 / 200 / 250, RHS 250×150 / 300×200.
+- Gutters (non-SOR 0.5 mm pre-coated) + uPVC down pipes 12.41.2 and shoes 12.42.6.2 (param gutter, default on); solar panels +0.15 kN/m² (param solar).
+- Drawing: roof line per pattern, purlins, gutters, knee brace, side elevation of every bay (≤ 10) with both braced end bays, eave tie; joint detail beside the base detail; notes list joints, bracing, screws, gutters. 3D: gable / Y roofs, gutters with down pipes, solar panels.
+- 50 variants (5 patterns × 2 member types × 5 load / size cases) run: no failures except a 9 m cantilever at Vb 55 (warned).
+
 ## 2026.11.21-z72
 - steel_shed: span min 6 → 3 m, eave min 3 → 2.4 m (all six styles checked at 4.5 m span × 5 bays @ 6 m, eave 3 m: design, free, quantities and 3D run).
 

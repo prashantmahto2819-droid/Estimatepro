@@ -371,15 +371,15 @@
      and the floor / kerb / stands chosen in "Along with the design" */
   T.reg("cycle_shed", function (v, res, H) {
     var W = posn(mm(v.width), 1500, 20000, 4500), Lt = posn(mm(v.length), 3000, 300000, 30000), bay = posn(mm(v.bay), 1500, 8000, 3000), Hc = posn(mm(v.height), 1800, 6000, 2400), th = posn(v.slope, 0, 25, 5) * Math.PI / 180, ov = posn(mm(v.overhang), 0, 1500, 300);
-    var sch = String(v.scheme || ""), one = /One row/.test(sch), tee = one && /T \(/.test(sch), RL = /Rolled/.test(String(v.members || ""));
+    var sch = String(v.scheme || ""), one = /One row/.test(sch), tee = one && /T \(/.test(sch), yy = /butterfly/.test(sch), gab = /duo-pitch/.test(sch), RL = /Rolled/.test(String(v.members || ""));
     var tube = function (t, fb) { var m = String(t || "").match(/(SHS|RHS)\s*(\d+)\s*[×x]\s*(\d+)\s*[×x]\s*([\d.]+)/); return m ? { k: "T", D: +m[2], B: +m[3], name: m[0] } : fb; };
     var ps = function (k, fbT, fbR) { var t = sm(res, k); return tube(t) || pick(t) || (RL ? sec(fbR) : { k: "T", D: fbT[0], B: fbT[1] }); };
     var post = ps("Posts", [80, 80], "ISMB 125"), raf = ps("Rafters", [122, 61], "ISMC 125"), pur = ps("Purlins", [66, 33], "ISMC 75");
     var nf = Math.max(2, Math.round(Lt / bay) + 1), bsp = Lt / (nf - 1), x0 = -Lt / 2, tn = Math.tan(th), P = [];
     var mem = function (a, b, s, roll) { if (s.k === "I") P.push(H.ibeam(a, b, s.B, s.D, s.tf, s.tw, "steel_member", roll || 0)); else if (s.k === "C") P.push(H.member(a, b, s.B, s.D, "steel_member", roll || 0)); else P.push(H.member(a, b, s.B, s.D, "paint_pure_white", roll || 0)); };
     /* post rows (y) and the roof line z(y) */
-    var yLo = -W / 2 + ov, yHi = W / 2 - ov, rows = one ? [tee ? 0 : yLo] : [yLo, yHi], ridge = tee ? 0 : null;
-    var zAt = function (y) { return ridge != null ? Hc + (W / 2 - Math.abs(y)) * tn : Hc + (y - yLo) * tn; };
+    var yLo = -W / 2 + ov, yHi = W / 2 - ov, rows = one ? [(tee || yy) ? 0 : yLo] : [yLo, yHi], ridge = (tee || yy || gab) ? 0 : null;
+    var zAt = function (y) { return yy ? Hc + Math.abs(y) * tn : gab ? Hc + (W / 2 - ov - Math.abs(y)) * tn : tee ? Hc + (W / 2 - Math.abs(y)) * tn : Hc + (y - yLo) * tn; };
     var fm = String(sm(res, "Footings")).match(/([\d.]+)\s*m sq\s*×\s*(\d+)/), fB = fm ? +fm[1] * 1000 : 900, fT = fm ? +fm[2] : 300, df = posn(mm(v.found_depth), 500, 3000, 1200), pa = posn(mm(v.ped_above), 0, 1000, 300);
     var bm = String(sm(res, "Base")).match(/(\d+)\s*sq\s*×\s*(\d+)/), bpS = bm ? +bm[1] : 250, bpT = bm ? +bm[2] : 12, ped = Math.max(300, bpS + 100);
     for (var i = 0; i < nf; i++) { var x = x0 + i * bsp;
@@ -389,7 +389,7 @@
       /* rafter across the full width */
       var rd = raf.D || 100; if (ridge != null) { mem([x, -W / 2, zAt(-W / 2) - rd / 2], [x, 0, zAt(0) - rd / 2], raf, 0); mem([x, 0, zAt(0) - rd / 2], [x, W / 2, zAt(W / 2) - rd / 2], raf, 0); }
       else mem([x, -W / 2, zAt(-W / 2) - rd / 2], [x, W / 2, zAt(W / 2) - rd / 2], raf, 0);
-      if (one && !tee && i < nf) { var yk = yLo, zk = zAt(yk) - rd; mem([x, yk, zk - Math.min(900, W * 0.25) * tn - 600], [x, yk + Math.min(1200, W * 0.3), zk], { k: "T", D: 60, B: 60 }, 0); }   /* knee brace of the cantilever */
+      if (one && !tee && !yy && i < nf) { var yk = yLo, zk = zAt(yk) - rd; mem([x, yk, zk - Math.min(900, W * 0.25) * tn - 600], [x, yk + Math.min(1200, W * 0.3), zk], { k: "T", D: 60, B: 60 }, 0); }   /* knee brace of the cantilever */
     }
     /* purlins along the length */
     var pm = String(sm(res, "Purlins")).match(/@\s*([\d.]+)\s*m/), psp = pm ? +pm[1] * 1000 : posn(mm(v.purlin_s), 600, 2000, 1200), npl = Math.max(2, Math.round(W / psp) + 1), rdz = raf.D || 100;
@@ -399,6 +399,11 @@
     if (ridge != null) { P.push(H.quad([x0 - 200, -W / 2, zs(-W / 2)], [-x0 + 200, -W / 2, zs(-W / 2)], [-x0 + 200, 0, zs(0)], [x0 - 200, 0, zs(0)], "sheet_blue")); P.push(H.quad([x0 - 200, 0, zs(0)], [-x0 + 200, 0, zs(0)], [-x0 + 200, W / 2, zs(W / 2)], [x0 - 200, W / 2, zs(W / 2)], "sheet_blue")); }
     else P.push(H.quad([x0 - 200, -W / 2, zs(-W / 2)], [-x0 + 200, -W / 2, zs(-W / 2)], [-x0 + 200, W / 2, zs(W / 2)], [x0 - 200, W / 2, zs(W / 2)], "sheet_blue"));
     void rdz;
+    /* gutters (low edges, or the valley of a butterfly roof) with down pipes at about 12 m */
+    if (v.gutter !== false) { var gys = yy ? [0] : (tee || gab) ? [-W / 2, W / 2] : [-W / 2], ndp = Math.ceil(Lt / 12000) + 1;
+      gys.forEach(function (gy) { var gz = zAt(gy) - 60; P.push(H.box(0, gy, Lt + 300, 160, gz - 120, gz, "steel_member"));
+        for (var di = 0; di < ndp; di++) { var dx = x0 + (Lt) * di / Math.max(1, ndp - 1), dy = yy ? 120 : gy; P.push(H.box(dx, dy, 110, 110, 0, gz - 120, "paint_pure_white")); } }); }
+    if (v.solar) { var zsp = function (y) { return zs(y) + 60; }; var hw = ridge != null ? [-W / 2 + 100, -100] : [-W / 2 + 100, W / 2 - 100]; [hw].concat(ridge != null ? [[100, W / 2 - 100]] : []).forEach(function (r2) { for (var sx = x0 + 300; sx + 1000 < -x0; sx += 1100) P.push(H.quad([sx, r2[0], zsp(r2[0])], [sx + 1000, r2[0], zsp(r2[0])], [sx + 1000, r2[1], zsp(r2[1])], [sx, r2[1], zsp(r2[1])], "glass_tint")); }); }
     /* along with the design: floor, kerb and stands */
     var fl = String(v.x_floor || "");
     if (fl && fl !== "None") P.push(H.box(0, 0, Lt, W, -80, 0, /Paver/.test(fl) ? "paver_grey" : "concrete"));
