@@ -3,6 +3,11 @@
 This file is for the people maintaining the app. It is not published with the site (see `.assetsignore`).
 The text users see is `EP_NOTES` in `js/version.js`.
 
+## 2026.11.21-z63
+- mep2.js part 5 (`B.mepServices`, run by PLUMBAUTO / MEPAUTO after the floors, all `mauto`): PVC overhead tank on the top level at the riser group (capacity = design OHT) with CPVC Ø32 feed to each riser; septic tank (`sep` = IS 2470 size for the persons) 3.5 m in front + soak pit + S.W. outlet; drain ends at the septic inlet end; rain-water pipes `rwp_110` with `rwp:true`, max(2, ⌈roof m² / 40⌉), corners first.
+- Quantities: septic tank as excavation 2.8.1, PCC 4.1.8, brick 6.1.1, plaster 13.4.1, RCC 5.1.2, shuttering 5.9.3, steel 5.22A.6, filling 2.25 (CPWD 2023); soak pit 19.33 (≤ 10 persons) or 19.32.1; RWP vertical length roof → ground + 0.45, shoe 12.42.6.2, grating 12.46, clips 12.43.2 per 1.8 m; meter board → main DB cable and main DB → upper DB sub-mains (E&M 1.14.4 / .5 / .6 by load), earth pit → meter board 5.12.
+- mep.js: manholes drawn on the plumbing-layout plan of drains (they were missing when the service drawing was on).
+
 ## 2026.11.21-z62
 - New `js/bim/mep2.js` (after mep.js; in the service-worker cache): MEP part 4.
   - `PLUMBAUTO`: per floor, rooms holding sanitary items (`B.pclass`: WC / W / SH / FT / GY / STACK / RISER) get a soil-and-vent stack (`vent_pipe_110`, `stack:true`; in line with a stack on another floor, else at the room corner nearest the outside), a CPVC riser (new item `cw_riser`), a floor trap if a toilet has none; soil Ø110 WC → stack, waste Ø75 fixtures → floor trap → stack (sinks direct), CW tree from the riser (Ø20 first leg, Ø15), HW tree from the geyser. Ground floor: house connection from each stack to a ring 1 m outside the building and S.W. drain(s) along it (`mh: 30`, manholes at ends / bends / junctions) to a septic tank or manhole outside, else the front. Everything it lays has `mauto` and is replaced on the next run.

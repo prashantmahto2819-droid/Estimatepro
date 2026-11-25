@@ -307,6 +307,7 @@
       if (S.flow) for (var i = 0; i < p.length - 1; i++) { var a = p[i], b = p[i + 1], ln = G.dist(a, b); if (ln < 4 * N) continue; var u = G.norm(G.sub(b, a)), nn = [-u[1], u[0]], tip = G.add(a, G.mul(u, ln * 0.62)), back = G.sub(tip, G.mul(u, 1.6 * N));
         out.fill.push({ pts: [tip, G.add(back, G.mul(nn, 0.7 * N)), G.sub(back, G.mul(nn, 0.7 * N))], col: "rgba(20,20,20,.85)" }); out.segs.push(L(G.add(back, G.mul(nn, 0.7 * N)), tip), L(G.sub(back, G.mul(nn, 0.7 * N)), tip)); }
       if (e.svc === "rw" || e.svc === "vent") { var q0 = p[0]; out.segs.push(circ(q0, 1.2 * N)); }   /* down pipe / vent stack seen from above */
+      if (+e.mh > 0 && /^drain_/.test(e.kind || "") && B.manholes) B.manholes(doc, e).forEach(function (h) { var hl = (h.dep > 900 ? 1200 : 900) / 2 + 115, hw = (h.dep > 900 ? 900 : 800) / 2 + 115, nn = [-h.u[1], h.u[0]], c = function (x, y) { return [h.p[0] + h.u[0] * x + nn[0] * y, h.p[1] + h.u[1] * x + nn[1] * y]; }, q = [c(-hl, -hw), c(hl, -hw), c(hl, hw), c(-hl, hw)]; for (var k = 0; k < 4; k++) out.segs.push(L(q[k], q[(k + 1) % 4])); out.segs.push(circ(h.p, 250)); });   /* manholes */
       return out; };
     R0.labels = function (doc, e, h) { if (e.svc && hideP(doc.d)) return []; if (!e.svc || !SVC[e.svc] || !plb(doc.d)) return rlab0.apply(this, arguments);
       var S = SVC[e.svc], N = scaleOf(doc.d), p = e.pts, best = 0, bi = 0; for (var i = 0; i < p.length - 1; i++) { var ln = G.dist(p[i], p[i + 1]); if (ln > best) { best = ln; bi = i; } } if (p.length < 2) return [];

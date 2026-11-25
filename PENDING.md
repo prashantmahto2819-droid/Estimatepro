@@ -1,6 +1,6 @@
 # Estimate Pro — pending work (kept with the code; not published)
 
-Last updated at version 2026.11.21-z62.
+Last updated at version 2026.11.21-z63.
 
 ## A. Waiting for the owner
 1. Server work: (-z21) module switches and a shared library of blocks and hatch patterns are built — the owner has to run `server/shared.sql` once in Supabase, then check that a switched-off module disappears for a normal user. Still open: shared 3D models / cut-outs / material pictures (large files — need Supabase Storage), WhatsApp update messages with real pictures attached (needs a sending gateway; links to the pictures are already added).
@@ -65,6 +65,8 @@ Last updated at version 2026.11.21-z62.
 6. (-w: 37 hatch patterns.) (-z15: STONE, RUBBLE.) (-z13: HATCHLOAD reads .pat files) (-z10: bold / italic text) (-z14: Times / Courier fonts) (-z13: block library on the device.) Still open: block library shared between users (needs the server).
 7. (done in -r: PIPE — CPVC, rain-water pipes, conduits, cable trays with lengths and SOR rates.) (-z6: drain pipes and wiring in conduit as runs.) (-z7: trench excavation and refilling.) (-z14: fall and manholes.) (-z22: manholes at ends, bends and junctions, shown on plan; 120 × 90 cm and extra depth by depth.) (-z38: circular manholes beyond 2.5 m.) Still open: manholes deeper than 2.5 m (circular), drop connections. (-z24: covers shown in 3D.) (Fittings are inside the SOR pipe / conduit rates.)
 8. (done in -r: north point and scale bar.) (-s: plot boundary from bearings, spot levels.) (-z5: SETBACK, AREASTATEMENT with coverage and FAR.) (-z6: CONTOURS; permitted coverage / FAR check.) (-z7: CUTFILL, height check.) (-z14: joined, rounded contours.)
+
+9. Electrical and plumbing (MEP): done in -z57 … -z63 — symbols, wiring, points by room, single line diagram, plumbing pipes, isometric, auto plumbing and drainage, tank, septic tank, rain-water pipes, cables and earthing, separate E / P sheets, MEPAUTO for the whole building. Still open: check on a real drawing of the owner.
 
 ## C2. Stairs
 1. (-z27: corner fitting, side, clear distances, wall warning, opening in the slab above.) (-z28: railing on the flights, headroom check.) (-z29: rail at the landing and round the opening above, landing length and gap as fields, STAIRUP repeats the stair on the floors above.) (-z30: L-shaped stair with a quarter landing.) (-z31: U-shaped stair, spiral stair, rails on the outer edges of landings.) (-z32: three winders on the L stair, warning for the height between the turns of a spiral.) (-z33: steel spiral weighed under structural steel, top platform.) (-z46: winders on the dog-leg stair.) (-z47: winders on the U stair.) Still open: a top platform for the spiral, an opening that leaves the slab over the low end, railing on the outer edge of the landing.

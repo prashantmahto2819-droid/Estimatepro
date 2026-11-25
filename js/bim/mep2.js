@@ -141,12 +141,13 @@
     stacks.forEach(function (p) { if (!uniq.some(function (q) { return G.dist(p, q) < 600; })) uniq.push(p); });
     var dia = nwc > 20 ? 150 : 100, runs = 0, mk = function (svc, dia2, pts, o) { add(Object.assign({ t: "run", kind: B.mepKindFor(svc, dia2), pts: pts.map(function (p) { return [Math.round(p[0]), Math.round(p[1])]; }), side: 1, z: SVC[svc].z, lvl: g, svc: svc, dia: dia2, slope: SVC[svc].slope, layer: svc === "drain" ? "P-DRAIN" : "P-SOIL", mauto: 1 }, o || {})); runs++; };
     var outs = uniq.map(function (p) { var q = rectParam(R, p); mk("soil", 110, [p, q.q]); return q; });
-    var tank = d.ents.filter(function (e) { return e.t === "asset" && same(e.lvl, g) && /^(septic|manhole)/.test(e.kind || "") && !G.inPoly(e.p, [[Bb[0], Bb[1]], [Bb[2], Bb[1]], [Bb[2], Bb[3]], [Bb[0], Bb[3]]]); })[0];
-    var T = tank ? rectParam(R, tank.p) : outs.slice().sort(function (a, b) { return a.q[1] - b.q[1]; })[0], P = T.P;
+    var tank = d.ents.filter(function (e) { return e.t === "asset" && same(e.lvl, g) && /^(septic|manhole)/.test(e.kind || "") && !(e.kind === "manhole" && d.ents.some(function (x) { return x.kind === "septic_tank" && same(x.lvl, g); })) && !G.inPoly(e.p, [[Bb[0], Bb[1]], [Bb[2], Bb[1]], [Bb[2], Bb[3]], [Bb[0], Bb[3]]]); })[0];
+    var tq = tank ? (tank.kind === "septic_tank" ? [tank.p[0] - 1300 * Math.cos((tank.rot || 0) * Math.PI / 180), tank.p[1] - 1300 * Math.sin((tank.rot || 0) * Math.PI / 180)] : tank.p) : null;
+    var T = tank ? rectParam(R, tq) : outs.slice().sort(function (a, b) { return a.q[1] - b.q[1]; })[0], P = T.P;
     var ccw = [], cw = []; outs.forEach(function (o) { if (o === T) return; var a = ((o.s - T.s) % P + P) % P; if (a < 1) return; (a <= P / 2 ? ccw : cw).push({ o: o, a: a }); });
     if (ccw.length) { var far = ccw.sort(function (x, y) { return y.a - x.a; })[0]; var pth = rectPath(R, T.s, T.s + far.a).reverse(); mk("drain", dia, pth, { mh: 30 }); }
     if (cw.length) { var far2 = cw.sort(function (x, y) { return y.a - x.a; })[0]; mk("drain", dia, rectPath(R, T.s - (P - far2.a), T.s), { mh: 30 }); }
-    if (tank && G.dist(T.q, tank.p) > 300) mk("drain", dia, [T.q, tank.p], { mh: 30 });
+    if (tank && G.dist(T.q, tq) > 300) mk("drain", dia, lpath(T.q, tq), { mh: 30 });
     if (!ccw.length && !cw.length && !tank) mk("drain", dia, [T.q, G.add(T.q, [0, -2000])], { mh: 30 });
     return { runs: runs, tank: !!tank };
   }
@@ -159,6 +160,7 @@
     doc.begin("Plumbing layout"); try {
       clearAuto(doc, onlyLv === undefined ? null : set); var add = function (o) { return doc.add(o); };
       lvls(d).forEach(function (l) { var st = plumbFloor(doc, l.id, add); ["rooms", "runs", "items", "wc", "fu"].forEach(function (k) { tot[k] += st[k]; }); tot.stacks = tot.stacks.concat(st.stacks); });
+      if (tot.rooms) { var risers = d.ents.filter(function (e) { return pcls(e) === "RISER"; }).map(function (e) { return e.p; }); tot.svc = B.mepServices(doc, add, risers); }
       var dr = drainOutside(doc, add, tot.stacks, tot.wc); tot.runs += dr.runs; tot.tank = dr.tank;
     } finally { doc.commit(); }
     return tot;
@@ -169,7 +171,7 @@
     var old = d.ents.filter(function (e) { return e.mauto; }).length;
     if (old) { var ok = await ed.getKw("Lay the plumbing again? The " + old + " pipes and items laid automatically before are replaced (your own pipes stay).", ["Yes", "No"], "Yes"); if (ok !== "Yes") return; }
     var t = await plumbAll(ed);
-    ed.say("Plumbing laid for " + t.rooms + " wet room" + (t.rooms === 1 ? "" : "s") + " on all floors: " + t.runs + " pipe runs, " + t.items + " stacks / risers / floor traps, the house drain with manholes" + (t.tank ? " to the septic tank / manhole" : "") + ". " + t.wc + " WC, " + t.fu + " fixture units. Check with SCHEDULE → Plumbing and Isometric; move or edit any pipe as you like.");
+    ed.say("Plumbing laid for " + t.rooms + " wet room" + (t.rooms === 1 ? "" : "s") + " on all floors: " + t.runs + " pipe runs, " + t.items + " stacks / risers / floor traps, the house drain with manholes" + (t.tank ? " to the septic tank / manhole" : "") + (t.svc ? (t.svc.tank ? ", overhead tank on the roof" : "") + (t.svc.sep ? ", septic tank and soak pit" : "") + (t.svc.rwp ? ", " + t.svc.rwp + " rain-water pipes" : "") : "") + ". " + t.wc + " WC, " + t.fu + " fixture units. Check with SCHEDULE → Plumbing and Isometric; move or edit any pipe as you like.");
   });
 
   /* ---------- meter board and earth pits outside, near the DB ---------- */
@@ -287,6 +289,83 @@
     T2.ents.forEach(function (en) { var o = JSON.parse(JSON.stringify(en)); ["a", "b", "p", "c"].forEach(function (f) { if (o[f]) o[f] = [o[f][0], o[f][1] + dy]; }); T.ents.push(o); });
     T.bb = [T.bb[0], T2.bb[1] + dy, Math.max(T.bb[2], T2.bb[2]), T.bb[3]]; return T;
   };
+
+  /* =====================================================================================================================
+     Part 5: what comes with the building services — overhead tank on the roof with its feed to the risers, septic tank and soak
+     pit sized for the persons (measured as excavation, PCC, brick work, plaster, RCC cover), rain-water pipes from the roof,
+     main and sub-main cables between the meter board and the DBs, and the earth connections.
+     ===================================================================================================================== */
+  function cpk(c) { var k = "cp_" + c.replace(/\./g, "_"); if (!B.MAP[k]) B.MAP[k] = { c: [["cpwd23", c]], books: ["cpwd23"] }; return k; }
+  function emk(c) { var k = "em_" + c.replace(/\./g, "_"); if (!B.MAP[k]) B.MAP[k] = { c: [["em22", c]], books: ["em22"] }; return k; }
+  function f2(v) { return (v / 1000).toFixed(2); }
+  var aq1 = X0.qty;
+  X0.qty = function (doc, e) {
+    var d = doc.d, k = e.kind || "", z = e.lvl ? B.below(d, e.lvl) : "super", R = function (code, dim, v, label, f) { return { k: cpk(code), dim: dim, v: v, label: label, f: f, z: z }; };
+    if (k === "septic_tank" && (e.sep || e.mauto)) {
+      var D0 = B.plumbDesign(d), sp = e.sep || [D0.sep[1], D0.sep[2], D0.sep[3]], Li = sp[0] * 1000, Bi = sp[1] * 1000, Dl = sp[2] * 1000, H = Dl + 300, t = 230, Lo = Li + 2 * t, Bo = Bi + 2 * t, ex = 300;
+      var exc = (Lo + 2 * ex) * (Bo + 2 * ex) * (H + 150 + 100), outer = Lo * Bo * (H + 150 + 100);
+      return [R("2.8.1", "V", exc, "Septic tank — excavation", f2(Lo + 2 * ex) + " × " + f2(Bo + 2 * ex) + " × " + f2(H + 250)),
+        R("4.1.8", "V", (Lo + 300) * (Bo + 300) * 150, "Septic tank — PCC 1:4:8 bed 150 mm", f2(Lo + 300) + " × " + f2(Bo + 300) + " × 0.15"),
+        R("6.1.1", "V", (2 * (Li + Bi + 2 * t)) * t * H + Bi * t * Dl * 0.9, "Septic tank — brick work in CM 1:4 (walls + baffle wall)", "2 × (" + f2(Li) + " + " + f2(Bi) + " + 0.46) × 0.23 × " + f2(H) + " + baffle"),
+        R("13.4.1", "A", 2 * (Li + Bi) * H + Li * Bi + 2 * Bi * Dl, "Septic tank — 12 mm plaster 1:4 inside (with water-proofing compound)", "walls, floor, both faces of the baffle"),
+        R("5.1.2", "V", Lo * Bo * 100, "Septic tank — RCC cover slab 100 mm with manhole covers", f2(Lo) + " × " + f2(Bo) + " × 0.10"),
+        R("5.9.3", "A", Li * Bi, "Septic tank — shuttering under the cover slab", f2(Li) + " × " + f2(Bi)),
+        R("5.22A.6", "N", Math.round(Lo * Bo * 100 / 1e9 * 80), "Septic tank — steel in the cover slab (≈ 80 kg/cum)", "≈ 80 kg/cum"),
+        R("2.25", "V", Math.max(0, exc - outer), "Septic tank — filling the excavated earth round it", "excavation − tank")];
+    }
+    if (k === "soak_pit" && e.mauto) { var big = (B.plumbDesign(d).P > 10); return [R(big ? "19.32.1" : "19.33", "N", 1, big ? "Soak pit 2.5 m dia × 3.0 m deep with honeycomb shaft" : "Soak pit 1.2 × 1.2 × 1.2 m filled with brick bats", "1 no.")]; }
+    if (k === "rwp_110" && e.rwp) { var g = B.level(d, groundId(d)), Lr = roofTop(d) - (g ? g.elev : 0) + 450;
+      return [{ k: "pipe_rain_110", dim: "L", v: Lr, label: "uPVC rain-water pipe 110 mm from the roof to the ground (vertical)", f: f2(Lr) + " m", z: z },
+        R("12.42.6.2", "N", 1, "uPVC shoe 110 mm at the foot of the rain-water pipe", "1 no."), R("12.46", "N", 1, "Grating at the roof inlet of the rain-water pipe", "1 no."),
+        R("12.43.2", "N", Math.ceil(Lr / 1800), "uPVC pipe clips 110 mm (one per 1.8 m)", Math.ceil(Lr / 1800) + " nos")]; }
+    var rows = aq1.apply(this, arguments), c = B.eclass(e);
+    if (c === "MB" || c === "DB" || c === "E") rows = rows.concat(cables(doc, e, c, z));
+    return rows;
+  };
+  function mainDB(d) { var g = groundId(d), dbs = d.ents.filter(function (e) { return B.eclass(e) === "DB"; }); return dbs.filter(function (e) { return same(e.lvl, g); })[0] || dbs[0] || null; }
+  function dbLoad(doc, db) { try { return (B.mepCircuits(doc, db) || []).reduce(function (a, c) { return a + c.w; }, 0); } catch (er) { return 0; } }
+  function cableFor(w) { var I = w * 0.75 / (230 * 0.9); return I <= 32 ? ["1.14.4", "2 × 6 + 1 × 6"] : I <= 40 ? ["1.14.5", "2 × 10 + 1 × 6"] : ["1.14.6", "2 × 16 + 1 × 6"]; }
+  function vgap(d, a, b) { var la = B.level(d, a.lvl), lb = B.level(d, b.lvl); return Math.abs((la ? la.elev : 0) - (lb ? lb.elev : 0)); }
+  function cables(doc, e, c, z) {
+    var d = doc.d, M = mainDB(d); if (!B.mepOf(d) || !M) return [];
+    var run = function (a, b) { return Math.abs(a.p[0] - b.p[0]) + Math.abs(a.p[1] - b.p[1]) + vgap(d, a, b) + 3000; };
+    if (c === "MB") { var all = d.ents.filter(function (x) { return B.eclass(x) === "DB"; }).reduce(function (a, x) { return a + dbLoad(doc, x); }, 0), cb = cableFor(all), L1 = run(e, M);
+      return [{ k: emk(cb[0]), dim: "L", v: L1, label: "Main cable " + cb[1] + " sq mm, meter board → main DB", f: f2(L1) + " m (incl. 3 m drops)", z: z }]; }
+    if (c === "DB" && e !== M) { var cb2 = cableFor(dbLoad(doc, e)), L2 = run(M, e);
+      return [{ k: emk(cb2[0]), dim: "L", v: L2, label: "Sub-main " + cb2[1] + " sq mm, main DB → " + (e.name || "DB") + " (" + (B.level(d, e.lvl) || {}).name + ")", f: f2(L2) + " m (incl. rise and drops)", z: z }]; }
+    if (c === "E") { var to = d.ents.filter(function (x) { return B.eclass(x) === "MB"; })[0] || M, L3 = Math.abs(e.p[0] - to.p[0]) + Math.abs(e.p[1] - to.p[1]) + 2000;
+      return [{ k: emk("5.12"), dim: "L", v: L3, label: "Earth connection, 6 SWG G.I. wire in 15 mm G.I. pipe, earth pit → " + (to === M ? "main DB" : "meter board"), f: f2(L3) + " m", z: z }]; }
+    return [];
+  }
+  /* placed by PLUMBAUTO after the floors: tank on the roof, septic tank + soak pit, rain-water pipes */
+  function services(doc, add, risers) {
+    var d = doc.d, ls = lvls(d), top = ls[ls.length - 1], g = groundId(d), Bb = bldBox(d, g), D = B.plumbDesign(d), out = { tank: 0, sep: 0, rwp: 0 }; if (!Bb) return out;
+    var mk = function (o) { return add(Object.assign({ t: "asset", rot: 0, sc: 1, layer: "P-FIX", mauto: 1 }, o)); };
+    /* overhead tank and its feed */
+    if (top && risers.length && !d.ents.some(function (e) { return e.kind === "tank" || /^tank_/.test(e.kind || ""); })) {
+      var cx = risers.reduce(function (a, p) { return a + p[0]; }, 0) / risers.length, cy = risers.reduce(function (a, p) { return a + p[1]; }, 0) / risers.length, tp = [Math.round(cx), Math.round(Math.min(Bb[3] - 900, Math.max(Bb[1] + 900, cy)))];
+      mk({ kind: "tank", p: tp, lvl: top.id, cap: D.oht, name: "OHT " + D.oht + " L" }); out.tank = 1;
+      var uq = []; risers.forEach(function (p) { if (!uq.some(function (q) { return G.dist(p, q) < 600; })) uq.push(p); });
+      uq.forEach(function (p) { var pts = lpath(tp, p); add({ t: "run", kind: B.mepKindFor("cw", 32), pts: pts.map(function (q) { return [Math.round(q[0]), Math.round(q[1])]; }), side: 1, z: SVC.cw.z, lvl: top.id, svc: "cw", dia: 32, layer: "P-CW", mauto: 1 }); });
+    }
+    /* septic tank and soak pit in front of the building */
+    if (!d.ents.some(function (e) { return /^(septic|manhole)/.test(e.kind || "") && same(e.lvl, g); })) {
+      var sx = (Bb[0] + Bb[2]) / 2, syy = Bb[1] - 1000 - 2500;
+      mk({ kind: "septic_tank", p: [Math.round(sx), Math.round(syy)], lvl: g, sep: [D.sep[1], D.sep[2], D.sep[3]], name: "Septic tank " + D.sep[0] + " users" });
+      var sk = mk({ kind: "soak_pit", p: [Math.round(sx + 4500), Math.round(syy)], lvl: g, name: "Soak pit" }); out.sep = 1;
+      add({ t: "run", kind: B.mepKindFor("drain", 100), pts: [[Math.round(sx + 1300), Math.round(syy)], [Math.round(sx + 3700), Math.round(syy)]], side: 1, z: SVC.drain.z, lvl: g, svc: "drain", dia: 100, slope: 60, layer: "P-DRAIN", mauto: 1 }); void sk;
+    }
+    /* rain-water pipes: one 110 mm pipe for about 40 m² of roof, at the corners first */
+    if (!d.ents.some(function (e) { return e.kind === "rwp_110"; })) {
+      var area = (Bb[2] - Bb[0] + 900) * (Bb[3] - Bb[1] + 900) / 1e6, n = Math.max(2, Math.ceil(area / 40)), o = 150;
+      var cs = [[Bb[0] - o, Bb[1] - o], [Bb[2] + o, Bb[3] + o], [Bb[2] + o, Bb[1] - o], [Bb[0] - o, Bb[3] + o]], pts = cs.slice(0, Math.min(4, n));
+      var long = (Bb[2] - Bb[0]) >= (Bb[3] - Bb[1]), extra = n - pts.length;
+      for (var i = 0; i < extra; i++) { var f = (Math.floor(i / 2) + 1) / (Math.ceil(extra / 2) + 1), side = i % 2; pts.push(long ? [Bb[0] + (Bb[2] - Bb[0]) * f, side ? Bb[3] + o : Bb[1] - o] : [side ? Bb[2] + o : Bb[0] - o, Bb[1] + (Bb[3] - Bb[1]) * f]); }
+      pts.forEach(function (p) { mk({ kind: "rwp_110", p: [Math.round(p[0]), Math.round(p[1])], lvl: g, rwp: true, name: "RWP" }); }); out.rwp = pts.length;
+    }
+    return out;
+  }
+  B.mepServices = services;
 
   /* ---------- ribbon ---------- */
   if (CAD.RSEC && CAD.RSEC["Site & services"]) { var sec = CAD.RSEC["Site & services"];
