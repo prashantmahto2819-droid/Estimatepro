@@ -279,7 +279,7 @@
         for (var vi = v0; vi < M.v.length; vi += 14) { mv(M.v, vi); var nx = M.v[vi + 3], ny = M.v[vi + 4], lnx = (nx * cR + ny * sR) / f3[0], lny = (-nx * sR + ny * cR) / f3[1], nz = M.v[vi + 5] / f3[2], nl = Math.hypot(lnx, lny, nz) || 1; M.v[vi + 3] = (lnx * cR - lny * sR) / nl; M.v[vi + 4] = (lnx * sR + lny * cR) / nl; M.v[vi + 5] = nz / nl; }
         for (var ei = e0; ei < M.e.length; ei += 3) mv(M.e, ei); }
       /* a light fitting also lights the 3D view: a point just below a ceiling fitting, near the top of a standing one */
-      if (H.lights && (def.cat === "Lighting" || /light|lamp|chandelier|bulb|lantern/i.test(def.n || "")) && !/switch|point wiring/i.test(def.n || "")) { var cL = xf(e)([0, 0]), sL = e.sc || 1, hL = (def.h || 100) * sL, up = def.mount === "ceiling" || def.mount === "top"; H.lights.push([cL[0] * 0.001, cL[1] * 0.001, (up ? zM - 120 : zM + hL * 0.9) * 0.001, (hL > 2500 ? 3.2 : 1) * (e.lpow == null || e.lpow === "" ? 1 : Math.max(0, Math.min(4, +e.lpow))), LC ? LC[3] : null]); if (+e.lpow === 0 && e.lpow !== "" && e.lpow != null) H.lights.pop(); } }
+      if (H.lights && (def.cat === "Lighting" || /light|lamp|chandelier|bulb|lantern/i.test(def.n || "")) && !/switch|point wiring/i.test(def.n || "")) { var cL = xf(e)([0, 0]), sL = e.sc || 1, hL = (def.h || 100) * sL, up = def.mount === "ceiling" || def.mount === "top"; H.lights.push([cL[0] * 0.001, cL[1] * 0.001, (up ? zM - 120 : zM + hL * 0.9) * 0.001, (hL > 2500 ? 3.2 : 1) * (e.lpow == null || e.lpow === "" ? 1 : Math.max(0, Math.min(4, +e.lpow))), LC ? LC[3] : null].concat(B.lightBeam ? B.lightBeam(e, def, xf(e), cL) : [])); if (+e.lpow === 0 && e.lpow !== "" && e.lpow != null) H.lights.pop(); } }
   };
   /* ---------- landscape areas ---------- */
   var LAND = { lawn: ["Lawn (grassing)", "grass", "rgba(90,150,70,.35)"], paver: ["Paver blocks", "paver", "rgba(150,140,128,.4)"], gravel: ["Gravel / ballast", "gravel", "rgba(170,160,145,.35)"], bed: ["Planting bed (shrubbery)", "soil", "rgba(120,95,70,.35)"], pcc: ["PCC paving 1:4:8", "concrete", "rgba(170,170,170,.35)"], water: ["Water surface — pool / pond / tank (for the view)", "water_pool", "rgba(60,140,190,.4)"] };
@@ -368,4 +368,16 @@
   };
   /* helpers shared with assets2.js (extra library items) */
   B.AH = { cyl: cyl, sphere: sphere, rect: rect, circ: circ, L: L, V: V };
+})();
+/* which way a light fitting shines, for the 3D view: [direction, cosine of the beam edge] — spots and downlights make a cone
+   (a scallop on a wall close by), uplights and façade spots shine up, wall lights only into the room (not through the wall). */
+(function () { var B = window.EP && window.EP.bim; if (!B) return;
+  B.lightBeam = function (e, def, X, c) {
+    var nm = (def.n || "") + " " + (e.kind || ""), fr = X([0, 1000]), f = [(fr[0] - c[0]) / 1000, (fr[1] - c[1]) / 1000], fl = Math.hypot(f[0], f[1]) || 1; f = [f[0] / fl, f[1] / fl];
+    if (e.beam === "all") return [];
+    if (e.beam === "down" || /downlight|COB|spot light|track|pendant spot|magnetic/i.test(nm)) return [[0, 0, -1], e.beamCos != null && e.beamCos !== "" ? +e.beamCos : 0.55];
+    if (/uplight|spike|façade spot|tree \/ façade|wall washer up/i.test(nm)) return [[f[0] * 0.25, f[1] * 0.25, 1], 0.72];
+    if (e.beam === "front" || e.beam === "back" || def.mount === "wall" || /wall|sconce|bracket|bedside/i.test(nm)) { var sg = e.beam === "back" ? -1 : 1; return [[f[0] * sg, f[1] * sg, -0.35], -0.15]; }
+    return [];
+  };
 })();

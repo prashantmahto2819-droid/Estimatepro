@@ -3,6 +3,10 @@
 This file is for the people maintaining the app. It is not published with the site (see `.assetsignore`).
 The text users see is `EP_NOTES` in `js/version.js`.
 
+## 2026.11.21-z64
+- 3D lights: light entries may carry [5] direction and [6] cosine of the beam edge (`B.lightBeam` in assets.js: spots / downlights / COB / track ↓ 0.55; uplights / spike / façade spots ↑ 0.72; wall-mounted lights into the room (local +y) −0.35 z, −0.15; Properties `beam` auto / down / all / front / back and `beamCos`). Shader `uPLd[32]` with a smoothstep cone.
+- Lamp shadows: the shadow camera looks along the beam (`lampVP`, near 0.2); "More shadows" now the next eight fittings (2048 × 1024, 4 × 2 tiles of 512) with 9-tap filtering — nine shadowed fittings in all.
+
 ## 2026.11.21-z63
 - mep2.js part 5 (`B.mepServices`, run by PLUMBAUTO / MEPAUTO after the floors, all `mauto`): PVC overhead tank on the top level at the riser group (capacity = design OHT) with CPVC Ø32 feed to each riser; septic tank (`sep` = IS 2470 size for the persons) 3.5 m in front + soak pit + S.W. outlet; drain ends at the septic inlet end; rain-water pipes `rwp_110` with `rwp:true`, max(2, ⌈roof m² / 40⌉), corners first.
 - Quantities: septic tank as excavation 2.8.1, PCC 4.1.8, brick 6.1.1, plaster 13.4.1, RCC 5.1.2, shuttering 5.9.3, steel 5.22A.6, filling 2.25 (CPWD 2023); soak pit 19.33 (≤ 10 persons) or 19.32.1; RWP vertical length roof → ground + 0.45, shoe 12.42.6.2, grating 12.46, clips 12.43.2 per 1.8 m; meter board → main DB cable and main DB → upper DB sub-mains (E&M 1.14.4 / .5 / .6 by load), earth pit → meter board 5.12.
