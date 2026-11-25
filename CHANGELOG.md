@@ -3,6 +3,10 @@
 This file is for the people maintaining the app. It is not published with the site (see `.assetsignore`).
 The text users see is `EP_NOTES` in `js/version.js`.
 
+## 2026.11.21-z59
+- `cycle_shed`: new input "Member type" — tubular (SHS / RHS, as before) or rolled ISMB / ISMC (IS 808, E250). Rolled: purlins lightest ISMC (gravity with the top flange held by the sheet, uplift with LTB over the bay, L/150); rafters lightest ISMB / ISMC (gravity LLT = purlin spacing for two posts or the arm for a cantilever, uplift LLT = span / purlin spacing, L/180 or L/90); posts ISMB / ISHB ≥ 125 deep (IS 800 compression Kz 2.0 / Ky 1.0, bending with LTB over 2H, combined cl 9.3.2.2) — all with the DS.steel routines. Steel item 10.1 instead of 10.16.3. Module renamed "(tubular or rolled)".
+  - 30 × 4.5 m, two rows: ISMB 125 posts, ISMC 125 rafters, ISMC 75 purlins, 2.72 t (20.1 kg/m²); T: ISMB 200 posts, 2.68 t; cantilever: ISHB 200 / ISMC 250, 4.04 t. Tubular unchanged (1.83 t).
+
 ## 2026.11.21-z58
 - Design Studio: new module `cycle_shed` (`js/ds/modules_extra6.js`, added to ui-design FILES and the service-worker cache) — two-wheeler / cycle parking shed in hollow sections (IS 4923 SHS / RHS, properties from outer size and thickness with square corners [approx 2–5 % above the tables]).
   - Schemes: two rows of posts with a mono-slope roof (rafter on two posts, fixed bases), one row of posts with a T roof (rigid post-top joint, unbalanced and wind cases), one row cantilever.

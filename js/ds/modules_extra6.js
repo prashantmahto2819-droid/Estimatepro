@@ -62,6 +62,30 @@
     return r;
   }
 
+  /* ---------- rolled sections (IS 808): lightest that passes, checked with the IS 800 routines of DS.steel ---------- */
+  var MEMB = ["Tubular – SHS / RHS (IS 4923, ERW tubes)", "Rolled – ISMB / ISMC (IS 808)"];
+  function rolled(inp) { return /^Rolled/.test(String(inp.members)); }
+  function SEC() { return DS.sections; } function ST() { return DS.steel; }
+  function rsec(n) { var s = Object.assign({}, SEC().section(n)); s.t = s.tf; s.per = 2 * s.h + 4 * s.b - 2 * s.tw; return s; }
+  function passes(fn) { var sc = new C.Calc("s"); fn(sc); return !sc.failures.length; }
+  /* beam: gravity with the compression flange held by purlins / sheet (LLT = Lg), uplift with the other flange free (LLT = Lu) */
+  function beamPick(names, fy, Mg, Mu, V, Lg, Lu, deflOk) {
+    for (var i = 0; i < names.length; i++) { var s = rsec(names[i]);
+      if (passes(function (sc) { ST().bending(sc, Mg, s, fy, Lg, Lg <= 0, "", "z"); if (Mu > 0) ST().bending(sc, Mu, s, fy, Lu, false, "", "z"); ST().shear_strength(sc, V, s, fy, ""); }) && deflOk(s)) return s; }
+    return rsec(names[names.length - 1]);
+  }
+  function beamCalc(c, tag, s, fy, Mg, Mu, V, Lg, Lu, defl, dlim, why) {
+    c.section(tag); c.let("Section", "", s.name + " (" + F(s.w, ".2f") + " kg/m)", "", "IS 808", why || "");
+    ST().bending(c, Mg, s, fy, Math.max(Lg, 0.01), Lg <= 0, " (gravity – compression flange held " + (Lg <= 0 ? "by the sheeting" : "at " + F(Lg, ".2f") + " m") + ")", "z");
+    if (Mu > 0) ST().bending(c, Mu, s, fy, Lu, false, " (wind uplift – other flange free over " + F(Lu, ".2f") + " m)", "z");
+    ST().shear_strength(c, V, s, fy, ""); if (defl != null) c.check("Deflection (service)", defl, dlim, { unit: "mm", clause: "IS 800 Table 6" });
+  }
+  function postPick(names, fy, N, Mz, V, Hp) {
+    for (var i = 0; i < names.length; i++) { var s = rsec(names[i]);
+      if (passes(function (sc) { var cp = ST().compression(sc, N, s, fy, Hp, Hp, 2.0, 1.0, ""), bd = ST().bending(sc, Mz, s, fy, 2 * Hp, false, "", "z"); ST().shear_strength(sc, V, s, fy, ""); ST().combined(sc, N, Mz, cp, bd, s, fy, ""); })) return s; }
+    return rsec(names[names.length - 1]);
+  }
+
   var SCHEME = ["Two rows of posts – mono-slope roof", "One row of posts – T (roof on both sides)", "One row of posts – cantilever (Γ, roof on one side)"];
   function kind(inp) { var v = String(inp.scheme); return /^Two/.test(v) ? "two" : /T \(/.test(v) ? "T" : "cant"; }
 
@@ -95,9 +119,11 @@
     c.let("Purlins across the roof / spacing on the slope", "n / sp", np + " / " + F(sp, ".2f"), "nos / m", "0.50 mm profiled sheet: span ≤ 1.5 m (manufacturer tables – verify)");
     var wpu_d = (1.5 * (gs + qk)) * sp, wpu_u = (1.5 * cpl * pd - 0.9 * gs) * sp, Mp = Math.max(wpu_d, wpu_u) * bay * bay / 8;
     c.calc("Purlin moment, simply supported over the bay (worst of 1.5(DL+LL) and 1.5 WL uplift − 0.9 DL)", "Mp", "max(wd, wu)*s**2/8", "kN·m", "", { wd: R(wpu_d, 3), wu: R(wpu_u, 3), s: R(bay, 3) });
-    var purl = pick(HS, function (s) { var r = resist(s, fy, 1e3); return r.cls !== "Slender" && r.Md >= Mp && 5 * (gs + qk) * sp * Math.pow(bay * 1000, 4) / (384 * 2e5 * s.Iz) <= bay * 1000 / 150 && s.h >= 50; });
-    var dP = 5 * (gs + qk) * sp * Math.pow(bay * 1000, 4) / (384 * 2e5 * purl.Iz);
-    design(c, "Purlin (" + purl.name + ")", purl, fy, 0, Mp, Math.max(wpu_d, wpu_u) * bay / 2, 1e3, dP, bay * 1000 / 150, "lightest hollow section that passes; long side vertical, screwed to cleats on the rafter");
+    var RL = rolled(inp), fyr0 = RL ? 250 : fy, Mpg = wpu_d * bay * bay / 8, Mpu = Math.max(0, wpu_u) * bay * bay / 8, dfl = function (s) { return 5 * (gs + qk) * sp * Math.pow(bay * 1000, 4) / (384 * 2e5 * s.Iz); }, purl, dP;
+    if (RL) { purl = beamPick(SEC().by_weight(SEC().ISMC), 250, Mpg, Mpu, Math.max(wpu_d, wpu_u) * bay / 2, 0, bay, function (s) { return dfl(s) <= bay * 1000 / 150; }); dP = dfl(purl);
+      beamCalc(c, "Purlin (" + purl.name + ")", purl, 250, Mpg, Mpu, Math.max(wpu_d, wpu_u) * bay / 2, 0, bay, dP, bay * 1000 / 150, "lightest ISMC that passes; toes up the slope, on cleats; sag rod at mid-span if the bay is over 4 m"); }
+    else { purl = pick(HS, function (s) { var r = resist(s, fy, 1e3); return r.cls !== "Slender" && r.Md >= Mp && dfl(s) <= bay * 1000 / 150 && s.h >= 50; }); dP = dfl(purl);
+      design(c, "Purlin (" + purl.name + ")", purl, fy, 0, Mp, Math.max(wpu_d, wpu_u) * bay / 2, 1e3, dP, bay * 1000 / 150, "lightest hollow section that passes; long side vertical, screwed to cleats on the rafter"); }
     var gk = gs + purl.w * 9.81e-3 / sp;   /* sheeting + purlins per m² of roof */
 
     /* frames */
@@ -131,11 +157,21 @@
     }
     /* rafter and post sizes */
     var Ls = K === "two" ? span : arm, defR = function (s) { return K === "two" ? 5 * (wG + wQ) * Math.pow(Ls * 1000, 4) / (384 * 2e5 * s.Iz) : (wG + wQ) * Math.pow(Ls * 1000, 4) / (8 * 2e5 * s.Iz); }, limR = K === "two" ? Ls * 1000 / 180 : Ls * 1000 / 90;
+    var Hp = K === "two" ? Hhi : K === "cant" ? Hhi : H, KL = 2.0 * Hp * 1000;
+    if (RL) {
+      /* rafter: gravity – top flange held by the purlins (two posts) / bottom flange in compression at the post, free over the cantilever; uplift – the other flange free */
+      var Mrg = Mr, Mru = K === "two" ? Math.max(0, 1.5 * wU - 0.9 * wG) * span * span / 8 : Math.max(0, 1.5 * wU - 0.9 * wG) * arm * arm / 2, Lg = K === "two" ? sp : arm, Lu = K === "two" ? span : sp;
+      raf = beamPick(SEC().by_weight(SEC().ISMB).concat(SEC().by_weight(SEC().ISMC)).sort(function (a, b) { return SEC().section(a).w - SEC().section(b).w; }), 250, Mrg, Mru, Vr, Lg, Lu, function (s) { return defR(s) <= limR && s.h >= 100; });
+      beamCalc(c, "Rafter (" + raf.name + ")", raf, 250, Mrg, Mru, Vr, Lg, Lu, defR(raf), limR, "lightest ISMB / ISMC that passes bending (with LTB), shear and deflection");
+      post = postPick(SEC().by_weight(SEC().ISMB).concat(SEC().by_weight(SEC().ISHB)).sort(function (a, b) { return SEC().section(a).w - SEC().section(b).w; }).filter(function (n) { return SEC().section(n).h >= 125; }), 250, Np, Mpost, Vpost, Hp);
+      c.section("Post (" + post.name + ")"); c.let("Section", "", post.name + " (" + F(post.w, ".2f") + " kg/m)", "", "IS 808", "web across the shed; fixed at the base, free at the top across the shed (Kz = 2.0), held along the shed by the eave tie and end-bay bracing (Ky = 1.0)");
+      var cpP = ST().compression(c, Np, post, 250, Hp, Hp, 2.0, 1.0, ""), bdP = ST().bending(c, Mpost, post, 250, 2 * Hp, false, "", "z"); ST().shear_strength(c, Vpost, post, 250, ""); ST().combined(c, Np, Mpost, cpP, bdP, post, 250, "");
+    } else {
     raf = pick(HS, function (s) { var r = resist(s, fy, 1e3); return r.cls !== "Slender" && r.Md >= Mr && r.Vd >= Vr && defR(s) <= limR && s.h >= 72; });
     design(c, "Rafter (" + raf.name + ")", raf, fy, Nr, Mr, Vr, 1e3, defR(raf), limR, "lightest that passes bending, shear and deflection (L/" + (K === "two" ? 180 : "90 for a cantilever tip") + ")");
-    var Hp = K === "two" ? Hhi : K === "cant" ? Hhi : H, KL = 2.0 * Hp * 1000;
     post = pick(HS.filter(function (s) { return s.family === "SHS"; }), function (s) { var r = resist(s, fy, KL); return r.cls !== "Slender" && r.KLr <= 180 && Np / r.Nd + Mpost / r.Md <= 1 && r.Vd >= Vpost && s.h >= Math.max(raf.b, 72); });
     design(c, "Post (" + post.name + ")", post, fy, Np, Mpost, Vpost, KL, null, null, "square hollow section, fixed at the base, free at the top across the shed (K = 2.0)");
+    }
     c.info("Longitudinal stability", "rod bracing X in the two end bays (roof plane and the post line" + (K === "two" ? "s" : "") + "), eave tie along the post tops", "IS 800 cl 4.3 / practice");
 
     /* base plate, anchor bolts */
@@ -144,7 +180,7 @@
     var db = [16, 20, 24, 27].filter(function (d) { return 0.9 * 400 * 0.78 * area(d) / 1.25 / 1000 >= Tb; })[0] || 30;
     var Tdb = c.calc("Tension capacity of one bolt (4.6)", "Tdb", "0.9*400*0.78*pi*d**2/4/1.25/1000", "kN", "IS 800 cl 10.3.5", { d: db }); c.check("Bolt tension", Tb, Tdb, { unit: "kN", clause: "IS 800 cl 10.3.5" });
     var La = c.calc("Anchor length (bond 1.2 N/mm², ≥ 20d)", "La", "max(T*1000/(pi*d*1.2), 20*d)", "mm", "IS 456 cl 26.2.1", { T: R(Tb, 3), d: db });
-    var Bp = ceil_to(post.h + 150, 10), pa = (Bp - post.h) / 2;
+    var Bp = ceil_to(Math.max(post.h, post.b) + 150, 10), pa = (Bp - Math.min(post.h, post.b)) / 2;
     var wb = c.calc("Bearing pressure under the plate (axial + moment, plate " + G(Bp) + " sq)", "w", "Np*1000/B**2 + 6*Mu*1e6/B**3", "N/mm²", "", { Np: R(Np, 3), Mu: R(Mpost, 3), B: Bp });
     c.check("Bearing ≤ 0.45 fck", wb, 0.45 * num(inp.fck), { unit: "N/mm²", clause: "IS 800 cl 7.4.1" });
     var tp = c.calc("Base plate thickness (projection a = b)", "tp", "max(sqrt(2.5*w*(a**2 - 0.3*a**2)*1.1/250), tpost, 12)", "mm", "IS 800 cl 7.4.3.1", "stiffeners 6 mm on the four sides", { w: R(wb, 3), a: pa, tpost: post.t });
@@ -169,8 +205,8 @@
 
     /* checks & notes */
     var kgm2 = (nf * (K === "two" ? 2 : 1) * post.w * (Hp + 0.1) + nf * raf.w * (W / cs) + np * purl.w * Lt) / (W * Lt);
-    c.thumb("Steel per m² of roof", 16, kgm2, "kg/m²", "light tubular canopies 12–22 kg/m²", "Practice");
-    c.miss("Hot-dip galvanising or zinc-rich primer + 2 coats enamel; seal tube ends with welded caps; drain holes at the post bottom", "IS 4923 / practice", "Important");
+    c.thumb("Steel per m² of roof", RL ? 22 : 16, kgm2, "kg/m²", RL ? "light canopies in rolled sections 18–30 kg/m²" : "light tubular canopies 12–22 kg/m²", "Practice");
+    c.miss(RL ? "Zinc-rich / red-oxide primer + 2 coats enamel; purlin cleats ISA 50 × 50 × 6 with 2-M12 bolts" : "Hot-dip galvanising or zinc-rich primer + 2 coats enamel; seal tube ends with welded caps; drain holes at the post bottom", RL ? "Practice" : "IS 4923 / practice", "Important");
     c.miss("Floor: PCC / paver block with 1:60 fall to a drain along the open side; wheel stoppers / cycle stands as required", "Practice", "Advisory");
     if (isMine()) c.miss("Mine / coal area: add coal-dust load on the roof (0.5 kN/m² typical) and use epoxy / PU paint", "Practice", "Important");
 
@@ -185,13 +221,13 @@
     var qty = [], postL = K === "two" ? (H + Hhi) / 2 + 0.1 : Hp + 0.1, rafL = W / cs + 0.1;
     var kgPost = nP * post.w * postL, kgRaf = nf * raf.w * rafL, kgPur = np * purl.w * (Lt + 0.2), kgPlate = nP * (Bp * Bp * tp + 4 * 0.5 * 100 * 100 * 6) * 7.85e-6 + nf * 3 * 0.12 * 0.12 * 0.008 * 7850 + np * nf * 0.4;
     var kgBr = (K === "two" ? 3 : 2) * 2 * Math.sqrt(bay * bay + Math.pow(K === "two" ? span : W, 2)) * 0.888 + nb * 2.0;
-    qty.push(Q("Steel work in tubular sections (ERW hollow sections, IS 4923) – posts, rafters, purlins, cut, welded, hoisted, fixed, with primer", "kg",
-      [row("Posts " + post.name, nP, postL, post.w), row("Rafters " + raf.name, nf, rafL, raf.w), row("Purlins " + purl.name + " (" + np + " lines)", np, Lt + 0.2, purl.w)], [CPWD(), "10.16.3"]));
+    qty.push(Q(RL ? "Structural steel work in single sections (ISMB / ISMC) – posts, rafters, purlins, cut, hoisted, fixed with cleats / bolts / welds, with primer" : "Steel work in tubular sections (ERW hollow sections, IS 4923) – posts, rafters, purlins, cut, welded, hoisted, fixed, with primer", "kg",
+      [row("Posts " + post.name, nP, postL, post.w), row("Rafters " + raf.name, nf, rafL, raf.w), row("Purlins " + purl.name + " (" + np + " lines)", np, Lt + 0.2, purl.w)], [CPWD(), RL ? "10.1" : "10.16.3"]));
     qty.push(Q("Structural steel in plates (base plates, stiffeners, cap / end plates, purlin cleats) incl. priming", "kg", [row("Plates and cleats", 1, kgPlate)], [CPWD(), "10.2"]));
     qty.push(Q("MS rod bracing 12 mm with turnbuckles (end bays) and eave tie", "kg", [row("Bracing rods + eave tie", 1, kgBr)], [CPWD(), "10.1"]));
     qty.push(Q("MS holding-down bolts with nuts & washers", "kg", [row("4 bolts per post (kg = π/4·d²·L·7.85e-6)", nP * 4, area(db) * (La + 200) * 7.85e-6)], [CPWD(), "10.19"]));
     qty.push(Q("Pre-coated galvanised profile sheet 0.50 mm for the roof, with self-drilling screws", "sqm", [row("Roof (on the slope) incl. end overhangs", 1, Lt + 0.3, W / cs)], [CPWD(), "12.50"]));
-    qty.push(Q("Painting steel work, two coats synthetic enamel over primer (outside of tubes)", "sqm", [row("Posts", nP, postL, post.per / 1000), row("Rafters", nf, rafL, raf.per / 1000), row("Purlins", np, Lt + 0.2, purl.per / 1000)], [CPWD(), "13.61.1"]));
+    qty.push(Q("Painting steel work, two coats synthetic enamel over primer" + (RL ? "" : " (outside of tubes)"), "sqm", [row("Posts", nP, postL, post.per / 1000), row("Rafters", nf, rafL, raf.per / 1000), row("Purlins", np, Lt + 0.2, purl.per / 1000)], [CPWD(), "13.61.1"]));
     qty.push(Q("Earth work in excavation for footings, all kinds of soil", "cum", [row("Footing pits", nP, res.B + 0.6, res.B + 0.6, Df + 0.1)], [CPWD(), "2.8.1"]));
     qty.push(Q("PCC 1:4:8 below footings", "cum", [row("Levelling course 100", nP, res.B + 0.2, res.B + 0.2, 0.1)], [CPWD(), "4.1.8"]));
     qty.push(Q("RCC M" + G(fck) + " in footings & pedestals (excl. steel & shuttering)", "cum", [row("Footings", nP, res.B, res.B, tf), row("Pedestals", nP, a0, a0, Df - tf + ped)], null, CM().rcc_rate(fck)));
@@ -202,7 +238,7 @@
     var totSteel = kgPost + kgRaf + kgPur + kgPlate + kgBr;
 
     var sheet = drawing(inp, K, W, Lt, bay, nb, H, Hhi, th, ov, span, arm, post, raf, purl, np, sp, res, tf, a0, Df, ped, tp, Bp, db, La, bars);
-    var summary = { "Shed": F(W, ".2f") + " × " + F(Lt, ".2f") + " m, " + String(inp.scheme), "Frames": nf + " frames @ " + F(bay, ".2f") + " m; clear height " + F(H, ".2f") + " m, slope " + G(th) + "°",
+    var summary = { "Shed": F(W, ".2f") + " × " + F(Lt, ".2f") + " m, " + String(inp.scheme) + (RL ? " — rolled sections" : " — tubular"), "Frames": nf + " frames @ " + F(bay, ".2f") + " m; clear height " + F(H, ".2f") + " m, slope " + G(th) + "°",
       "Posts": nP + " nos " + post.name, "Rafters": nf + " nos " + raf.name, "Purlins": np + " lines " + purl.name + " @ " + F(sp, ".2f") + " m", "Roof": "0.50 mm pre-coated profile sheet",
       "Base": G(Bp) + " sq × " + G(tp) + " plate, 4-M" + G(db), "Footings": nP + " nos " + F(res.B, ".2f") + " m sq × " + G(tf * 1000) + ", " + G(bars.dia) + "Ø @ " + G(bars.spacing),
       "Total steel": F(totSteel / 1000, ".2f") + " t (" + F(totSteel / (W * Lt), ".1f") + " kg/m²)", "Wind": "pd = " + F(pd, ".3f") + " kN/m²", "Max utilisation": F(c.max_utilisation, ".2f") };
@@ -239,7 +275,7 @@
     b.line(-B / 2 - 500, 0, B / 2 + 500, 0, "SOIL"); b.dim(-B / 2, -Df * 1000 - 150, B / 2, -Df * 1000 - 150, 8); b.dim(B / 2, -Df * 1000, B / 2, 0, -8, "Df " + F(Df * 1000, ",.0f"));
     b.text(0, -Df * 1000 - 600, "Footing " + F(B, ",.0f") + " sq × " + G(tf * 1000) + ", " + G(bars.dia) + "Ø @ " + G(bars.spacing) + " both ways; pedestal " + G(a0 * 1000) + " sq, 4-12Ø + 8Ø @ 150", 1.8, { anchor: "middle" });
     b.text(post.h / 2 + 120, ped * 1000 + 150, "Base plate " + G(Bp) + " sq × " + G(tp) + ", 4-M" + G(db) + " × " + G(ceil_to(La + 100, 50)) + ", 30 grout", 1.8);
-    var notes = ["Hollow sections to IS 4923 (YSt 310 / fy " + G(num(inp.fy_st)) + "), all joints fully welded (6 mm fillet), tube ends sealed with welded caps.",
+    var notes = [rolled(inp) ? "Rolled sections to IS 808 / IS 2062 E250; rafter to post by end plate and 4 bolts or full welding; purlins on ISA 50 cleats with 2-M12 bolts." : "Hollow sections to IS 4923 (YSt 310 / fy " + G(num(inp.fy_st)) + "), all joints fully welded (6 mm fillet), tube ends sealed with welded caps.",
       "Wind to IS 875-3:2015, Vb = " + G(num(inp.vb)) + " m/s, terrain " + G(num(inp.terrain)) + "; canopy net pressure coefficients – verify with IS 875-3 Tables 17 / 18.",
       "Roof 0.50 mm pre-coated profile sheet, self-drilling screws with EPDM washers at every second crest on each purlin; side lap 1.5 corrugations.",
       "Footings RCC M" + G(num(inp.fck)) + " on PCC 1:4:8; anchor bolts set with a template; non-shrink grout 30 mm. Steel: zinc-rich primer + 2 coats enamel (or hot-dip galvanised)."];
@@ -248,6 +284,7 @@
 
   var PARAMS = [
     P("scheme", "Framing scheme", SCHEME[0], { kind: "select", options: SCHEME.slice(), group: "Shed" }),
+    P("members", "Member type", MEMB[0], { kind: "select", options: MEMB.slice(), group: "Shed", help: "Tubular is lighter and neater; rolled ISMB / ISMC are easy to get everywhere and bolt up on site" }),
     P("width", "Covered width (across)", 4.5, "m", { min: 2, max: 9, step: 0.1, group: "Shed" }),
     P("length", "Length of the shed", 30.0, "m", { min: 3, max: 300, step: 0.5, group: "Shed" }),
     P("bay", "Post spacing along the length (about)", 3.0, "m", { min: 2, max: 6, step: 0.25, group: "Shed" }),
@@ -260,7 +297,7 @@
     P("terrain", "Terrain category", 2, { kind: "select", options: [1, 2, 3, 4], group: "Wind", help: "open campus / mine: 2; built-up town: 3" }),
     P("k1", "Risk coefficient k1", 1.0, { min: 0.7, max: 1.1, step: 0.01, group: "Wind" }),
     P("k3", "Topography factor k3", 1.0, { min: 1.0, max: 1.36, step: 0.01, group: "Wind" }),
-    P("fy_st", "Hollow section fy (IS 4923)", 310.0, "N/mm²", { kind: "select", options: [210.0, 240.0, 310.0, 355.0], group: "Steel", help: "YSt 210 / 240 / 310 / 355 — 310 is the common grade" }),
+    P("fy_st", "Hollow section fy (IS 4923)", 310.0, "N/mm²", { kind: "select", options: [210.0, 240.0, 310.0, 355.0], group: "Steel", help: "YSt 210 / 240 / 310 / 355 — 310 is the common grade. Rolled sections: E250 (fy 250)." }),
     P("found_depth", "Footing founding depth below GL", 1.2, "m", { min: 0.8, max: 2.5, step: 0.1, group: "Foundation" }),
     P("ped_above", "Pedestal top above GL", 0.3, "m", { min: 0.15, max: 0.6, step: 0.05, group: "Foundation" }),
     P("sbc", "Safe bearing capacity", 150.0, "kN/m²", { min: 50, max: 400, group: "Foundation" }),
@@ -270,8 +307,8 @@
     P("cover", "Clear cover (footing)", 50.0, "mm", { min: 40, max: 75, step: 5, group: "Materials" })
   ];
   M.PARAMS = PARAMS;
-  C.register({ id: "cycle_shed", phase: 2, category: "Steel structures", name: "Two-wheeler / cycle parking shed (tubular)", icon: "🛵",
-    description: "Light open parking canopy in hollow steel sections (SHS / RHS, IS 4923): two rows of posts with a mono-slope roof, one row with a T roof, or a cantilever. " +
+  C.register({ id: "cycle_shed", phase: 2, category: "Steel structures", name: "Two-wheeler / cycle parking shed (tubular or rolled)", icon: "🛵",
+    description: "Light open parking canopy in hollow steel sections (SHS / RHS, IS 4923) or rolled ISMB / ISMC: two rows of posts with a mono-slope roof, one row with a T roof, or a cantilever. " +
       "IS 875 wind on a free-standing canopy (down and uplift), purlins, rafters and posts to IS 800, base plate & anchor bolts, isolated footings (bearing, overturning, uplift); BBS, quantities & drawing.",
     params: PARAMS, run: run_cycle_shed, references: ["IS 800:2007", "IS 4923:2017", "IS 875 (Parts 1–3):2015", "IS 1904:1986", "IS 456:2000"], modes: ["design"] });
 })();
