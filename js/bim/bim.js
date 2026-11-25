@@ -78,6 +78,12 @@
       fill(xs, W, 140, -W / 2); var band = Math.min(160, Hh * 0.28), zl = Hh / 2 - band / 2, zu = Hh / 2 + band / 2, edges = [-W / 2].concat(xs).concat([W / 2]), dg = [], rl = 0; zs.push(zl, zu);
       for (var ri = 0; ri + 1 < edges.length; ri++) { var cxr = (edges[ri] + edges[ri + 1]) / 2, rr = Math.min(band, edges[ri + 1] - edges[ri]) / 2 - 2; if (rr < 15) continue; for (var a = 0; a < 12; a++) { var t0 = a * Math.PI / 6, t1 = (a + 1) * Math.PI / 6; dg.push([cxr + rr * Math.cos(t0), Hh / 2 + rr * Math.sin(t0), cxr + rr * Math.cos(t1), Hh / 2 + rr * Math.sin(t1)]); } rl += 2 * Math.PI * rr; }
       return { pat: pat, xs: xs, zs: zs, diag: dg, W: W, H: Hh, fw: fw, kg: (xs.length * Hh + 2 * W) / 1000 * 1.13 + rl / 1000 * 0.62 + 2 * (W + Hh) / 1000 * 0.98 }; }
+    else if (pat === "scroll") {   /* scroll-work: upright bars with a pair of C-scrolls (an S) in each square of a bay */
+      fill(xs, W, 300, -W / 2); var ed2 = [-W / 2].concat(xs).concat([W / 2]), dgs = [], sl = 0; zs.push(Hh * 0.02, Hh * 0.98);
+      for (var si = 0; si + 1 < ed2.length; si++) { var bw = ed2[si + 1] - ed2[si], cx2 = (ed2[si] + ed2[si + 1]) / 2, nz = Math.max(1, Math.floor(Hh / bw)), ch = Hh / nz;
+        for (var zi = 0; zi < nz; zi++) { var cz = ch * (zi + 0.5), r0 = Math.min(bw, ch) / 4 - 6; if (r0 < 20) continue;
+          [[cz - r0, 1], [cz + r0, -1]].forEach(function (S) { var N2 = 20, prev = null; for (var k = 0; k <= N2; k++) { var t = k / N2 * Math.PI * 3, r = r0 * (1 - k / N2 * 0.75), pt = [cx2 + S[1] * r * Math.cos(t + (S[1] > 0 ? Math.PI / 2 : -Math.PI / 2)), S[0] + r * Math.sin(t + (S[1] > 0 ? Math.PI / 2 : -Math.PI / 2))]; if (prev) { dgs.push([prev[0], prev[1], pt[0], pt[1]]); sl += Math.hypot(pt[0] - prev[0], pt[1] - prev[1]); } prev = pt; } }); } }
+      return { pat: pat, xs: xs, zs: zs, diag: dgs, W: W, H: Hh, fw: fw, kg: (xs.length * Hh + 2 * W) / 1000 * 1.13 + sl / 1000 * 0.62 + 2 * (W + Hh) / 1000 * 0.98 }; }
     else { fill(xs, W, 300, -W / 2); fill(zs, Hh, 150, 0); }
     var len = xs.length * Hh + zs.length * W; return { pat: pat, xs: xs, zs: zs, W: W, H: Hh, fw: fw, kg: len / 1000 * 1.13 + 2 * (W + Hh) / 1000 * 0.98 }; };
   B.archSp = function (o) { if (!o || !o.head) return 0; var r = o.head === "arch" ? o.w / 2 : o.head === "seg" ? o.w * 0.2 : o.head === "point" ? o.w * 0.866 : o.head === "horse" ? o.w * 0.75 : 0; if (!r || r > o.h - 300) return 0;
@@ -123,7 +129,8 @@
       var side = e.flip ? -1 : 1, hinge = e.swing === "r" ? b0 : a0, other = e.swing === "r" ? a0 : b0, leafDir = G.mul(n, side), face = G.add(hinge, G.mul(n, side * th / 2)), leaves = e.kind === "double" ? 2 : 1;
       if (e.kind === "shutter") { L(G.add(a0, G.mul(n, th * 0.2)), G.add(b0, G.mul(n, th * 0.2))); out.dashed.push({ k: "L", a: G.add(a0, G.mul(n, th * 0.45)), b: G.add(b0, G.mul(n, th * 0.45)) }); return out; }
       if (e.kind === "sliding") { L(G.add(a0, G.mul(n, side * th * 0.25)), G.add(G.lerp(a0, b0, 0.55), G.mul(n, side * th * 0.25))); L(G.add(G.lerp(a0, b0, 0.45), G.mul(n, -side * th * 0.0)), G.add(b0, G.mul(n, -side * th * 0.0))); return out; }
-      var lw = e.w / leaves;
+      var fxR = Math.max(0.2, Math.min(0.5, +e.fixR || 0.33)), lw = e.kind === "double_fixed" ? e.w * (1 - fxR) : e.w / leaves;
+      if (e.kind === "double_fixed") { var oth = G.add(other, G.mul(n, side * th / 2)), tw2 = G.norm(G.sub(hinge, other)), fx1 = G.add(oth, G.mul(tw2, e.w * fxR)); L(oth, fx1); L(G.add(oth, G.mul(leafDir, 35)), G.add(fx1, G.mul(leafDir, 35))); L(fx1, G.add(fx1, G.mul(leafDir, 35))); }   /* the fixed leaf, shut */
       for (var i = 0; i < leaves; i++) {
         var hg = i === 0 ? hinge : other, fc = G.add(hg, G.mul(n, side * th / 2)), toward = G.norm(G.sub(i === 0 ? other : hinge, hg)), tip = G.add(fc, G.mul(leafDir, lw));
         L(fc, tip); var a1 = G.ang(fc, G.add(fc, G.mul(toward, lw))), a2 = G.ang(fc, tip), sw = G.an(a2 - a1) < Math.PI ? { s: a1, e: a2 } : { s: a2, e: a1 };
@@ -505,7 +512,7 @@
       push(e.t === "door" ? (e.mat === "steel" ? "door_steel" : e.mat === "pvc" ? "door_pvc" : e.mat === "al" ? "door_al" : "door_flush") : (e.mat === "upvc" ? "win_upvc" : "win_al"), "A", e.w * e.h - B.archSp(e), (e.t === "door" ? "Door shutter " : "Window ") + (e.preset || "") + " " + Math.round(e.w) + "×" + Math.round(e.h), m(e.w) + " × " + m(e.h));
       var gr = e.t === "window" && B.grillOf ? B.grillOf(e) : null; if (gr) push("ms_grill", "M", gr.kg, "Steel grill of window " + (e.preset || "") + " " + Math.round(e.w) + "×" + Math.round(e.h) + " — " + ({ v: "upright bars", h: "level bars", sq: "square grid", box: "oblong grid", dia: "diamond grid", ring: "upright bars with a band of rings" }[gr.pat] || "bars"), (gr.pat === "ring" ? gr.xs.length + " uprights and 2 rails with " + Math.round(gr.diag.length / 12) + " rings of 10 mm round; bars" : (gr.xs.length + gr.zs.length + (gr.diag || []).length) + " bars")+ " of 12 mm square + flat all round (weight by length — check with the fabricator's drawing)");
       if (e.t === "door" && +e.casing > 20 && !e.head) push("door_architrave", "L", 2 * (2 * e.h + e.w + 2 * (+e.casing)), "Architrave (moulded beading) round the door frame, both faces — " + Math.round(+e.casing) + " mm", "2 × (2 × " + m(e.h) + " + " + m(e.w + 2 * (+e.casing)) + ") — the rate item is for 50 × 12 mm; change it for another size");
-      if (e.t === "door") push("door_frame", "L", 2 * e.h + e.w, "Door frame (running length) " + (e.preset || ""), "2 × " + m(e.h) + " + " + m(e.w));
+      if (e.t === "door" && e.frm !== "none") push(e.frm === "stone" ? "stone_door_frame" : "door_frame", "L", 2 * e.h + e.w, (e.frm === "stone" ? "Stone (granite) door frame 150 × 50" : "Door frame" + (e.frm === "slim" ? " 75 × 40" : e.frm === "heavy" ? " 125 × 75" : "")) + " (running length) " + (e.preset || ""), "2 × " + m(e.h) + " + " + m(e.w));
       push(e.t === "door" ? "count_door" : "count_window", "N", 1, (e.t === "door" ? "Doors " : "Windows ") + (e.preset || ""), "1 no.");
       return rows;
     }

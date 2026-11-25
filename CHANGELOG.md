@@ -3,6 +3,11 @@
 This file is for the people maintaining the app. It is not published with the site (see `.assetsignore`).
 The text users see is `EP_NOTES` in `js/version.js`.
 
+## 2026.11.21-z65
+- Door `frm`: "" 50 × 100, slim 40 × 75, heavy 75 × 125, stone 50 × 150 (granite look, key `stone_door_frame` → non-SOR), none (no frame boxes, no frame row). Door kind `double_fixed` with `fixR` (0.2–0.5, default ⅓): plan shows one swing arc + the shut fixed leaf; 3D opens only the main leaf. Schedule: horseshoe arch, frame type, "double, one leaf fixed".
+- assets9: part type "br" (box turned by its own angle); `B.chairParts(x, y, a, style)` / `B.CHAIRS` (plain, uph, arm, cane, stool, metal); `dining_p` takes `chair` and `ends`; new `dining_round_p` (chairs all round, `seats`), `sofa_bed_p` (var open), `recliner_p` (1–4 seats by width, var open = footrests up).
+- Window grill `scroll`: bars at 300 with a pair of mirrored C-scrolls in each square, weighed (flat 0.62 kg/m).
+
 ## 2026.11.21-z64
 - 3D lights: light entries may carry [5] direction and [6] cosine of the beam edge (`B.lightBeam` in assets.js: spots / downlights / COB / track ↓ 0.55; uplights / spike / façade spots ↑ 0.72; wall-mounted lights into the room (local +y) −0.35 z, −0.15; Properties `beam` auto / down / all / front / back and `beamCos`). Shader `uPLd[32]` with a smoothstep cone.
 - Lamp shadows: the shadow camera looks along the beam (`lampVP`, near 0.2); "More shadows" now the next eight fittings (2048 × 1024, 4 × 2 tiles of 512) with 9-tap filtering — nine shadowed fittings in all.

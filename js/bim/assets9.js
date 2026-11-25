@@ -10,20 +10,39 @@
     var def = { n: n, cat: cat, w: w, d: d, h: h, key: key, param: true, vars: vars || null }; o = o || {}; if (o.m) def.mount = o.m; if (o.z != null) def.mz = o.z;
     var size = function (e) { e = e || {}; return [+e.W > 0 ? +e.W : w, +e.D > 0 ? +e.D : d, +e.HH > 0 ? +e.HH : h]; };
     def.sym = function (X, e) { var z = size(e), s = X.s, out = G.polySegs(rect(X([0, 0]), z[0] * s, z[1] * s, X.r), true), b = build(z[0], z[1], z[2], e || {});
-      (b.sym || []).forEach(function (q) { out = out.concat(G.polySegs(rect(X([q[0], q[1]]), q[2] * s, q[3] * s, X.r), true)); }); return out; };
+      (b.sym || []).forEach(function (q) { out = out.concat(G.polySegs(rect(X([q[0], q[1]]), q[2] * s, q[3] * s, X.r + (q[4] || 0)), true)); }); return out; };
     def.mesh = function (M, X, z0, LK, H, e) { var z = size(e), s = X.s;
       build(z[0], z[1], z[2], e || {}).parts.forEach(function (q) { var t = q[0];
-        if (t === "b") { if (q[3] > 0.5 && q[4] > 0.5 && q[6] - q[5] > 0.5) H.box(M, X([q[1], q[2]]), q[3] * s, q[4] * s, X.r, z0 + q[5] * s, z0 + q[6] * s, LK(q[7])); }
+        if (t === "br") { if (q[3] > 0.5 && q[4] > 0.5 && q[6] - q[5] > 0.5) H.box(M, X([q[1], q[2]]), q[3] * s, q[4] * s, X.r + (q[8] || 0), z0 + q[5] * s, z0 + q[6] * s, LK(q[7])); }   /* a box turned by its own angle (°) */
+        else if (t === "b") { if (q[3] > 0.5 && q[4] > 0.5 && q[6] - q[5] > 0.5) H.box(M, X([q[1], q[2]]), q[3] * s, q[4] * s, X.r, z0 + q[5] * s, z0 + q[6] * s, LK(q[7])); }
         else if (t === "c") cyl(M, X([q[1], q[2]]), q[3] * s, z0 + q[4] * s, z0 + q[5] * s, LK(q[6]), 16, q[7] != null ? q[7] * s : undefined);
         else if (t === "s") sphere(M, X([q[1], q[2]]), q[3] * s, z0 + q[4] * s, LK(q[5])); }); };
     A[id] = def;
   }
-  var FU = "Furniture", WD = "wood_teak", DK = "wood_dark", WH = "paint_pure_white", FB = "fabric_beige", BK = "steel_matt_black";
+  var TAU2 = Math.PI * 2, FU = "Furniture", WD = "wood_teak", DK = "wood_dark", WH = "paint_pure_white", FB = "fabric_beige", BK = "steel_matt_black";
   function legs4(w, d, inset, sz, z0, z1, look) { var x = w / 2 - inset, y = d / 2 - inset; return [["b", -x, -y, sz, sz, z0, z1, look], ["b", x, -y, sz, sz, z0, z1, look], ["b", -x, y, sz, sz, z0, z1, look], ["b", x, y, sz, sz, z0, z1, look]]; }
   function chair(x, y, face, look, seatLook) {   /* face: 0 = looks towards +y, 1 = −y, 2 = +x, 3 = −x */
     var bx = face === 2 ? -200 : face === 3 ? 200 : 0, by = face === 0 ? -200 : face === 1 ? 200 : 0, bw = face > 1 ? 40 : 420, bd = face > 1 ? 420 : 40;
     return [["b", x, y, 440, 440, 420, 470, seatLook], ["b", x + bx, y + by, bw, bd, 470, 900, look]].concat(legs4(400, 400, 0, 35, 0, 420, look).map(function (q) { q = q.slice(); q[1] += x; q[2] += y; return q; }));
   }
+
+  /* a chair of a chosen design at (x, y), looking along angle a (radians; 0 = looks towards +y); every part turned with it */
+  var CHAIRS = [["", "Plain wooden chairs"], ["uph", "Upholstered high-back chairs"], ["arm", "Arm chairs"], ["cane", "Cane-back chairs"], ["stool", "Stools (no back)"], ["metal", "Metal café chairs"]];
+  function chairR(x, y, a, st) {
+    var c = Math.cos(a), sn = Math.sin(a), deg = a * 180 / Math.PI, P = [], at = function (px, py) { return [x + px * c - py * sn, y + px * sn + py * c]; };
+    var put = function (px, py, w, d, z0, z1, lk) { var q = at(px, py); P.push(["br", q[0], q[1], w, d, z0, z1, lk, deg]); };
+    var fr = st === "metal" ? BK : DK, seat = st === "uph" ? FB : st === "metal" ? BK : FB, sw = st === "stool" ? 380 : 440;
+    [[-1, -1], [1, -1], [-1, 1], [1, 1]].forEach(function (k) { put(k[0] * (sw / 2 - 25), k[1] * (sw / 2 - 25), st === "metal" ? 22 : 35, st === "metal" ? 22 : 35, 0, st === "stool" ? 620 : 420, fr); });
+    if (st === "stool") { put(0, 0, sw, sw, 620, 670, seat); put(0, -sw / 2 + 60, sw - 60, 20, 250, 270, fr); return P; }
+    put(0, 0, sw, sw, 420, st === "uph" ? 490 : 470, seat);
+    if (st === "uph") put(0, -sw / 2 + 35, sw, 70, 470, 1050, FB);
+    else if (st === "cane") { put(-sw / 2 + 25, -sw / 2 + 20, 35, 40, 470, 920, fr); put(sw / 2 - 25, -sw / 2 + 20, 35, 40, 470, 920, fr); put(0, -sw / 2 + 20, sw, 40, 880, 920, fr); put(0, -sw / 2 + 20, sw - 70, 12, 520, 880, "fabric_beige"); }
+    else if (st === "metal") { put(0, -sw / 2 + 15, sw, 18, 640, 860, BK); put(-sw / 2 + 12, -sw / 2 + 15, 22, 22, 470, 860, BK); put(sw / 2 - 12, -sw / 2 + 15, 22, 22, 470, 860, BK); }
+    else put(0, -sw / 2 + 20, sw - 20, 40, 470, 900, fr);
+    if (st === "arm") { put(-sw / 2 + 20, 0, 40, sw - 40, 640, 680, fr); put(sw / 2 - 20, 0, 40, sw - 40, 640, 680, fr); put(-sw / 2 + 20, sw / 2 - 40, 35, 35, 470, 640, fr); put(sw / 2 - 20, sw / 2 - 40, 35, 35, 470, 640, fr); }
+    return P;
+  }
+  B.chairParts = chairR; B.CHAIRS = CHAIRS;
 
   /* ---------- beds ---------- */
   pm("bed_p", "Bed — any size (pillows and panels follow the width)", FU, 1500, 2000, 1100, "bed", [["", "Wooden with plain headboard"], ["uph", "Upholstered headboard (panels)"], ["storage", "Box / storage bed"], ["poster", "Four-poster"], ["low", "Low platform bed"]], function (w, d, h, e) {
@@ -65,9 +84,30 @@
   pm("dining_p", "Dining table with chairs — any size (chairs follow the length)", FU, 1800, 900, 750, "dining_table", TOPS, function (w, d, h, e) {
     var v = e.var || "", P = [["b", 0, 0, w, d, h - 35, h, topLook(v)]], n = Math.max(1, Math.floor((w - 150) / 600)), sw = w / n, lk = v === "glass" ? "steel_ss" : DK;
     if (v === "marble" || v === "granite") P.push(["b", 0, 0, Math.min(w * 0.5, 900), d * 0.35, 0, 60, DK], ["b", 0, 0, Math.min(w * 0.3, 500), d * 0.2, 60, h - 35, DK]); else P = P.concat(legs4(w, d, 70, 60, 0, h - 35, lk));
-    for (var i = 0; i < n; i++) { var x = -w / 2 + sw * (i + 0.5); P = P.concat(chair(x, -d / 2 - 180, 0, DK, FB), chair(x, d / 2 + 180, 1, DK, FB)); }
-    if (w >= 1500) P = P.concat(chair(-w / 2 - 180, 0, 2, DK, FB), chair(w / 2 + 180, 0, 3, DK, FB));
+    var cs = e.chair || "", ends = e.ends == null || e.ends === "" ? w >= 1500 : e.ends === "1";
+    for (var i = 0; i < n; i++) { var x = -w / 2 + sw * (i + 0.5); P = P.concat(chairR(x, -d / 2 - 180, 0, cs), chairR(x, d / 2 + 180, Math.PI, cs)); }
+    if (ends) P = P.concat(chairR(-w / 2 - 180, 0, -Math.PI / 2, cs), chairR(w / 2 + 180, 0, Math.PI / 2, cs));
     return { parts: P, sym: [[0, 0, w * 0.9, d * 0.8]] };
+  });
+  pm("dining_round_p", "Round dining table with chairs — any diameter (chairs go round it)", FU, 1200, 1200, 750, "dining_table", TOPS, function (w, d, h, e) {
+    var v = e.var || "", D = Math.min(w, d), r = D / 2, P = [["c", 0, 0, r, h - 35, h, topLook(v)], ["c", 0, 0, 70, 0, h - 35, v === "glass" ? "steel_ss" : DK], ["c", 0, 0, Math.min(r * 0.55, 330), 0, 40, DK]];
+    var n = +e.seats > 0 ? Math.round(+e.seats) : Math.max(3, Math.min(10, Math.floor(Math.PI * (D + 360) / 650))), rc = r + 180;
+    for (var i = 0; i < n; i++) { var a = TAU2 * i / n, cx = rc * Math.sin(a), cy = -rc * Math.cos(a); P = P.concat(chairR(cx, cy, a, e.chair || "")); }
+    return { parts: P, sym: [] };
+  });
+  pm("sofa_bed_p", "Sofa-cum-bed — any width (shown as a sofa or opened as a bed)", FU, 1900, 950, 850, "sofa", [["", "Shown as a sofa"], ["open", "Opened as a bed"]], function (w, d, h, e) {
+    var open = e.var === "open", P = [["b", 0, 0, w, d, 80, 300, "fabric_grey"]].concat(legs4(w, d, 60, 50, 0, 80, DK));
+    P.push(["b", -w / 2 + 70, 0, 140, d, 300, 600, "fabric_grey"], ["b", w / 2 - 70, 0, 140, d, 300, 600, "fabric_grey"]);
+    if (open) { P.push(["b", 0, 400, w - 280, d + 900, 300, 480, FB], ["b", 0, -d / 2 + 90, w - 280, 180, 480, 560, WH]); for (var k = 0; k < 4; k++) P.push(["b", (k < 2 ? -1 : 1) * (w / 2 - 300), (k % 2 ? 1 : 0) * 900 + 60, 40, 40, 0, 300, BK]); }
+    else { var ns = Math.max(2, Math.round((w - 280) / 600)), sw2 = (w - 280) / ns; for (var j = 0; j < ns; j++) P.push(["b", -w / 2 + 140 + sw2 * (j + 0.5), 60, sw2 - 12, d - 220, 300, 460, FB], ["b", -w / 2 + 140 + sw2 * (j + 0.5), -d / 2 + 90, sw2 - 12, 180, 300, h, FB]); }
+    return { parts: P, sym: open ? [[0, 400, w - 280, d + 900]] : [[0, -d / 2 + 90, w - 280, 180]] };
+  });
+  pm("recliner_p", "Recliner sofa — 1 to 4 seats (footrests up or down)", FU, 950, 1000, 1050, "sofa", [["", "Footrests down"], ["open", "Footrests up (reclined)"]], function (w, d, h, e) {
+    var n = Math.max(1, Math.min(4, Math.round((w - 160) / 780))), sw = (w - 160) / n, up = e.var === "open", P = [];
+    P.push(["b", -w / 2 + 40, 0, 80, d, 0, 650, "fabric_brown"], ["b", w / 2 - 40, 0, 80, d, 0, 650, "fabric_brown"]);
+    for (var i = 0; i < n; i++) { var x = -w / 2 + 80 + sw * (i + 0.5); P.push(["b", x, 50, sw - 20, d - 250, 120, 470, "fabric_brown"], ["b", x, -d / 2 + 110, sw - 20, 220, 120, up ? 900 : h, "fabric_brown"]);
+      if (up) P.push(["b", x, d / 2 + 180, sw - 60, 420, 300, 400, "fabric_brown"]); if (i > 0) P.push(["b", x - sw / 2, 0, 60, d - 200, 120, 620, "fabric_brown"]); }
+    return { parts: P, sym: up ? [[0, d / 2 + 180, w - 160, 420]] : [] };
   });
   pm("table_p", "Table — any size (centre, side, office, conference)", FU, 1200, 600, 450, "table", TOPS, function (w, d, h, e) {
     var v = e.var || "", lk = v === "glass" ? "steel_ss" : DK, P = [["b", 0, 0, w, d, h - 30, h, topLook(v)]].concat(legs4(w, d, 50, 50, 0, h - 30, lk)); if (h < 600) P.push(["b", 0, 0, w - 140, d - 140, h * 0.3, h * 0.3 + 18, topLook(v === "glass" ? "" : v)]); return { parts: P };

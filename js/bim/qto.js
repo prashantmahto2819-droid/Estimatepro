@@ -37,6 +37,7 @@
     door_pvc: { c: [["cpwd23", "9.118.1"]], q: /PVC door shutter|uPVC.*door shutter/i },
     door_steel: { q: /steel.*door.*shutter|M\.S\. door/i }, door_al: { q: /aluminium.*door/i },
     door_frame: { c: [["cpwd23", "10.14.1.1"], ["cpwd", "10.14.1.1"]], q: /pressed steel door frames/i },
+    stone_door_frame: { q: /(granite|stone).{0,40}(door frame|jamb|chaukhat)|door frame.{0,40}(granite|stone)/i },
     win_al: { q: /aluminium.*(glazed|sliding).*window/i }, win_upvc: { c: [["cpwd23", "9.147.A1.2"]], q: /uPVC.*window/i },
     roof_gi: { q: /colour coated|pre-?painted.*sheet|G\.?I\.? sheet roofing/i }, roof_tile: { q: /roof tiles|mangalore/i }, roof_puf: { q: /PUF|insulated sandwich/i },
     waterproof: { q: /water ?proofing/i }, stair_finish: { q: /kota stone.*steps|granite.*steps|treads/i }, railing: { q: /railing|hand ?rail/i },

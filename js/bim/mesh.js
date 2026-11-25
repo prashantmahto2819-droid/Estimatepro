@@ -82,9 +82,9 @@
   }
   /* ---------- doors & windows ---------- */
   function hosted(M, doc, o, z0) {
-    var pl = B.place(doc, o); if (!pl) return; var d = doc.d, th = pl.w.th, u = pl.u, n = pl.n, zb = o.t === "door" ? 0 : (o.sill != null ? o.sill : 900), zt = zb + o.h, fw = 50;
-    var mat = o.t === "door" ? byMat(d, "door_frame", null, o.lookF, o.colF) : byMat(d, "win_frame", o.mat || "al", o.look, o.col), glass = B.lookFor(d, "glass"), frameD = o.t === "door" ? mat : mat;
-    var A = G.sub(pl.p, G.mul(u, o.w / 2)), Bp = G.add(pl.p, G.mul(u, o.w / 2)), fd = o.t === "door" ? 100 : 60;
+    var pl = B.place(doc, o); if (!pl) return; var d = doc.d, th = pl.w.th, u = pl.u, n = pl.n, zb = o.t === "door" ? 0 : (o.sill != null ? o.sill : 900), zt = zb + o.h, FRM = o.t === "door" ? ({ slim: [40, 75], heavy: [75, 125], stone: [50, 150], none: [6, 40] }[o.frm] || [50, 100]) : null, fw = FRM ? FRM[0] : 50;
+    var mat = o.t === "door" ? (o.frm === "stone" ? B.lookFor(d, "granite") || byMat(d, "door_frame", null, o.lookF, o.colF) : byMat(d, "door_frame", null, o.lookF, o.colF)) : byMat(d, "win_frame", o.mat || "al", o.look, o.col), glass = B.lookFor(d, "glass"), frameD = o.t === "door" ? mat : mat;
+    var A = G.sub(pl.p, G.mul(u, o.w / 2)), Bp = G.add(pl.p, G.mul(u, o.w / 2)), fd = o.t === "door" ? FRM[1] : 60;
     /* round or flat-arched head: the opening is cut square up to the crown; the corners above the springing are filled
        with the wall's own faces, and a door / window gets a glazed fan-light with an arched frame */
     var rise = o.head === "arch" ? o.w / 2 : o.head === "seg" ? o.w * 0.2 : o.head === "point" ? o.w * 0.866 : o.head === "horse" ? o.w * 0.75 : 0; if (rise > o.h - 300) rise = 0;
@@ -101,10 +101,10 @@
         for (var bi = 1; bi <= nb; bi++) { var ba = Math.PI * bi / (nb + 1), bx = Math.cos(ba), bz = Math.sin(ba), r1 = (hw - 50), tx = -bz * 15, tz = bx * 15 * (rise / hw); vq([[tx, zt + tz], [-tx, zt - tz], [r1 * bx - tx, zt + r1 * bz * (rise / hw) - tz], [r1 * bx + tx, zt + r1 * bz * (rise / hw) + tz]], -fdp * 0.6, fdp * 0.6, fm); } }
     }
     if (horse) { var xH = o.w / 2 * Math.cos(Math.PI / 6); A = G.sub(pl.p, G.mul(u, xH)); Bp = G.add(pl.p, G.mul(u, xH)); }   /* frame and leaf stand between the piers */
-    // frame: two jambs + head (+ sill for windows)
-    box(M, G.add(A, G.mul(u, fw / 2)), fw, fd, Math.atan2(u[1], u[0]) * 180 / Math.PI, z0 + zb, z0 + zt, frameD);
-    box(M, G.sub(Bp, G.mul(u, fw / 2)), fw, fd, Math.atan2(u[1], u[0]) * 180 / Math.PI, z0 + zb, z0 + zt, frameD);
-    boxAlong(M, A, Bp, fd, z0 + zt - fw, z0 + zt, frameD);
+    // frame: two jambs + head (+ sill for windows); a frameless door has none
+    if (o.frm !== "none" || o.t !== "door") box(M, G.add(A, G.mul(u, fw / 2)), fw, fd, Math.atan2(u[1], u[0]) * 180 / Math.PI, z0 + zb, z0 + zt, frameD);
+    if (o.frm !== "none" || o.t !== "door") { box(M, G.sub(Bp, G.mul(u, fw / 2)), fw, fd, Math.atan2(u[1], u[0]) * 180 / Math.PI, z0 + zb, z0 + zt, frameD);
+      boxAlong(M, A, Bp, fd, z0 + zt - fw, z0 + zt, frameD); }
     if (o.t === "door" && +o.casing > 20 && !o.head) { var cw = +o.casing, nC = G.perp(u), thC = ((pl.w && pl.w.th) || 230) / 2 + 9, angC = Math.atan2(u[1], u[0]) * 180 / Math.PI; [1, -1].forEach(function (sd) { var off = G.mul(nC, sd * thC); box(M, G.add(G.sub(A, G.mul(u, cw / 2)), off), cw, 18, angC, z0 + zb, z0 + zt + cw, frameD); box(M, G.add(G.add(Bp, G.mul(u, cw / 2)), off), cw, 18, angC, z0 + zb, z0 + zt + cw, frameD); boxAlong(M, G.add(A, off), G.add(Bp, off), 18, z0 + zt, z0 + zt + cw, frameD); }); }   /* architrave (casing) round the frame on both faces */
     if (o.t === "window") {
       boxAlong(M, A, Bp, fd, z0 + zb, z0 + zb + fw, mat);
@@ -165,7 +165,9 @@
         else { boxAlong(M, at(hx - 22), at(hx + 22), 50, zlo + 960, zlo + 1120, hk); boxAlong(M, at(hx - 110), at(hx + 10), 120, zlo + 1030, zlo + 1050, hk); } }
     }
     var og = Math.max(0, Math.min(110, +o.open || 0)) * Math.PI / 180, sw = function (h, q) { var r = G.dist(h, q), dv = G.norm(G.sub(q, h)); return G.add(h, G.add(G.mul(dv, r * Math.cos(og)), G.mul(n, side * r * Math.sin(og)))); };   /* a door shown standing open: the leaf swung about its hinge to the side it opens */
-    if (og > 0.01 && o.kind !== "sliding") { if (o.kind === "double") { var m2 = G.mid(la, lb); leafShape(la, sw(la, G.sub(m2, G.mul(u, 3)))); leafShape(lb, sw(lb, G.add(m2, G.mul(u, 3)))); } else if (o.swing === "r") leafShape(lb, sw(lb, la)); else leafShape(la, sw(la, lb)); }
+    var fxR = Math.max(0.2, Math.min(0.5, +o.fixR || 0.33)), spP = o.swing === "r" ? G.lerp(la, lb, fxR) : G.lerp(la, lb, 1 - fxR);   /* double door with one fixed leaf: the split */
+    if (o.kind === "double_fixed") { if (og > 0.01) { if (o.swing === "r") { leafShape(lb, sw(lb, G.add(spP, G.mul(u, 3)))); leafShape(la, G.sub(spP, G.mul(u, 3))); } else { leafShape(la, sw(la, G.sub(spP, G.mul(u, 3)))); leafShape(G.add(spP, G.mul(u, 3)), lb); } } else { leafShape(la, G.sub(spP, G.mul(u, 3))); leafShape(G.add(spP, G.mul(u, 3)), lb); } }
+    else if (og > 0.01 && o.kind !== "sliding") { if (o.kind === "double") { var m2 = G.mid(la, lb); leafShape(la, sw(la, G.sub(m2, G.mul(u, 3)))); leafShape(lb, sw(lb, G.add(m2, G.mul(u, 3)))); } else if (o.swing === "r") leafShape(lb, sw(lb, la)); else leafShape(la, sw(la, lb)); }
     else if (o.kind === "double") { var m = G.mid(la, lb); leafShape(la, G.sub(m, G.mul(u, 3))); leafShape(G.add(m, G.mul(u, 3)), lb); }
     else leafShape(la, lb);
   }
