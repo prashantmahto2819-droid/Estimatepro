@@ -461,6 +461,8 @@ tr.adjrow.far td{background:var(--warn-soft);font-weight:600;border-top:2px soli
 .help-sec figure img{display:block;max-width:100%;max-height:680px;width:auto;height:auto;margin:0 auto}
 .help-sec figcaption{padding:8px 12px;font-size:13px;color:var(--muted);border-top:1px solid var(--line);background:var(--raised)}
 @media (max-width:900px){.help{grid-template-columns:minmax(0,1fr)}.help-toc{position:static;max-height:none}}
+.tabs .tab-grp{margin-left:10px;position:relative}
+.tabs .tab-grp::before{content:"";position:absolute;left:-6px;top:22%;bottom:22%;border-left:1px solid var(--line)}
 </style>
 
 </head>
@@ -471,15 +473,16 @@ tr.adjrow.far td{background:var(--warn-soft);font-weight:600;border-top:2px soli
 <nav class="tabs" aria-label="Main">
 <button type="button" data-tab="estimates" id="tab-estimates">Estimates</button>
 <button type="button" data-tab="reviews" id="tab-reviews" title="Estimates sent to you for checking / approval">Reviews</button>
-<button type="button" data-tab="photos" id="tab-photos" title="GPS photos — kept 45 days, download them">GPS Photos</button>
-<button type="button" data-tab="scan" id="tab-scan" title="Scan documents like CamScanner — PDF / JPG / text">Scanner</button>
+<button type="button" data-tab="planner" id="tab-planner" class="tab-grp" title="Building Planner — plan a house, office, school, college, hospital, hotel, hostel, canteen or hall from the plot and the rooms needed, then 2D, 3D and estimate">Building Planner</button>
 <button type="button" data-tab="cad" id="tab-cad" title="2D drafting, DXF, PDF tracing and take-off">CAD Studio</button>
 <button type="button" data-tab="design" id="tab-design">Design Studio</button>
-<button type="button" data-tab="library" id="tab-library">Rate library</button>
+<button type="button" data-tab="library" id="tab-library" class="tab-grp">Rate library</button>
 <button type="button" data-tab="basic" id="tab-basic">Basic rates</button>
 <button type="button" data-tab="sors" id="tab-sors">My SORs</button>
+<button type="button" data-tab="photos" id="tab-photos" class="tab-grp" title="GPS photos — kept 45 days, download them">GPS Photos</button>
+<button type="button" data-tab="scan" id="tab-scan" title="Scan documents like CamScanner — PDF / JPG / text">Scanner</button>
 <button type="button" data-tab="backup" id="tab-backup" title="Download / restore a backup of your work">Backup</button>
-<button type="button" data-tab="users" id="tab-users" hidden>Users</button>
+<button type="button" data-tab="users" id="tab-users" class="tab-grp" hidden>Users</button>
 <button type="button" data-tab="help" id="tab-help">Help / सहायता</button>
 </nav>
 <div class="who" id="who"><span class="muted">Signing in…</span></div>
@@ -559,7 +562,11 @@ tr.adjrow.far td{background:var(--warn-soft);font-weight:600;border-top:2px soli
 <script src="js/bim/tools.js"></script>
 <script src="js/bim/qto.js"></script>
 <script src="js/bim/wallfin.js"></script>
+<script src="js/plan/spaces.js"></script>
+<script src="js/plan/layout.js"></script>
+<script src="js/plan/build.js"></script>
 <script src="js/ui-cad.js"></script>
+<script src="js/ui-plan.js"></script>
 <script src="js/cad/libs.js"></script>
 <script src="js/ui-shared.js"></script>
 <script src="js/ui-bim.js"></script>

@@ -1,0 +1,145 @@
+/* Estimate Pro — Building Planner tab (भवन प्लानर).
+   Pick the building type (house, office, school, college, hospital, hotel, hostel, canteen, community hall), give the plot and the rules,
+   the programme (family / staff / students / beds / seats …) — the list of rooms is made from NBC 2016, CBSE, AICTE, IPHS and Ministry of Tourism norms
+   and can be edited room by room. "Make layouts" gives the best 3–4 different plans with a score; "Build in CAD" turns the chosen plan into a full
+   drawing (walls, doors, windows, rooms, stairs, slabs, frame, furniture), runs MEP and elevations, and from there 3D, quantities and the estimate. */
+(function () {
+  "use strict";
+  var EP = window.EP, S = EP.S, U = EP.ui, esc = U.esc, PL = EP.plan;
+  var KEY = "ep_planner_v1";
+  var P = S.pl = { type: "house", inp: {}, plot: { w: 12, d: 18 }, facing: "E", set: "mbbl", rules: null, rulesEdited: false, floors: 2, frame: "rcc", vastu: true, furn: true, mep: true, views: true, rate: {}, items: null, res: null, sel: {}, busy: false, open: {} };
+  try { var sv = JSON.parse(localStorage.getItem(KEY) || "{}"); ["type", "inp", "plot", "facing", "set", "rules", "rulesEdited", "floors", "frame", "vastu", "furn", "mep", "views", "rate", "items", "itemsType"].forEach(function (k) { if (sv[k] != null) P[k] = sv[k]; }); } catch (e) {}
+  function save() { try { localStorage.setItem(KEY, JSON.stringify({ type: P.type, inp: P.inp, plot: P.plot, facing: P.facing, set: P.set, rules: P.rules, rulesEdited: P.rulesEdited, floors: P.floors, frame: P.frame, vastu: P.vastu, furn: P.furn, mep: P.mep, views: P.views, rate: P.rate, items: P.items, itemsType: P.itemsType })); } catch (e) {} }
+  function T() { var t = PL.TYPES[P.type] || PL.TYPES.house; t.id = P.type in PL.TYPES ? P.type : "house"; return t; }
+  function vals() { var t = T(), v = {}, cur = P.inp[t.id] || {}; t.inputs.forEach(function (i) { v[i.k] = cur[i.k] != null ? cur[i.k] : i.def; }); return v; }
+  function rulesNow() { if (!P.rules || !P.rulesEdited) P.rules = PL.rulesFor(P.set, T().rules, P.plot.w * P.plot.d); return P.rules; }
+  function regen() { var t = T(), it = t.program(vals(), P.floors > 0 ? P.floors : 2); P.items = it.map(function (x) { return Object.assign({}, x, { on: !x.off, size: "M" }); }); P.res = null; P.sel = {}; save(); }
+  function items() { if (!P.items || P.itemsType !== P.type) { P.itemsType = P.type; regen(); } return P.items; }
+  function sp(k) { return PL.SPACES[k] || {}; }
+  function areaOf(x) { var s = sp(x.key); if (x.area > 0) return +x.area; var z = s[x.size || "M"] || s.M || [3, 3]; return Math.round(z[0] * z[1] * 10) / 10; }
+  function n1(v, k) { return (Math.round(v * Math.pow(10, k || 0)) / Math.pow(10, k || 0)).toLocaleString("en-IN"); }
+  function inr(v) { return "₹ " + Math.round(v).toLocaleString("en-IN"); }
+
+  U.views.planner = function () {
+    var t = T(), v = vals(), R = rulesNow(), L = items(), A = P.plot.w * P.plot.d;
+    var h = '<div class="pl" style="display:flex;flex-direction:column;gap:14px;max-width:1200px">';
+    h += '<div class="row" style="gap:10px;align-items:flex-end;flex-wrap:wrap"><div class="grow"><h1 style="margin:0">Building Planner <span class="muted" style="font-size:.55em;font-weight:500">भवन प्लानर — नक्शा, 2D, 3D, एस्टीमेट</span></h1>' +
+      '<p class="muted" style="margin:4px 0 0">Choose the building, give the plot and what you need — get 3–4 scored layouts by NBC 2016 and the standards for that building, then build the chosen one in CAD Studio with walls, doors, windows, stairs, frame, furniture, MEP, 3D and quantities for the estimate.</p></div></div>';
+    /* 1. type */
+    h += '<section class="panel" style="padding:12px 14px"><h3 style="margin:0 0 8px">1. Building type <span class="muted" style="font-weight:500">भवन का प्रकार</span></h3><div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px">' +
+      PL.ORDER.map(function (k) { var x = PL.TYPES[k]; return '<button type="button" class="btn ' + (k === P.type ? "pri" : "sec") + '" data-pltype="' + k + '" aria-pressed="' + (k === P.type) + '" style="display:flex;flex-direction:column;align-items:flex-start;gap:2px;text-align:left;padding:8px 10px;height:auto"><span style="font-size:18px">' + x.icon + '</span><b>' + esc(x.n) + '</b><span style="font-size:12px;opacity:.8">' + esc(x.hi) + "</span></button>"; }).join("") + "</div></section>";
+    /* 2. plot and rules */
+    var fld = function (k, lab, val, step, w) { return '<label style="display:flex;flex-direction:column;gap:2px;flex:0 0 auto"><span class="muted small">' + lab + '</span><input class="in small" style="width:' + (w || 90) + 'px" type="number" step="' + (step || 0.1) + '" data-plf="' + k + '" value="' + esc(String(val)) + '"></label>'; };
+    h += '<section class="panel" style="padding:12px 14px"><h3 style="margin:0 0 8px">2. Plot and rules <span class="muted" style="font-weight:500">प्लॉट और नियम</span></h3><div class="row" style="gap:10px;flex-wrap:wrap;align-items:flex-end">' +
+      fld("plot.w", "Plot width along the road (m) / सामने की चौड़ाई", P.plot.w, 0.1, 150) + fld("plot.d", "Plot depth (m) / गहराई", P.plot.d, 0.1, 120) +
+      '<label style="display:flex;flex-direction:column;gap:2px"><span class="muted small">Road is on the plot\'s … side / सड़क किस दिशा में</span><select class="in small" data-plf="facing">' + [["N", "North / उत्तर"], ["E", "East / पूर्व"], ["S", "South / दक्षिण"], ["W", "West / पश्चिम"]].map(function (o) { return '<option value="' + o[0] + '"' + (P.facing === o[0] ? " selected" : "") + ">" + o[1] + "</option>"; }).join("") + "</select></label>" +
+      '<span class="muted small" style="align-self:center">Plot area <b>' + n1(A, 2) + " m²</b> (" + n1(A * 10.7639) + " sq ft)</span></div>" +
+      '<div class="row" style="gap:10px;flex-wrap:wrap;align-items:flex-end;margin-top:8px"><label style="display:flex;flex-direction:column;gap:2px"><span class="muted small">Rules / नियम</span><select class="in small" data-plf="set">' + Object.keys(PL.RULESETS).map(function (k) { return '<option value="' + k + '"' + (P.set === k ? " selected" : "") + ">" + esc(PL.RULESETS[k].n) + "</option>"; }).join("") + "</select></label>" +
+      fld("r.f", "Front setback m", R.f) + fld("r.r", "Rear m", R.r) + fld("r.l", "Left m", R.l) + fld("r.rt", "Right m", R.rt) + fld("r.cov", "Coverage %", R.cov, 1) + fld("r.far", "FAR", R.far, 0.05) + fld("r.h", "Height m", R.h, 0.5) +
+      (P.rulesEdited ? '<button type="button" class="btn sec small" data-plact="rules-reset">Reset from rules</button>' : "") + "</div>" +
+      '<p class="muted small" style="margin:6px 0 0">Setbacks, coverage, FAR and height are typical values for this plot size — check them with your town\'s building rules (नगर निगम / T&CP) and change them here if they differ.</p>' +
+      '<div class="row" style="gap:14px;flex-wrap:wrap;align-items:flex-end;margin-top:8px"><label style="display:flex;flex-direction:column;gap:2px"><span class="muted small">Floors / मंज़िल</span><select class="in small" data-plf="floors">' + [[0, "Auto (as many as needed)"]].concat(t.single ? [[1, "Ground only"]] : [1, 2, 3, 4, 5, 6, 7, 8].map(function (n) { return [n, n === 1 ? "Ground only (G)" : "G+" + (n - 1)]; })).map(function (o) { return '<option value="' + o[0] + '"' + (+P.floors === o[0] ? " selected" : "") + ">" + o[1] + "</option>"; }).join("") + "</select></label>" +
+      '<label style="display:flex;flex-direction:column;gap:2px"><span class="muted small">Structure / ढाँचा</span><select class="in small" data-plf="frame"><option value="rcc"' + (P.frame !== "lb" ? " selected" : "") + '>RCC frame (columns, beams, footings)</option><option value="lb"' + (P.frame === "lb" ? " selected" : "") + ">Load-bearing walls</option></select></label>" +
+      ["vastu|Vastu / वास्तु", "furn|Furniture / फ़र्नीचर", "mep|Electrical + plumbing", "views|Elevations + section"].map(function (x) { var p = x.split("|"); return '<label class="row" style="gap:6px;align-items:center"><input type="checkbox" data-plf="' + p[0] + '"' + (P[p[0]] ? " checked" : "") + "> " + p[1] + "</label>"; }).join("") +
+      fld("rate", "Rough rate ₹/m² (built-up)", P.rate[t.id] || t.rate, 500, 120) + "</div></section>";
+    /* 3. programme */
+    h += '<section class="panel" style="padding:12px 14px"><h3 style="margin:0 0 8px">3. What is needed <span class="muted" style="font-weight:500">ज़रूरतें</span></h3><div class="row" style="gap:12px;flex-wrap:wrap;align-items:flex-end">' +
+      t.inputs.map(function (i) { return i.bool ? '<label class="row" style="gap:6px;align-items:center"><input type="checkbox" data-plin="' + i.k + '"' + (v[i.k] ? " checked" : "") + "> " + esc(i.n) + ' <span class="muted small">' + esc(i.hi) + "</span></label>" :
+        '<label style="display:flex;flex-direction:column;gap:2px;min-width:120px"><span class="muted small">' + esc(i.n) + " / " + esc(i.hi) + '</span><input class="in small" style="width:110px" type="number" min="' + (i.min || 0) + '" max="' + (i.max || 9999) + '" data-plin="' + i.k + '" value="' + v[i.k] + '"></label>'; }).join("") + "</div></section>";
+    /* 4. rooms list */
+    var on = L.filter(function (x) { return x.on !== false && x.n > 0; }), carpet = on.reduce(function (s, x) { return s + areaOf(x) * x.n * (x.fl === "all" || sp(x.key).fl === "all" ? Math.max(1, +P.floors || 1) : 1); }, 0);
+    h += '<section class="panel" style="padding:12px 14px"><div class="row" style="gap:8px;align-items:center;flex-wrap:wrap"><h3 class="grow" style="margin:0">4. Rooms and spaces <span class="muted" style="font-weight:500">कमरों की सूची — चुनें, संख्या, साइज़</span></h3>' +
+      '<select class="in small" data-plact="addroom"><option value="">+ Add a room / space…</option>' + Object.keys(PL.SPACES).filter(function (k) { return !PL.SPACES[k].auto; }).sort(function (a, b) { return PL.SPACES[a].n.localeCompare(PL.SPACES[b].n); }).map(function (k) { return '<option value="' + k + '">' + esc(PL.SPACES[k].n + " — " + PL.SPACES[k].hi) + "</option>"; }).join("") + "</select>" +
+      '<button type="button" class="btn sec small" data-plact="regen">Make the list again</button></div>' +
+      '<div style="overflow-x:auto;margin-top:8px"><table class="tbl" style="width:100%;font-size:13px;border-collapse:collapse"><thead><tr><th></th><th style="text-align:left">Room / space</th><th>Nos.</th><th>Size</th><th>Area each m²</th><th>Floor</th><th style="text-align:left">Norm</th></tr></thead><tbody>' +
+      L.map(function (x, i) { var s = sp(x.key), z = s[x.size || "M"] || s.M || [0, 0], fx = x.fix ? " · " + [x.fix.wc ? x.fix.wc + " WC" : "", x.fix.ur ? x.fix.ur + " urinal" : "", x.fix.wb ? x.fix.wb + " basin" : "", x.fix.bath ? x.fix.bath + " bath" : "", x.fix.pwd ? "CWSN cubicle" : ""].filter(Boolean).join(", ") : "";
+        var norm = (s.minA ? "min " + s.minA + " m²" : "") + (s.minW ? (s.minA ? ", " : "") + "width ≥ " + s.minW + " m" : "") + (s.att ? " · with " + PL.SPACES[s.att].n.toLowerCase() : "") + fx;
+        return '<tr style="border-top:1px solid var(--line)' + (x.on === false ? ";opacity:.5" : "") + '"><td><input type="checkbox" data-plit="' + i + '" data-k="on"' + (x.on !== false ? " checked" : "") + ' aria-label="Include ' + esc(x.name || s.n) + '"></td>' +
+          "<td>" + esc(x.name || s.n) + '<div class="muted small">' + esc(s.hi || "") + "</div></td>" +
+          '<td style="text-align:center"><input class="in small" style="width:58px" type="number" min="0" max="500" data-plit="' + i + '" data-k="n" value="' + x.n + '"></td>' +
+          '<td style="text-align:center"><select class="in small" data-plit="' + i + '" data-k="size">' + ["S", "M", "L"].map(function (k) { var zz = s[k] || [0, 0]; return '<option value="' + k + '"' + ((x.size || "M") === k ? " selected" : "") + ">" + { S: "Small", M: "Normal", L: "Large" }[k] + " " + zz[0] + "×" + zz[1] + "</option>"; }).join("") + "</select></td>" +
+          '<td style="text-align:center"><input class="in small" style="width:72px" type="number" step="0.5" min="0" data-plit="' + i + '" data-k="area" value="' + (x.area > 0 ? x.area : "") + '" placeholder="' + n1(z[0] * z[1], 1) + '"></td>' +
+          '<td style="text-align:center"><select class="in small" data-plit="' + i + '" data-k="fl">' + [["", "Auto"], ["G", "Ground"], ["up", "Upper"], ["all", "Every floor"]].map(function (o) { var cur = x.fl != null ? x.fl : ""; return '<option value="' + o[0] + '"' + (cur === o[0] ? " selected" : "") + ">" + o[1] + "</option>"; }).join("") + "</select></td>" +
+          '<td class="muted small">' + esc(norm) + "</td></tr>"; }).join("") + "</tbody></table></div>" +
+      '<p class="muted small" style="margin:6px 0 0">Selected: <b>' + on.reduce(function (s, x) { return s + x.n; }, 0) + " rooms / spaces, about " + n1(carpet) + ' m² of rooms</b> (walls, stairs and corridors are added in the layout). Area each = blank uses the size chosen; type a number to fix it.</p></section>';
+    /* 5. layouts */
+    h += '<section class="panel" style="padding:12px 14px"><div class="row" style="gap:8px;align-items:center;flex-wrap:wrap"><h3 class="grow" style="margin:0">5. Layout options <span class="muted" style="font-weight:500">नक्शे के विकल्प</span></h3><button type="button" class="btn pri" data-plact="make"' + (P.busy ? " disabled" : "") + ">" + (P.busy ? "Working…" : P.res ? "Make layouts again" : "Make layouts / नक्शे बनाएँ") + "</button></div>";
+    if (P.res && P.res.err) h += '<div class="ds-msg" role="alert">' + esc(P.res.err) + "</div>";
+    else if (P.res) h += resultHtml(P.res);
+    else h += '<p class="muted" style="margin:8px 0 0">Press <b>Make layouts</b> to get 3–4 plans to choose from.</p>';
+    h += "</section>";
+    h += '<p class="muted small">Layouts are made by rules (zones, room sizes, daylight, access, wet areas together, stairs one above the other) and are a starting design: check them with an architect / engineer and the local authority before construction or submission. Norms used: NBC 2016 Parts 3, 4, 9; CBSE Affiliation Bye-laws 2018; AICTE Approval Process Handbook; IPHS 2022; Ministry of Tourism hotel guidelines.</p>';
+    return h + "</div>";
+  };
+  function resultHtml(res) {
+    var I = res.info, R = rulesNow(), t = T(), h = '<div class="row" style="gap:12px;flex-wrap:wrap;margin:8px 0" role="status">' +
+      [["Floors", I.nF === 1 ? "Ground only" : "G+" + (I.nF - 1)], ["Building", n1(I.W, 2) + " × " + n1(I.D, 2) + " m"], ["Built-up", n1(I.built) + " m²"], ["Coverage", n1(I.cov, 1) + " % / " + R.cov + " %"], ["FAR", I.far.toFixed(2) + " / " + R.far], ["Height", n1(I.height, 1) + " / " + R.h + " m"], ["Occupants (NBC)", "≈ " + I.occ]].map(function (x) { return '<div style="padding:6px 10px;border:1px solid var(--line);border-radius:8px"><div class="muted small">' + x[0] + "</div><b>" + x[1] + "</b></div>"; }).join("") + "</div>";
+    if (res.warn.length) h += '<div class="ds-msg" role="note">' + res.warn.map(esc).join("<br>") + "</div>";
+    h += '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(330px,1fr));gap:12px;margin-top:8px">';
+    res.opts.forEach(function (o, i) {
+      var f = P.sel[o.id] || 0, sc = o.sc, st = o.stats, col = sc.score >= 75 ? "#1e8e3e" : sc.score >= 50 ? "#b06000" : "#c5221f", notes = [];
+      if (sc.notes.win.length) notes.push("No outer wall for daylight: " + sc.notes.win.join(", "));
+      if (sc.notes.acc.length) notes.push("Reached only through another room: " + sc.notes.acc.join(", "));
+      if (sc.notes.small.length) notes.push("Smaller than chosen: " + sc.notes.small.slice(0, 6).join(", ") + (sc.notes.small.length > 6 ? " …" : ""));
+      if (sc.notes.tight.length) notes.push("Narrower than the norm: " + sc.notes.tight.join(", "));
+      if (P.vastu && sc.notes.vastu.length) notes.push("Vastu: " + sc.notes.vastu.join("; "));
+      h += '<div style="border:1px solid var(--line);border-radius:10px;padding:10px;display:flex;flex-direction:column;gap:8px"><div class="row" style="align-items:center;gap:8px"><b class="grow">' + esc(o.label) + ' <span class="muted small">' + esc(t.mode === "corr" ? (o.dbl ? "rooms both sides of the corridor" : "rooms on one side of the corridor") + ", core " + { L: "at the left end", R: "at the right end", C: "in the middle", LR: "at both ends" }[o.v.core] : (o.v.pass ? "with a passage" : "rooms open off the halls") + ", " + o.v.k + " rows") + "</span></b>" +
+        '<span style="font-weight:700;color:' + col + '" title="Layout score">' + sc.score + "/100</span>" + (P.vastu && sc.vastu != null ? '<span class="muted small" title="Vastu match">Vastu ' + sc.vastu + "%</span>" : "") + "</div>";
+      if (o.floors.length > 1) h += '<div class="seg" role="group" aria-label="Floor">' + o.floors.map(function (_, k) { return '<button type="button" data-plfl="' + o.id + ":" + k + '" aria-pressed="' + (k === f) + '">' + (k === 0 ? "Ground" : k === 1 ? "First" : k === 2 ? "Second" : "Floor " + k) + "</button>"; }).join("") + "</div>";
+      h += '<div style="border:1px solid var(--line);border-radius:6px;overflow:hidden;background:#fff">' + PL.svg(o, f, { facing: P.facing, scale: Math.max(10, Math.min(28, 360 / (o.W + 2.4))) }) + "</div>";
+      h += '<div class="small">Rooms ' + st.rooms + " · carpet ≈ " + n1(st.carpet) + " m² · built-up ≈ " + n1(st.built) + " m² · efficiency " + st.eff + " % · rough cost <b>" + inr(st.cost) + "</b></div>";
+      if (notes.length) h += '<ul class="muted small" style="margin:0;padding-left:18px">' + notes.map(function (n) { return "<li>" + esc(n) + "</li>"; }).join("") + "</ul>";
+      h += '<button type="button" class="btn pri" data-plbuild="' + i + '">Build ' + esc(o.label) + " in CAD — 2D, 3D, estimate</button></div>";
+    });
+    return h + "</div>";
+  }
+  function cfgNow() { var t = T(); return { type: t.id, items: items().map(function (x) { var y = Object.assign({}, x); if (y.fl === "") delete y.fl; return y; }), plot: { w: +P.plot.w, d: +P.plot.d }, rules: rulesNow(), floors: +P.floors || 0, facing: P.facing, vastu: !!P.vastu, rate: +(P.rate[t.id] || t.rate), frame: P.frame, furn: P.furn, name: t.n + " " + P.plot.w + "×" + P.plot.d + " m" }; }
+  function make() { P.busy = true; U.render(); setTimeout(function () { try { P.res = PL.generate(cfgNow()); P.sel = {}; } catch (er) { console.error(er); P.res = { err: "Could not make the layouts: " + (er && er.message) }; } P.busy = false; U.render(); }, 30); }
+  async function build(i) {
+    var o = P.res && P.res.opts[i]; if (!o) return; var cfg = cfgNow(), t = T(), d;
+    try { d = PL.toDoc(o, cfg); } catch (er) { console.error(er); U.toast("Could not build the drawing: " + (er && er.message)); return; }
+    d.name = cfg.name + " — " + o.label;
+    S.tab = "cad"; try { history.replaceState(null, "", "#cad"); } catch (e) {}
+    await EP.cad.newDrawing(d.name, "mm", d); window.scrollTo(0, 0);
+    var C = S.cad, ed = C && C.ed; if (!ed) return; var done = [];
+    try { if (ed.zoomExtents) ed.zoomExtents(); } catch (e) {}
+    if (P.mep) { try { U.toast("Placing electrical and plumbing…"); var pers = t.id === "house" ? (vals().persons || 5) : Math.max(5, P.res.info.occ || 10); await PL.autoRun(ed, "MEPAUTO", [t.grp || "C", pers, "All"]); done.push("electrical + plumbing"); } catch (er) { console.warn("MEP", er); } }
+    if (P.views) {
+      try { await PL.autoRun(ed, "ELEVATION", ["All"]); done.push("4 elevations"); } catch (er) { console.warn("elevation", er); }
+      try { var st = ed.doc.d.ents.filter(function (e) { return e.t === "stair" && e.lvl === "L0"; })[0], ox = cfg.rules.l * 1000, oy = cfg.rules.f * 1000, xs = st ? st.p[0] + 300 : ox + o.W * 500;
+        await PL.autoRun(ed, "SECTION", [[xs, oy - 2000], [xs, oy + o.D * 1000 + 2000], "Left", null]); done.push("section A-A"); } catch (er) { console.warn("section", er); }
+    }
+    try { if (ed.zoomExtents) ed.zoomExtents(); ed.dirty = true; } catch (e) {}
+    ed.say((t.n + " — " + o.label + " built: " + o.floors.length + " floor(s), " + ed.doc.d.ents.filter(function (e) { return e.t === "room"; }).length + " rooms") + (done.length ? ", " + done.join(", ") : "") + ". Press 3D to see it, Σ Quantities to send the quantities to an estimate. Every wall, door, window and room can be edited like any drawing.");
+    U.toast("Built in CAD Studio — 3D button for the model, Σ Quantities for the estimate");
+  }
+  function setPath(k, val) {
+    var t = T();
+    if (k === "plot.w" || k === "plot.d") { var n = +val; if (!(n > 3)) { U.toast("Enter the plot size in metres"); return; } P.plot[k.slice(5)] = n; if (!P.rulesEdited) P.rules = null; }
+    else if (k.indexOf("r.") === 0) { var R = Object.assign({}, rulesNow()); R[k.slice(2)] = Math.max(0, +val || 0); P.rules = R; P.rulesEdited = true; }
+    else if (k === "set") { P.set = val; P.rulesEdited = false; P.rules = null; }
+    else if (k === "floors") { P.floors = +val; if (t.mode === "corr" || /school|college|hospital|office|hostel/.test(t.id)) regen(); }
+    else if (k === "rate") { P.rate[t.id] = Math.max(0, +val || 0); }
+    else if (k === "vastu" || k === "furn" || k === "mep" || k === "views") P[k] = !!val;
+    else P[k] = val;
+    P.res = null; save(); U.render();
+  }
+  document.addEventListener("change", function (e) {
+    var el = e.target; if (!el.closest || !el.closest(".pl")) return; var ds = el.dataset;
+    if (ds.plf) { setPath(ds.plf, el.type === "checkbox" ? el.checked : el.value); return; }
+    if (ds.plin) { var t = T(), cur = P.inp[t.id] = P.inp[t.id] || {}, def = t.inputs.filter(function (i) { return i.k === ds.plin; })[0]; cur[ds.plin] = el.type === "checkbox" ? (el.checked ? 1 : 0) : Math.max(def.min || 0, Math.min(def.max || 1e6, +el.value || 0)); regen(); U.render(); return; }
+    if (ds.plit != null) { var x = items()[+ds.plit]; if (!x) return; var k = ds.k;
+      if (k === "on") x.on = el.checked; else if (k === "n") x.n = Math.max(0, Math.round(+el.value || 0)); else if (k === "size") { x.size = el.value; if (!x.occ) delete x.area; } else if (k === "area") { x.area = +el.value > 0 ? +el.value : 0; if (x.occ) x.areaSet = x.area > 0; } else if (k === "fl") x.fl = el.value;
+      P.res = null; save(); U.render(); return; }
+    if (ds.plact === "addroom" && el.value) { var key = el.value, s = PL.SPACES[key]; items().push({ key: key, n: 1, on: true, size: "M", name: null, fl: s.fl || "" }); P.res = null; save(); U.render(); }
+  });
+  document.addEventListener("click", function (e) {
+    var b = e.target.closest && e.target.closest("button"); if (!b || !b.closest(".pl")) return; var ds = b.dataset;
+    if (ds.pltype) { if (P.type !== ds.pltype) { P.type = ds.pltype; P.rulesEdited = false; P.rules = null; var t = T(); if (t.plot) P.plot = { w: t.plot[0], d: t.plot[1] }; P.floors = t.single ? 1 : ds.pltype === "house" ? 2 : 0; P.itemsType = null; regen(); } U.render(); return; }
+    if (ds.plact === "regen") { regen(); U.render(); return; }
+    if (ds.plact === "rules-reset") { P.rulesEdited = false; P.rules = null; P.res = null; save(); U.render(); return; }
+    if (ds.plact === "make") { make(); return; }
+    if (ds.plfl) { var kv = ds.plfl.split(":"); P.sel[kv[0]] = +kv[1]; U.render(); return; }
+    if (ds.plbuild != null) { build(+ds.plbuild); return; }
+  });
+})();
