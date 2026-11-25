@@ -3,6 +3,9 @@
 This file is for the people maintaining the app. It is not published with the site (see `.assetsignore`).
 The text users see is `EP_NOTES` in `js/version.js`.
 
+## 2026.11.21-z69
+- to3d_b3: builder `cycle_shed` (the only Design Studio module that had none): all three schemes (two rows mono-slope, T with ridge on the post line, cantilever Γ with knee braces), tubular (SHS / RHS boxes) or rolled (ISMB I-sections, ISMC as boxes) read from the result summary, base plates, pedestals and footings from the summary, purlins at the designed spacing, roof sheet; extras: floor slab (paver look), kerb, stands. Checked: Design Studio → Open in CAD gives one dsmodel with 308 parts and renders.
+
 ## 2026.11.21-z68
 - CAD full screen: after requestFullscreen, `navigator.keyboard.lock(["Escape"])` (Chrome / Edge) so Esc reaches the command line; unlocked when leaving. Other browsers: the Esc button on the status bar.
 
