@@ -106,9 +106,10 @@
     while (i < n) {
       var it = items[i]; if (it.fixW) { cols.push({ it: [it], fix: it.fixW }); i++; continue; }
       if (o.corr) { cols.push({ it: [it], fix: null, min: colW(it, d) }); i++; continue; }
+      if (it.sp && it.sp.open === "court") { cols.push({ it: [it] }); i++; continue; }
       var w = tot(it) / d; if (w >= (it.minW || 1.2) * 0.98 || i === n - 1) { cols.push({ it: [it] }); i++; continue; }
       var grp = [it], A = tot(it), j = i + 1;
-      while (j < n && grp.length < 3 && !items[j].fixW) { var nx = items[j]; if (tot(nx) / d >= (nx.minW || 1.2) * 1.6) break; grp.push(nx); A += tot(nx); j++; if (A / d >= Math.max.apply(null, grp.map(function (g) { return g.minW || 1.2; })) * 0.98) break; }
+      while (j < n && grp.length < 3 && !items[j].fixW && !(items[j].sp && items[j].sp.open === "court")) { var nx = items[j]; if (tot(nx) / d >= (nx.minW || 1.2) * 1.6) break; grp.push(nx); A += tot(nx); j++; if (A / d >= Math.max.apply(null, grp.map(function (g) { return g.minW || 1.2; })) * 0.98) break; }
       grp.sort(function (a, b) { return (b.main ? 1 : 0) - (a.main ? 1 : 0); });
       cols.push({ it: grp }); i = j;
     }
@@ -154,38 +155,43 @@
 
   /* ---------------- band layouts (house, canteen, hall) ---------------- */
   function bandOrder(list) { /* zone order; inside the service zone: stair, kitchen, store, utility, toilets together */
-    var rank = { stair: 0, kitchen: 1, ckitchen: 1, hkitchen: 1, hall_kit: 1, prep: 2, dish: 3, store: 4, dstore: 4, cstore: 5, utility: 6, toilet: 7, wc: 8, toilet_m: 9, toilet_f: 10, toilet_pwd: 11 };
+    var rank = { court: -1, stair: 0, kitchen: 1, ckitchen: 1, hkitchen: 1, hall_kit: 1, prep: 2, dish: 3, store: 4, dstore: 4, cstore: 5, utility: 6, toilet: 7, wc: 8, toilet_m: 9, toilet_f: 10, toilet_pwd: 11 };
     return list.slice().sort(function (a, b) { return a.z - b.z || ((rank[a.key] != null ? rank[a.key] : 20) - (rank[b.key] != null ? rank[b.key] : 20)); });
   }
   function cutsOf(n, k) { var o = []; if (k <= 1) return [[]]; if (k === 2) { for (var i = 0; i <= n; i++) o.push([i]); return o; } for (var a = 0; a <= n; a++) for (var b = a; b <= n; b++) o.push([a, b]); return o; }
   function splitBy(list, cut) { var o = [], s = 0; cut.concat([list.length]).forEach(function (c) { o.push(list.slice(s, c)); s = c; }); return o; }
   /* the rooms of one floor into the rows (contiguous in zone order) so that each row is filled close to its size */
-  function fillRows(list, defs, W, stair) {
-    var real = []; defs.forEach(function (df, i) { if (!df.pass) real.push(i); });
-    var caps = real.map(function (i) { return defs[i].d * W - (stair && stair.row === i ? stair.w * defs[i].d : 0); }), best = null, its = list.filter(function (x) { return !(stair && x.sp.stair); });
+  function fillRows(list, defs, W, fixed) {
+    fixed = fixed || []; var real = []; defs.forEach(function (df, i) { if (!df.pass) real.push(i); });
+    var isFix = function (x) { return fixed.some(function (f) { return f.kind === "stair" ? x.sp.stair : false; }); };
+    var caps = real.map(function (i) { return defs[i].d * W - sum(fixed.filter(function (f) { return f.row === i; }), function (f) { return f.w * defs[i].d; }); }), best = null, its = list.filter(function (x) { return !isFix(x); });
     cutsOf(its.length, real.length).forEach(function (cut) {
       var ps = splitBy(its, cut), err = 0;
-      ps.forEach(function (p, i) { var a = sum(p, function (x) { return x.sp.stair ? fixStair(x, defs[real[i]].d) * defs[real[i]].d : tot(x); }); err += Math.abs(a - caps[i]) / Math.max(1, caps[i]); if (!p.length && !(stair && stair.row === real[i])) err += 3;
+      ps.forEach(function (p, i) { var a = sum(p, function (x) { return x.sp.stair ? fixStair(x, defs[real[i]].d) * defs[real[i]].d : tot(x); }); err += Math.abs(a - caps[i]) / Math.max(1, caps[i]); if (!p.length && !fixed.some(function (f) { return f.row === real[i]; })) err += 3;
         p.forEach(function (x) { if (x.minW && defs[real[i]].d < x.minW - 0.05) err += 2; if (x.sp.stair && fixStair(x, defs[real[i]].d) * 1 > W * 0.6) err += 2; }); });
       if (!best || err < best.err) best = { err: err, ps: ps };
     });
     var out = defs.map(function (df) { return df.pass ? df : { d: df.d, items: [] }; });
     best.ps.forEach(function (p, i) { out[real[i]].items = p; });
-    if (stair) { var st = list.filter(function (x) { return x.sp.stair; })[0]; if (st) out[stair.row].items = out[stair.row].items.concat([st]); }
+    fixed.forEach(function (f) { if (f.kind === "stair") { var st = list.filter(function (x) { return x.sp.stair; })[0]; if (st) out[f.row].items = out[f.row].items.concat([st]); } });
     return out;
   }
-  function bandFloor(T, W, D, rowsDef, v, fixedStair) {
+  var VOID = { key: "void", sp: null, name: "Open to sky (courtyard)", a: 0, z: 2, minW: 1 };
+  function bandFloor(T, W, D, rowsDef, v, fixed) {
+    fixed = fixed || [];
     var rects = [], y = 0, extra = [];
     rowsDef.forEach(function (rw, ri) {
       if (rw.pass) { extra.push(room(null, 0, y, W, rw.d, { z: 2, pass: 1, name: "Passage", key: "passage" })); y += rw.d; return; }
       var its = rw.items.slice();
-      if (!its.length) { extra.push(room(null, 0, y, W, rw.d, { z: 2, pass: 1, name: "Lobby", key: "passage" })); y += rw.d; return; }
-      if (fixedStair && fixedStair.row === ri) {
-        var res = packRowObs(its.filter(function (x) { return !x.sp.stair; }), 0, W, y, rw.d, [[fixedStair.x, fixedStair.x + fixedStair.w]], v.mirror, { stretch: 1.5 });
+      var fx = fixed.filter(function (f) { return f.row === ri; });
+      if (!its.length && !fx.length) { extra.push(room(null, 0, y, W, rw.d, { z: 2, pass: 1, name: "Lobby", key: "passage" })); y += rw.d; return; }
+      if (fx.length) {
+        var res = packRowObs(its.filter(function (x) { return !x.sp.stair; }), 0, W, y, rw.d, fx.map(function (f) { return [f.x, f.x + f.w]; }), v.mirror, { stretch: 1.5 });
         rects = rects.concat(res.rects); extra = extra.concat(emptyRooms(res.empty));
-        var st = its.filter(function (x) { return x.sp.stair; })[0]; if (st) rects.push({ it: st, x: fixedStair.x, y: y, w: fixedStair.w, d: rw.d });
+        fx.forEach(function (f) { if (f.kind === "stair") { var st = its.filter(function (x) { return x.sp.stair; })[0]; if (st) rects.push({ it: st, x: f.x, y: y, w: f.w, d: rw.d }); } else rects.push({ it: Object.assign({}, VOID, { uid: uid(), sp: SP["void"], a: f.w * rw.d }), x: f.x, y: y, w: f.w, d: rw.d }); });
       } else {
         its.forEach(function (x) { x.fixW = x.sp.stair ? fixStair(x, rw.d) : null; });
+        var cI = its.filter(function (x) { return x.sp.open === "court"; })[0]; if (cI) { its = its.filter(function (x) { return x !== cI; }); its.splice(Math.ceil(its.length / 2), 0, cI); }
         var sI = its.filter(function (x) { return x.sp.stair; })[0]; if (sI) { its = its.filter(function (x) { return x !== sI; }); if (v.stairEnd === "L") its.unshift(sI); else its.push(sI); }
         var pr = packRow(its, 0, W, y, rw.d, v.mirror && !sI, { stretch: 1.5 }); rects = rects.concat(pr); extra = extra.concat(emptyRooms(pr.empty));
       }
@@ -214,9 +220,9 @@
   };
   function bandVariant(T, ord, W, D, defs, v, cfg) {
     var g = fillRows(ord[0], defs, W, null), floors = [bandFloor(T, W, D, g, v, null)];
-    var st = floors[0].filter(function (r) { return r.inst && r.inst.sp && r.inst.sp.stair; })[0], stRow = -1;
-    if (st) { var y0 = 0; defs.forEach(function (df, i) { if (Math.abs(st.y - y0) < 1e-3 && !df.pass) stRow = i; y0 += df.d; }); }
-    for (var f = 1; f < ord.length; f++) { var fs = st && stRow >= 0 ? { row: stRow, x: st.x, w: st.w } : null; floors.push(bandFloor(T, W, D, fillRows(ord[f], defs, W, fs), v, fs)); }
+    var rowOf = function (r) { var y0 = 0, k = -1; defs.forEach(function (df, i) { if (Math.abs(r.y - y0) < 1e-3 && !df.pass && Math.abs(r.d - df.d) < 1e-3) k = i; y0 += df.d; }); return k; }, fs = [];
+    floors[0].forEach(function (r) { var sp = r.inst && r.inst.sp; if (!sp) return; if (sp.stair || sp.open === "court") { var k = rowOf(r); if (k >= 0) fs.push({ row: k, x: r.x, w: r.w, kind: sp.stair ? "stair" : "void" }); } });
+    for (var f = 1; f < ord.length; f++) floors.push(bandFloor(T, W, D, fillRows(ord[f], defs, W, fs), v, fs));
     return { mode: "band", W: W, D: D, floors: floors, v: v, rows: defs.map(function (d) { return d.pass ? -d.d : d.d; }), sig: "b" + v.k + (v.pass ? "p" : "") + (v.mirror ? "m" : "") + v.stairEnd + g.map(function (d) { return d.pass ? "P" : d.items.length; }).join(".") };
   }
 
@@ -439,11 +445,12 @@
         if (sp.minA && A < sp.minA * 0.97) { pen += 8; if (notes.small.indexOf(r.name) < 0) notes.small.push(r.name); }
         if (sp.stair && r.inst.stair) { var s = r.inst.stair; var fits = (r.w >= s.w - 0.05 && r.d >= s.d - 0.05) || (r.d >= s.w - 0.05 && r.w >= s.d - 0.05); if (!fits) { pen += 25; notes.tight.push(r.name); } }
         var el = edgeLen(r, W, D); if (plan.shape) el.all = extLen(r, rooms);
+        rooms.forEach(function (q) { if (q !== r && q.inst && q.inst.sp && q.inst.sp.open === "court") el.all += shared(r, q); });
         if (sp.unit) { /* a flat needs an outer wall for its rooms */ if (el.all < 3) { pen += 20; notes.win.push(r.name); } }
         else if ((sp.win === "hab" || sp.win === "hall") && el.all < 1.0) { pen += 14; notes.win.push(r.name); }
         else if (sp.win === "kit" && el.all < 0.9) { pen += 15; notes.win.push(r.name); }
         else if (sp.win === "wet" && el.all < 0.5) { pen += 2.5; }
-        if (sp.open && el.all < 1) pen += 15;
+        if (sp.open === "court") { if (el.all > 0.3) pen += 18; } else if (sp.open && el.all < 1) pen += 15;
         if ((sp.open === "park" || sp.shop) && el.f < 2.4) pen += sp.shop ? 20 : 12;
         if (cfg.unitExt) el.all = el.b;
         if (r.inst.main && fi === 0 && el.f < 1.0) { pen += 14; notes.acc.push(r.name + " (not on the road side)"); }

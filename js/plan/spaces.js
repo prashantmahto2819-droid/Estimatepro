@@ -49,6 +49,8 @@
     wc: s({ n: "WC (powder room)", hi: "डब्ल्यूसी", z: 3, S: [0.9, 1.2], M: [1.0, 1.5], L: [1.2, 1.8], minA: 1.1, minW: 0.9, wet: 1, win: "wet", furn: "wc1", fin: "ceramic", door: "D11", asp: 2.4 }),
     balcony: s({ n: "Balcony", hi: "बालकनी", z: 0, S: [1.2, 3.0], M: [1.5, 3.6], L: [1.8, 4.2], minW: 1.0, open: "balc", fl: "up", fin: "ceramic", win: "none", asp: 4 }),
     servant: s({ n: "Staff / servant room", hi: "सर्वेंट रूम", z: 3, S: [2.4, 2.7], M: [2.7, 3.0], L: [3.0, 3.3], minA: 7.5, minW: 2.1, win: "hab", fl: "G", furn: "bed1" }),
+    court: s({ n: "Courtyard (aangan)", hi: "आंगन", z: 2, S: [2.4, 2.4], M: [3.0, 3.0], L: [3.6, 3.6], minW: 2.4, open: "court", circ: 1, fl: "G", fin: "kota", win: "none", asp: 1.8 }),
+    "void": s({ n: "Open to sky (courtyard)", hi: "खुला आंगन", z: 2, S: [3, 3], M: [3, 3], L: [3, 3], minW: 1.0, open: "court", win: "none", fl: "up", asp: 9, auto: 1, isVoid: 1 }),
     passage: s({ n: "Passage", hi: "पैसेज", z: 2, S: [1.0, 3.0], M: [1.1, 4.0], L: [1.2, 5.0], minW: 1.0, circ: 1, win: "none", asp: 99, auto: 1 }),
     stair: s({ n: "Staircase", hi: "सीढ़ी", z: 3, S: [2.4, 4.2], M: [2.4, 4.5], L: [2.7, 4.8], minW: 2.0, win: "store", fl: "all", stair: 1, fin: "granite", asp: 2.6 }),
     lift: s({ n: "Lift", hi: "लिफ़्ट", z: 3, S: [1.8, 1.8], M: [2.0, 2.2], L: [2.4, 2.8], minW: 1.8, win: "none", fl: "all", lift: 1, fin: "granite", asp: 1.6 }),
@@ -222,7 +224,7 @@
       L.push(it("toilet"));
       if (beds >= 3) { L.push(it("lounge", 1, { fl: "up", opt: 1 })); L.push(it("balcony", 1, { opt: 1 })); }
       L.push(it("stair", 1, { opt: 1 }));
-      L.push(it("study", 1, { off: 1 })); L.push(it("guest", 1, { off: 1 })); L.push(it("sitout", 1, { off: 1 })); L.push(it("servant", 1, { off: 1 })); L.push(it("wc", 1, { off: 1 })); L.push(it("bike_park", 1, { off: 1 }));
+      L.push(it("court", 1, { off: 1 })); L.push(it("study", 1, { off: 1 })); L.push(it("guest", 1, { off: 1 })); L.push(it("sitout", 1, { off: 1 })); L.push(it("servant", 1, { off: 1 })); L.push(it("wc", 1, { off: 1 })); L.push(it("bike_park", 1, { off: 1 }));
       return L;
     } };
   T.office = { plot: [25, 30], n: "Office building", hi: "ऑफ़िस बिल्डिंग", icon: "🏢", mode: "corr", h: 3600, occ: 10, stairW: 1.5, band: 6.0, cw: 1.8, grp: "C", rate: 26000, rules: "com", fixk: "office",

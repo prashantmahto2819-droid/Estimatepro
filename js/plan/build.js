@@ -197,7 +197,7 @@
       rooms.forEach(function (r) {
         var pts = outline(r), n = pts.length, ins = [];
         for (var i = 0; i < n; i++) { var a = pts[i], b = pts[(i + 1) % n], hz = Math.abs(a[1] - b[1]) < 1e-6; ins.push(thAt(hz, hz ? a[1] : a[0], hz ? (a[0] + b[0]) / 2 : (a[1] + b[1]) / 2) / 2 * 1000); }
-        var mm = pts.map(function (q) { return P(q[0], q[1]); }), Q = B.insetPoly ? B.insetPoly(mm, ins) : mm, s = sp(r);
+        var mm = pts.map(function (q) { return P(q[0], q[1]); }), Q = B.insetPoly ? B.insetPoly(mm, ins) : mm, s = sp(r); if (s && s.isVoid) return;
         var fl = r.corr || r.pass ? (house ? des.floorMain : "kota") : !s ? des.floorMain : s.stair ? des.floorStair : s.open ? (s.fin || "kota") : (s.wet || s.fin === "ceramic") ? des.floorWet : s.fin === "granite" ? "granite" : s.fin === "ips" ? "ips" : des.floorMain;
         add({ t: "room", pts: Q, name: r.name, lvl: lvl, floor: fl, skirt: 100, ceil: false, layer: "A-ROOM", plk: r.key });
         if (des.ceil && des.ceil !== "none" && s && !s.wet && !s.open && !s.stair && (/^(living|dining|master|lounge|reception|hlobby|flobby|conf|cabin_head|principal|restaurant|banquet|meeting|chall|din_hall|seminar)$/.test(r.key) || (s.win === "hall" && PL.areaOf(r) > 40 && T.id !== "factory")))
@@ -208,7 +208,7 @@
         var corrMode = T.mode === "corr", inL = along ? x1 - x0 : y1 - y0, inW = along ? y1 - y0 : x1 - x0, ws = Math.min(sd.ws, Math.max(0.75, (inW - 0.1) / 2)), slen = (sd.n / 2 - 1) * sd.T + ws, off = corrMode ? 0 : Math.max(0, Math.min(ws + 0.05, inL - slen - 0.01)), u, p0;
         var startHigh = false; if (acc && acc.p) { if (along) startHigh = acc.p.hz ? acc.c > (x0 + x1) / 2 : acc.p.c > (x0 + x1) / 2; else startHigh = acc.p.hz ? acc.p.c > (y0 + y1) / 2 : acc.c > (y0 + y1) / 2; }
         if (along) { u = startHigh ? [-1, 0] : [1, 0]; p0 = startHigh ? [x1 - off, y1] : [x0 + off, y0]; } else { u = startHigh ? [0, -1] : [0, 1]; p0 = startHigh ? [x0, y1 - off] : [x1, y0 + off]; }
-        var e = add({ t: "stair", p: P(p0[0], p0[1]), dir: Math.atan2(u[1], u[0]) * 180 / Math.PI, w: Math.round(ws * 1000), n: sd.n, R: Math.round(sd.R * 10000) / 10, T: Math.round(sd.T * 1000), wt: 150, kind: "dogleg", lvl: lvl, land: Math.round(ws * 1000), side: 1, rail: "in", layer: "A-STAIR" });
+        var e = add({ t: "stair", p: P(p0[0], p0[1]), dir: Math.atan2(u[1], u[0]) * 180 / Math.PI, w: Math.round(ws * 1000), n: sd.n, R: Math.round(sd.R * 10000) / 10, T: Math.round(sd.T * 1000), wt: 150, kind: "dogleg", winder: des.stairType === "winder" ? "3" : undefined, lvl: lvl, land: Math.round(ws * 1000), side: 1, rail: "in", layer: "A-STAIR" });
         stairs.push({ e: e, r: r, fi: fi, hole: corrMode ? [x0, y0, x1, y1] : along ? (startHigh ? [x0, y0, x1 - off, y1] : [x0 + off, y0, x1, y1]) : (startHigh ? [x0, y0, x1, y1 - off] : [x0, y0 + off, x1, y1]) }); });
       /* furniture */
       if (cfg.furn !== false) rooms.forEach(function (r) { try { furnish(r, lvl, accessOf[r.uid]); } catch (er) { if (window.console) console.warn("furniture", r.name, er); } });
@@ -270,6 +270,7 @@
     var outer = B.insetPoly ? B.insetPoly(olM, olM.map(function () { return -115; })) : [P(-0.115, -0.115), P(W + 0.115, -0.115), P(W + 0.115, D + 0.115), P(-0.115, D + 0.115)];
     for (var f2 = 0; f2 < nF; f2++) {
       var holes = stairs.filter(function (s) { return s.fi === f2 && !(f2 === nF - 1 && (sloped || T.roof === "gi" || des.roof === "gi")); }).map(function (s) { var h = s.hole; return [P(h[0], h[1]), P(h[2], h[1]), P(h[2], h[3]), P(h[0], h[3])]; });
+      plan.floors[f2].forEach(function (r) { if (sp(r) && sp(r).open === "court") { var t = 0.115; holes.push([P(r.x + t, r.y + t), P(r.x + r.w - t, r.y + t), P(r.x + r.w - t, r.y + r.d - t), P(r.x + t, r.y + r.d - t)]); } });
       if (sloped && f2 === nF - 1 && T.roof !== "gi") { var tile = /^tile/.test(des.roof), gab = /gable/.test(des.roof); add({ t: "roof", pts: outer.map(function (q) { return q.slice(); }), kind: gab ? "gable" : "hip", slope: des.roof === "tile_gable" ? 32 : tile ? 25 : 22, th: tile ? 100 : 125, lvl: "L" + f2, off: H, mat: tile ? "tile" : "rcc", over: 600, dir: W >= D ? 0 : 90, layer: "A-ROOF" });
         if (!tile) continue; var hs = holes; if (hs.length) add({ t: "slab", pts: outer.map(function (q) { return q.slice(); }), holes: hs, th: house ? 125 : 150, lvl: "L" + f2, off: H, kind: "ceiling", layer: "S-SLAB" }); else add({ t: "slab", pts: outer.map(function (q) { return q.slice(); }), th: house ? 125 : 150, lvl: "L" + f2, off: H, kind: "ceiling", layer: "S-SLAB" }); continue; }
       if (des.roof === "gi" && f2 === nF - 1 && T.roof !== "gi") T = Object.assign({}, T, { roof: "gi" });
@@ -288,6 +289,15 @@
       if (frame) c.forEach(function (q) { add({ t: "column", p: P(q[0], q[1]), w: house ? 230 : 300, d: house ? 230 : 300, rot: 0, shape: "rect", lvl: "LT", h: 2700, layer: "S-COL" }); });
     });
     if (T.roof !== "gi" && !sloped) add({ t: "railing", pts: olM.concat([olM[0]]).map(function (q) { return q.slice(); }), h: 1000, lvl: "LT", style: des.parapet || "par_solid", layer: "A-RAIL" });
+    /* courtyard: parapet round the opening on the terrace */
+    if (!sloped) plan.floors[nF - 1].forEach(function (r) { if (!(sp(r) && sp(r).open === "court")) return; var c = [P(r.x, r.y), P(r.x + r.w, r.y), P(r.x + r.w, r.y + r.d), P(r.x, r.y + r.d)]; add({ t: "railing", pts: c.concat([c[0].slice()]), h: 1000, lvl: "LT", style: des.parapet || "par_solid", layer: "A-RAIL" }); });
+    /* terrace: solar panels and a pergola sit-out on a flat roof */
+    if (!sloped && T.roof !== "gi" && /solar|pergola|both/.test(des.terrace || "") && B.ASSET_LIB) {
+      var busy = []; plan.floors[nF - 1].forEach(function (r) { if (sp(r) && (sp(r).stair || sp(r).open === "court" || sp(r).lift)) busy.push([r.x - 0.6, r.y - 0.6, r.x + r.w + 0.6, r.y + r.d + 0.6]); });
+      var free = function (x0, y0, x1, y1) { return x0 >= 0.4 && y0 >= 0.4 && x1 <= W - 0.4 && y1 <= D - 0.4 && !busy.some(function (b) { return x0 < b[2] && x1 > b[0] && y0 < b[3] && y1 > b[1]; }) && (!plan.outline || [[x0, y0], [x1, y0], [x1, y1], [x0, y1]].every(function (q) { return G.inPoly(q, plan.outline); })); };
+      if (/pergola|both/.test(des.terrace)) { var done1 = false; [[W - 3.6, D - 3.6], [0.6, D - 3.6], [W - 3.6, 0.6], [0.6, 0.6]].forEach(function (q) { if (done1 || !free(q[0], q[1], q[0] + 3, q[1] + 3)) return; add({ t: "asset", kind: "pergola", p: P(q[0] + 1.5, q[1] + 1.5), rot: 0, lvl: "LT", layer: "L-LAND" }); busy.push([q[0] - 0.3, q[1] - 0.3, q[0] + 3.3, q[1] + 3.3]); done1 = true; }); }
+      if (/solar|both/.test(des.terrace)) { var nA = 0, maxA = house ? 2 : 8; for (var yy = 0.6; yy + 2.0 <= D - 0.4 && nA < maxA; yy += 2.6) for (var xx = 0.6; xx + 3.4 <= W - 0.4 && nA < maxA; xx += 3.8) if (free(xx, yy, xx + 3.4, yy + 2.0)) { add({ t: "asset", kind: "solar_array_4", p: P(xx + 1.7, yy + 1.0), rot: 0, lvl: "LT", layer: "E-ELEC" }); busy.push([xx, yy, xx + 3.4, yy + 2.0]); nA++; } }
+    }
     /* porch / portico in front of the main door (into the front setback) */
     var md = perFloor[0] && perFloor[0].mainDoor, fset = cfg.rules.f || 0;
     if (md && des.porch && des.porch !== "none" && md.p.hz && Math.abs(md.p.c) < 1e-3 && fset >= 2.0) {
@@ -300,6 +310,16 @@
       else add({ t: "slab", pts: poly, th: 125, lvl: "L0", off: H, kind: "roof", layer: "S-SLAB", porch: 1 });
       if (des.porch === "dome") add({ t: "dome", c: P((x0 + x1) / 2, -dp / 2), r: Math.round(Math.min(x1 - x0, dp) * 450), h: Math.round(Math.min(x1 - x0, dp) * 400), th: 100, lvl: "L0", off: H + 125, layer: "A-ROOF" });
       add({ t: "slab", pts: poly.map(function (q) { return q.slice(); }), th: 100, lvl: "L0", off: 0, kind: "floor", layer: "S-SLAB", porch: 1 });
+      md.edge = -dp; md.ew = x1 - x0;
+    }
+    /* entrance steps (plinth to ground) and a 1:12 ramp for public buildings */
+    if (md && des.entry && des.entry !== "none" && md.p.hz && Math.abs(md.p.c) < 1e-3) {
+      var rise = -(bs.ngl || -450), ye = md.edge != null ? md.edge : 0, sw = Math.max(1.2, Math.min(md.ew ? md.ew - 0.6 : md.w + 0.6, 3.0)), I = B.stepsInfo ? B.stepsInfo({ rise: rise, tread: 300, w: sw * 1000 }) : { len: 900 }, run = I.len / 1000;
+      if (md.edge == null) { add({ t: "slab", pts: [P(md.c - sw / 2 - 0.15, -0.9), P(md.c + sw / 2 + 0.15, -0.9), P(md.c + sw / 2 + 0.15, 0), P(md.c - sw / 2 - 0.15, 0)], th: 100, lvl: "L0", off: 0, kind: "floor", layer: "S-SLAB", porch: 1 }); ye = -0.9; }
+      if (fset >= Math.abs(ye) + run + 0.2) add({ t: "steps", a: P(md.c, ye - run), dir: 90, w: Math.round(sw * 1000), rise: rise, tread: 300, lvl: "L0", z: -rise, mat: "brick", layer: "A-STAIR" });
+      if (des.entry === "steps_ramp") { var rr = rise * 12 / 1000, lx = md.c + sw / 2 + 0.3, dirR = 1; if (ox / 1000 + lx + 1.5 + rr > cfg.plot.w - 0.3) { lx = md.c - sw / 2 - 0.3; dirR = -1; }
+        var land = [P(lx, ye - 1.5), P(lx + dirR * 1.5, ye - 1.5), P(lx + dirR * 1.5, ye), P(lx, ye)]; add({ t: "slab", pts: dirR > 0 ? land : land.reverse(), th: 100, lvl: "L0", off: 0, kind: "floor", layer: "S-SLAB", porch: 1 });
+        if (fset >= Math.abs(ye) + 1.5) add({ t: "ramp", a: P(lx + dirR * (1.5 + rr), ye - 0.75), b: P(lx + dirR * 1.5, ye - 0.75), w: 1200, rise: rise, th: 150, z: -rise, lvl: "L0", layer: "A-STAIR" }); }
     }
     /* chajjas (sunshades) over the outer windows: 600 mm deep, 150 mm wider each side, at lintel top */
     if (cfg.chajja !== false) ents.filter(function (e) { return e.t === "window"; }).forEach(function (wn) {
