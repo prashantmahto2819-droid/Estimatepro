@@ -3,6 +3,18 @@
 This file is for the people maintaining the app. It is not published with the site (see `.assetsignore`).
 The text users see is `EP_NOTES` in `js/version.js`.
 
+## 2026.11.21-z57
+- New `js/bim/mep.js` (after site.js; in the service-worker cache). Electrical and plumbing drawings in CAD Studio.
+- Electrical: `d.mep = { on, grp A|B|C, cond pvc|steel, sw mod|piano, ckt 1.5|2.5|4, sym, rccb, view }` set by `ELECSET`. Library items are classed (light, fan, exhaust, bell, 6 A / 16 A socket, TV, switch board, regulator, DB, meter board, earth pit, AC); with symbols on they draw IS-style symbols at paper size (2 × scale). New items: earth pit (→ em22 5.2), meter board.
+  - `ewire { a, b, k pt|ckt|pwr, c, bend, lvl }` on layer E-WIRE, an arc between two items (follows them when moved); circuit wires carry ticks and the circuit name. `WIRE` (by hand: From, Flip, Circuit), `WIREAUTO` (per floor: points → switch board of the same room or nearest within 6 m; boards chained to the nearest DB, circuits ≤ 10 points / 800 W; each 16 A socket its own P circuit).
+  - Quantities when on: point wiring per point by group / conduit / switch (em22 1.1, 1.3, 1.8, 1.10; twin control 1.2, 1.4, 1.9, 1.11), 6 A box 1.31 / 1.29, 16 A box 1.32 / 1.30, power plug wiring m 1.12 / 1.5, circuit wiring m 1.14.x / 1.7.x (arc + drops from 150 below the ceiling to each item), DB 2.3.x by ways (circuits + 2), MCB SP 2.10.1 per circuit, DP incomer 2.10.3, RCCB 2.14.2, bell 1.38, TV 1.24.7 / 1.23.7, regulator 1.25. Switch board and the old light_point / fan_point / socket / db rows are dropped (included in the above). Off → exactly as before.
+  - CPWD groups A/B/C are building categories (A Type I–III quarters, B Type IV and above, C non-residential), not lengths.
+- Plumbing: pipe runs get `svc` (cw, hw, soil, waste, vent, rw, drain). `PLUMB` draws them (CPVC 15–32, uPVC 75/110, S.W. 100–200; layers P-CW … P-DRAIN; heights per service). With `d.mep.plb` they draw as service lines (dashed for waste, vent, rain), "Ø… SP 1:40" labels and flow arrows. uPVC bends (> 30°) and tees (a pipe end on another pipe, away from its ends) → cpwd23 12.42.5.x / 12.42.4.x. New item: gully trap (19.4.1.1).
+- `MEPVIEW` (all / E / P / B) hides the other services in plan, sheets, PDF and DXF; quantities always count everything.
+- `SCHEDULE` → Electrical (legend with symbols, DB schedule with circuits, points, load, MCB, cable) and Plumbing (pipe schedule by service and size, bends / tees, sanitary fittings and traps). views2d exposes `B.SCH_KINDS` and `B.SCH_EXTRA`.
+- Properties: twin control, socket 6 / 16 A, load, circuit, DB name; pipe service and fall. Ribbon: Site & services → Electrical, Plumbing, MEP drawings. Help 18E-2.
+- Tested in the app on a two-room sample (auto wiring, manual wiring, settings, off, schedules, plumbing pipes, fittings, layout switch). Not yet: single-line diagram, toilet isometric, wires in 3D, two sheets with different layouts at the same time.
+
 ## 2026.11.21-z56
 - Home page: the Android card no longer mentions Google sign-in (owner's wish). The app itself still explains it when Google's page is opened.
 

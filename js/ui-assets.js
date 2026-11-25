@@ -106,7 +106,7 @@
         (g ? ro("Size (m)", ((g.bbox[3] - g.bbox[0]) * (e.sc || 1)).toFixed(2) + " × " + ((g.bbox[4] - g.bbox[1]) * (e.sc || 1)).toFixed(2) + " × " + ((g.bbox[5] - g.bbox[2]) * (e.sc || 1)).toFixed(2)) + ro("Triangles", Math.round(g.n / 3).toLocaleString("en-IN") + (g.truncated ? " (cut at the limit)" : "")) : "<p class='muted small'>Model data is loading…</p>");
     }
     var q = B.qty(ed.doc, e); if (q.length) h += "<div class='cad-ph'>Quantities</div><div class='bimq'>" + q.map(function (r) { return "<div><span>" + esc(r.label) + "</span><b>" + (r.dim === "A" ? (r.v / 1e6).toFixed(2) + " m²" : r.dim === "L" ? (r.v / 1000).toFixed(2) + " m" : r.dim === "V" ? (r.v / 1e6).toFixed(0) + " litre" : r.v + " no.") + "</b></div>"; }).join("") + "</div>";
-    return h;
+    if (B.mepFields) h += B.mepFields(e, ed, f, sel); return h;
   };
 
   /* ---------- 3D preview in a dialog ---------- */
