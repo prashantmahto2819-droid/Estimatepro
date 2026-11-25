@@ -3,6 +3,13 @@
 This file is for the people maintaining the app. It is not published with the site (see `.assetsignore`).
 The text users see is `EP_NOTES` in `js/version.js`.
 
+## 2026.11.21-z75
+- FIX: js/version.js EP_NOTES of z74 had raw newlines (re.sub turned "\\n" into a line break) → the file threw a syntax error on load; notes written with escaped \n again.
+- Planner L-shaped corridor buildings (PL.corrL, PL.lNeed): wing A along the road + wing B at the right / left end, core at the corner, four bands (front A, back A, wing B both sides, corridor A continues into wing B); chosen when a straight block does not fit the plot width but the L fits depth and coverage. plan.outline polygon → slabs, parapet, SVG outline, built-up area (PL.footArea); score uses true outer-wall length (PL.extLen) for shaped plans; mumty door side tested against the outline.
+- Ready patterns (ui-plan PRESETS): 1BHK, 2BHK, 3BHK, 3BHK / 4BHK duplex, row house (no side setbacks), bungalow, small / 100-staff office, primary / higher secondary school, PHC / CHC, guest house — one tap sets plot, needs, floors (+ small sizes) and makes layouts.
+- Build adds: compound wall on the plot line (layer A-SITE, 230 mm, from NGL to +1.8 m, just "r" inside) with a 3 m vehicle gate and 1 m wicket gate on the road side; chajjas 600 mm over every outer window at lintel top; drawing set after MEP: elevations + section (site layer hidden while drawn), DIMWALLS on every floor (dims tagged with their level), door / window and room schedules, area statement beside the plot, SHEET (all elevations).
+- Kitchen without an outer wall marked down more (15).
+
 ## 2026.11.21-z74
 - New tab Building Planner (js/ui-plan.js, tab id `planner`; nav regrouped with `.tab-grp` separators: Estimates/Reviews | Planner/CAD/Design | rates | photos/scanner/backup | users/help).
 - js/plan/spaces.js: space catalogue (≈110 spaces, S/M/L sizes, NBC minimum areas / widths, zones, wet, light, Vastu prefs, furniture set) and 9 building programmes (house, office, school (CBSE), college (AICTE), hospital (IPHS CHC), hotel (MoT star sizes), hostel, canteen (DoPT scale), community hall); toilet blocks from NBC Part 9 fittings per floor (PL.blockFor), indicative setback / coverage / FAR / height table (PL.rulesFor).

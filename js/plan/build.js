@@ -8,7 +8,7 @@
   "use strict";
   var EP = window.EP = window.EP || {}, PL = EP.plan = EP.plan || {};
   function r1(x) { return Math.round(x); }
-  var LAYC = { "A-WALL": 7, "A-DOOR": 4, "A-WIN": 140, "S-COL": 1, "S-BEAM": 5, "S-SLAB": 8, "S-FOOT": 9, "A-ROOF": 30, "A-STAIR": 6, "A-ROOM": 3, "A-RAIL": 8, "A-FURN": 42, "P-PLUMB": 150, "C-PROP": 1, "C-PROP-TXT": 7, "C-SETBACK": 3 };
+  var LAYC = { "A-WALL": 7, "A-DOOR": 4, "A-WIN": 140, "S-COL": 1, "S-BEAM": 5, "S-SLAB": 8, "S-FOOT": 9, "A-ROOF": 30, "A-STAIR": 6, "A-ROOM": 3, "A-RAIL": 8, "A-FURN": 42, "P-PLUMB": 150, "C-PROP": 1, "C-PROP-TXT": 7, "C-SETBACK": 3, "A-SITE": 33 };
 
   PL.toDoc = function (plan, cfg) {
     var CAD = EP.cad, B = EP.bim, G = EP.geom, T = plan.T, nF = plan.floors.length, H = T.h, house = T.id === "house", frame = cfg.frame !== "lb";
@@ -207,7 +207,8 @@
     }
 
     /* ---------- slabs (stair wells cut), stair cabin and parapet on the terrace ---------- */
-    var outer = [P(-0.115, -0.115), P(W + 0.115, -0.115), P(W + 0.115, D + 0.115), P(-0.115, D + 0.115)];
+    var olM = plan.outline ? plan.outline.map(function (q) { return P(q[0], q[1]); }) : [P(0, 0), P(W, 0), P(W, D), P(0, D)];
+    var outer = B.insetPoly ? B.insetPoly(olM, olM.map(function () { return -115; })) : [P(-0.115, -0.115), P(W + 0.115, -0.115), P(W + 0.115, D + 0.115), P(-0.115, D + 0.115)];
     for (var f2 = 0; f2 < nF; f2++) {
       var holes = stairs.filter(function (s) { return s.fi === f2; }).map(function (s) { var h = s.hole; return [P(h[0], h[1]), P(h[2], h[1]), P(h[2], h[3]), P(h[0], h[3])]; });
       add({ t: "slab", pts: outer.map(function (q) { return q.slice(); }), holes: holes, th: house ? 125 : 150, lvl: "L" + f2, off: H, kind: f2 === nF - 1 ? "roof" : "ceiling", layer: "S-SLAB" });
@@ -216,12 +217,27 @@
     topStairs.forEach(function (s) { var r = s.r, c = [[r.x, r.y], [r.x + r.w, r.y], [r.x + r.w, r.y + r.d], [r.x, r.y + r.d]], ws = [];
       for (var i = 0; i < 4; i++) ws.push(add({ t: "wall", a: P(c[i][0], c[i][1]), b: P(c[(i + 1) % 4][0], c[(i + 1) % 4][1]), th: 230, h: null, mat: "brick", just: "c", lvl: "LT", ext: true, layer: "A-WALL" }));
       /* door to the terrace on the side that is not on the building edge, else any */
-      var inner = [0, 1, 2, 3].filter(function (i) { var a = c[i], b = c[(i + 1) % 4]; return !((Math.abs(a[1] - b[1]) < 1e-6 && (a[1] < 1e-3 || Math.abs(a[1] - D) < 1e-3)) || (Math.abs(a[0] - b[0]) < 1e-6 && (a[0] < 1e-3 || Math.abs(a[0] - W) < 1e-3))); }), k = inner.length ? inner[0] : 0, wl = ws[k], L = G.dist(wl.a, wl.b);
+      var onEdge = function (a, b) { var ol = plan.outline || [[0, 0], [W, 0], [W, D], [0, D]]; return ol.some(function (q, j) { var r2 = ol[(j + 1) % ol.length]; if (Math.abs(a[1] - b[1]) < 1e-6 && Math.abs(q[1] - r2[1]) < 1e-6 && Math.abs(q[1] - a[1]) < 1e-3) return Math.min(Math.max(a[0], b[0]), Math.max(q[0], r2[0])) - Math.max(Math.min(a[0], b[0]), Math.min(q[0], r2[0])) > 0.3; if (Math.abs(a[0] - b[0]) < 1e-6 && Math.abs(q[0] - r2[0]) < 1e-6 && Math.abs(q[0] - a[0]) < 1e-3) return Math.min(Math.max(a[1], b[1]), Math.max(q[1], r2[1])) - Math.max(Math.min(a[1], b[1]), Math.min(q[1], r2[1])) > 0.3; return false; }); };
+      var inner = [0, 1, 2, 3].filter(function (i) { return !onEdge(c[i], c[(i + 1) % 4]); }), k = inner.length ? inner[0] : 0, wl = ws[k], L = G.dist(wl.a, wl.b);
       add({ t: "door", host: wl.id, at: Math.min(L - 600, Math.max(600, L / 2)), flip: false, swing: "l", w: 900, h: 2100, sill: 0, preset: "D2", mat: "flush", kind: "single", mark: "D2", layer: "A-DOOR" });
       add({ t: "slab", pts: [P(r.x - 0.115, r.y - 0.115), P(r.x + r.w + 0.115, r.y - 0.115), P(r.x + r.w + 0.115, r.y + r.d + 0.115), P(r.x - 0.115, r.y + r.d + 0.115)], th: 120, lvl: "LT", off: 2700, kind: "roof", layer: "S-SLAB" });
       if (frame) c.forEach(function (q) { add({ t: "column", p: P(q[0], q[1]), w: house ? 230 : 300, d: house ? 230 : 300, rot: 0, shape: "rect", lvl: "LT", h: 2700, layer: "S-COL" }); });
     });
-    add({ t: "railing", pts: [P(0, 0), P(W, 0), P(W, D), P(0, D), P(0, 0)], h: 1000, lvl: "LT", style: "par_solid", layer: "A-RAIL" });
+    add({ t: "railing", pts: olM.concat([olM[0]]).map(function (q) { return q.slice(); }), h: 1000, lvl: "LT", style: "par_solid", layer: "A-RAIL" });
+    /* chajjas (sunshades) over the outer windows: 600 mm deep, 150 mm wider each side, at lintel top */
+    if (cfg.chajja !== false) ents.filter(function (e) { return e.t === "window"; }).forEach(function (wn) {
+      var wl = ents.filter(function (x) { return x.id === wn.host; })[0]; if (!wl || !wl.ext) return; var L = B.wallLine(wl), mid = G.add(L.a, G.mul(L.u, wn.at)), cen = G.mul(G.add(olM[0], olM[2] || olM[1]), 0.5), out = G.dot(G.sub(mid, ents.length ? polyCen(olM) : cen), L.n) >= 0 ? L.n : G.mul(L.n, -1);
+      var face = G.add(mid, G.mul(out, wl.th / 2)), half = wn.w / 2 + 150, a = G.add(face, G.mul(L.u, -half)), b = G.add(face, G.mul(L.u, half)), dep = 600;
+      add({ t: "slab", pts: [a, b, G.add(b, G.mul(out, dep)), G.add(a, G.mul(out, dep))].map(function (q) { return [r1(q[0]), r1(q[1])]; }), th: 75, lvl: wl.lvl, off: (wn.sill || 0) + wn.h + 150, kind: "chajja", layer: "S-SLAB" }); });
+    function polyCen(pp) { var x = 0, y = 0; pp.forEach(function (q) { x += q[0]; y += q[1]; }); return [x / pp.length, y / pp.length]; }
+    /* site: compound wall on the plot line with a vehicle gate and a wicket gate on the road side */
+    if (cfg.site !== false) {
+      var ngl = bs.ngl || -450, cwH = 1800 - ngl, gx = Math.min(pw - 2000, Math.max(2000, ox + (function () { var pk = plan.floors[0].filter(function (r) { return sp(r) && sp(r).open === "park"; })[0] || plan.floors[0].filter(function (r) { return r.inst && r.inst.main; })[0]; return pk ? (pk.x + pk.w / 2) * 1000 : W * 500; })()));
+      var cwall = function (a, b) { return add({ t: "wall", a: a, b: b, th: 230, h: cwH, base: ngl, mat: "brick", just: "r", lvl: "L0", ext: true, layer: "A-SITE", site: 1 }); };
+      var front = cwall([0, 0], [pw, 0]); cwall([pw, 0], [pw, pd]); cwall([pw, pd], [0, pd]); cwall([0, pd], [0, 0]);
+      add({ t: "door", host: front.id, at: gx, flip: true, swing: "l", w: 3000, h: 1800, sill: 0, preset: "G1", mat: "steel", kind: "double", style: "grill", mark: "G1", layer: "A-SITE", gate: 1 });
+      var wx = gx + 2600 < pw - 800 ? gx + 2600 : gx - 2600; if (wx > 800) add({ t: "door", host: front.id, at: wx, flip: true, swing: "l", w: 1000, h: 1800, sill: 0, preset: "G2", mat: "steel", kind: "single", style: "grill", mark: "G2", layer: "A-SITE", gate: 1 });
+    }
     /* footings under the ground-floor columns */
     if (frame) {
       var fs = house ? [1200, 1200, 300, 1500] : nF > 2 ? [2200, 2200, 500, 2000] : [1800, 1800, 450, 1800];

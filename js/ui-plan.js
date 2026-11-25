@@ -10,6 +10,19 @@
   var P = S.pl = { type: "house", inp: {}, plot: { w: 12, d: 18 }, facing: "E", set: "mbbl", rules: null, rulesEdited: false, floors: 2, frame: "rcc", vastu: true, furn: true, mep: true, views: true, rate: {}, items: null, res: null, sel: {}, busy: false, open: {} };
   try { var sv = JSON.parse(localStorage.getItem(KEY) || "{}"); ["type", "inp", "plot", "facing", "set", "rules", "rulesEdited", "floors", "frame", "vastu", "furn", "mep", "views", "rate", "items", "itemsType"].forEach(function (k) { if (sv[k] != null) P[k] = sv[k]; }); } catch (e) {}
   function save() { try { localStorage.setItem(KEY, JSON.stringify({ type: P.type, inp: P.inp, plot: P.plot, facing: P.facing, set: P.set, rules: P.rules, rulesEdited: P.rulesEdited, floors: P.floors, frame: P.frame, vastu: P.vastu, furn: P.furn, mep: P.mep, views: P.views, rate: P.rate, items: P.items, itemsType: P.itemsType })); } catch (e) {} }
+  /* ready patterns: one tap sets the plot, the needs and the floors (house) */
+  var PRESETS = { house: [
+    { id: "1bhk", size: "S", n: "1BHK", hi: "25×40 ft", plot: [7.62, 12.19], v: { beds: 1, attached: 0, persons: 3, cars: 0, kitchenOpen: 0 }, fl: 1 },
+    { id: "2bhk", size: "S", n: "2BHK", hi: "30×50 ft", plot: [9.14, 15.24], v: { beds: 2, attached: 1, persons: 4, cars: 1, kitchenOpen: 0 }, fl: 1 },
+    { id: "3bhk", n: "3BHK", hi: "40×60 ft", plot: [12.19, 18.29], v: { beds: 3, attached: 2, persons: 5, cars: 1, kitchenOpen: 0 }, fl: 1 },
+    { id: "3dup", size: "S", n: "3BHK duplex", hi: "30×50 ft, G+1", plot: [9.14, 15.24], v: { beds: 3, attached: 2, persons: 5, cars: 1, kitchenOpen: 0 }, fl: 2 },
+    { id: "4dup", n: "4BHK duplex", hi: "40×60 ft, G+1", plot: [12.19, 18.29], v: { beds: 4, attached: 3, persons: 6, cars: 1, kitchenOpen: 0 }, fl: 2 },
+    { id: "row", size: "S", n: "Row house", hi: "20×50 ft, G+1, no side gaps", plot: [6.1, 15.24], v: { beds: 2, attached: 1, persons: 4, cars: 1, kitchenOpen: 0 }, fl: 2, rules: { f: 2.0, r: 1.5, l: 0, rt: 0, cov: 75, far: 1.75, h: 12 } },
+    { id: "bung", n: "Bungalow", hi: "50×80 ft, 4BHK, single storey", plot: [15.24, 24.38], v: { beds: 4, attached: 4, persons: 6, cars: 2, kitchenOpen: 0 }, fl: 1 } ],
+    office: [{ id: "o20", n: "Small office", hi: "20 staff", plot: [18, 24], v: { staff: 20, female: 40, cabins: 2, ws: 14, meet: 8 }, fl: 0 }, { id: "o100", n: "Office 100 staff", hi: "G+3", plot: [30, 40], v: { staff: 100, female: 40, cabins: 8, ws: 80, meet: 20 }, fl: 0 }],
+    school: [{ id: "pri", n: "Primary school", hi: "classes 1–5", plot: [35, 45], v: { classes: 5, sections: 1, students: 40, girls: 50, senior: 0, teachers: 7 }, fl: 0 }, { id: "hs", n: "Higher secondary", hi: "classes 1–12, 2 sections", plot: [60, 80], v: { classes: 12, sections: 2, students: 40, girls: 50, senior: 1, teachers: 40 }, fl: 0 }],
+    hospital: [{ id: "phc", n: "PHC (6 beds)", hi: "प्राथमिक स्वास्थ्य केंद्र", plot: [30, 40], v: { beds: 6, opd: 2, ot: 0, labour: 1, priv: 0 }, fl: 0 }, { id: "chc", n: "CHC (30 beds)", hi: "IPHS", plot: [40, 60], v: { beds: 30, opd: 4, ot: 1, labour: 1, priv: 4 }, fl: 0 }],
+    hotel: [{ id: "gh", n: "Guest house 10 rooms", hi: "1-star size", plot: [18, 30], v: { rooms: 10, star: 1, suites: 0, covers: 20, banq: 0 }, fl: 0 }] };
   function T() { var t = PL.TYPES[P.type] || PL.TYPES.house; t.id = P.type in PL.TYPES ? P.type : "house"; return t; }
   function vals() { var t = T(), v = {}, cur = P.inp[t.id] || {}; t.inputs.forEach(function (i) { v[i.k] = cur[i.k] != null ? cur[i.k] : i.def; }); return v; }
   function rulesNow() { if (!P.rules || !P.rulesEdited) P.rules = PL.rulesFor(P.set, T().rules, P.plot.w * P.plot.d); return P.rules; }
@@ -43,6 +56,7 @@
       ["vastu|Vastu / वास्तु", "furn|Furniture / फ़र्नीचर", "mep|Electrical + plumbing", "views|Elevations + section"].map(function (x) { var p = x.split("|"); return '<label class="row" style="gap:6px;align-items:center"><input type="checkbox" data-plf="' + p[0] + '"' + (P[p[0]] ? " checked" : "") + "> " + p[1] + "</label>"; }).join("") +
       fld("rate", "Rough rate ₹/m² (built-up)", P.rate[t.id] || t.rate, 500, 120) + "</div></section>";
     /* 3. programme */
+    if (PRESETS[t.id]) h += '<section class="panel" style="padding:12px 14px"><h3 style="margin:0 0 8px">Ready patterns <span class="muted" style="font-weight:500">तैयार पैटर्न — एक टैप में प्लॉट और ज़रूरतें</span></h3><div class="row" style="gap:8px;flex-wrap:wrap">' + PRESETS[t.id].map(function (p) { return '<button type="button" class="btn sec small" data-plpre="' + p.id + '" style="height:auto;padding:6px 10px;display:flex;flex-direction:column;align-items:flex-start"><b>' + esc(p.n) + '</b><span class="muted small">' + esc(p.hi) + "</span></button>"; }).join("") + "</div></section>";
     h += '<section class="panel" style="padding:12px 14px"><h3 style="margin:0 0 8px">3. What is needed <span class="muted" style="font-weight:500">ज़रूरतें</span></h3><div class="row" style="gap:12px;flex-wrap:wrap;align-items:flex-end">' +
       t.inputs.map(function (i) { return i.bool ? '<label class="row" style="gap:6px;align-items:center"><input type="checkbox" data-plin="' + i.k + '"' + (v[i.k] ? " checked" : "") + "> " + esc(i.n) + ' <span class="muted small">' + esc(i.hi) + "</span></label>" :
         '<label style="display:flex;flex-direction:column;gap:2px;min-width:120px"><span class="muted small">' + esc(i.n) + " / " + esc(i.hi) + '</span><input class="in small" style="width:110px" type="number" min="' + (i.min || 0) + '" max="' + (i.max || 9999) + '" data-plin="' + i.k + '" value="' + v[i.k] + '"></label>'; }).join("") + "</div></section>";
@@ -105,9 +119,18 @@
     try { if (ed.zoomExtents) ed.zoomExtents(); } catch (e) {}
     if (P.mep) { try { U.toast("Placing electrical and plumbing…"); var pers = t.id === "house" ? (vals().persons || 5) : Math.max(5, P.res.info.occ || 10); await PL.autoRun(ed, "MEPAUTO", [t.grp || "C", pers, "All"]); done.push("electrical + plumbing"); } catch (er) { console.warn("MEP", er); } }
     if (P.views) {
-      try { await PL.autoRun(ed, "ELEVATION", ["All"]); done.push("4 elevations"); } catch (er) { console.warn("elevation", er); }
+      var Ls = ed.doc.d.layers, siteL = Ls["A-SITE"], siteOn = siteL ? siteL.on : true; if (siteL) siteL.on = false;   /* the compound wall would hide the building in the elevations */
+      try { U.toast("Drawing elevations, section, dimensions, schedules and the sheet…"); await PL.autoRun(ed, "ELEVATION", ["All"]); done.push("4 elevations"); } catch (er) { console.warn("elevation", er); }
       try { var st = ed.doc.d.ents.filter(function (e) { return e.t === "stair" && e.lvl === "L0"; })[0], ox = cfg.rules.l * 1000, oy = cfg.rules.f * 1000, xs = st ? st.p[0] + 300 : ox + o.W * 500;
         await PL.autoRun(ed, "SECTION", [[xs, oy - 2000], [xs, oy + o.D * 1000 + 2000], "Left", null]); done.push("section A-A"); } catch (er) { console.warn("section", er); }
+      try { var B = EP.bim, bs0 = EP.cad.clone(B.ensure(ed.doc.d)), lvls = bs0.levels.filter(function (l) { return /^L\d/.test(l.id); }), nd = 0;
+        for (var li = 0; li < lvls.length; li++) { var bsx = EP.cad.clone(B.ensure(ed.doc.d)); bsx.cur = lvls[li].id; ed.doc.set("bim", bsx); var before = {}; ed.doc.d.ents.forEach(function (e) { before[e.id] = 1; });
+          await PL.autoRun(ed, "DIMWALLS", ["All"]); ed.doc.d.ents.forEach(function (e) { if (!before[e.id] && e.t === "dim") { e.lvl = lvls[li].id; nd++; } }); }
+        var bsy = EP.cad.clone(B.ensure(ed.doc.d)); bsy.cur = "L0"; ed.doc.set("bim", bsy); if (nd) done.push(nd + " dimensions"); } catch (er) { console.warn("dims", er); }
+      try { await PL.autoRun(ed, "SCHEDULE", ["Doors", null]); await PL.autoRun(ed, "SCHEDULE", ["Rooms", null]); done.push("door / window and room schedules"); } catch (er) { console.warn("schedule", er); }
+      try { var R0 = cfg.rules; await PL.autoRun(ed, "AREASTATEMENT", [String(R0.cov), String(R0.far), String(R0.h), [cfg.plot.w * 1000 + 3000, cfg.plot.d * 1000]]); done.push("area statement"); } catch (er) { console.warn("area", er); }
+      try { await PL.autoRun(ed, "SHEET", [undefined, "AllElevations", "Landscape"]); done.push("print sheet"); } catch (er) { console.warn("sheet", er); }
+      var sL = ed.doc.d.layers["A-SITE"]; if (sL) sL.on = siteOn !== false; ed.dirty = true;
     }
     try { if (ed.zoomExtents) ed.zoomExtents(); ed.dirty = true; } catch (e) {}
     ed.say((t.n + " — " + o.label + " built: " + o.floors.length + " floor(s), " + ed.doc.d.ents.filter(function (e) { return e.t === "room"; }).length + " rooms") + (done.length ? ", " + done.join(", ") : "") + ". Press 3D to see it, Σ Quantities to send the quantities to an estimate. Every wall, door, window and room can be edited like any drawing.");
@@ -136,6 +159,7 @@
   document.addEventListener("click", function (e) {
     var b = e.target.closest && e.target.closest("button"); if (!b || !b.closest(".pl")) return; var ds = b.dataset;
     if (ds.pltype) { if (P.type !== ds.pltype) { P.type = ds.pltype; P.rulesEdited = false; P.rules = null; var t = T(); if (t.plot) P.plot = { w: t.plot[0], d: t.plot[1] }; P.floors = t.single ? 1 : ds.pltype === "house" ? 2 : 0; P.itemsType = null; regen(); } U.render(); return; }
+    if (ds.plpre) { var pr = (PRESETS[P.type] || []).filter(function (x) { return x.id === ds.plpre; })[0]; if (!pr) return; P.plot = { w: pr.plot[0], d: pr.plot[1] }; P.inp[P.type] = Object.assign({}, pr.v); P.floors = pr.fl; if (pr.rules) { P.rules = Object.assign({}, pr.rules); P.rulesEdited = true; } else { P.rulesEdited = false; P.rules = null; } regen(); if (pr.size) P.items.forEach(function (x) { if (!x.occ) { x.size = pr.size; delete x.area; } }); save(); make(); return; }
     if (ds.plact === "regen") { regen(); U.render(); return; }
     if (ds.plact === "rules-reset") { P.rulesEdited = false; P.rules = null; P.res = null; save(); U.render(); return; }
     if (ds.plact === "make") { make(); return; }

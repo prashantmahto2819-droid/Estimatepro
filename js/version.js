@@ -1,9 +1,5 @@
 /* App version + "what's new" — the super admin is offered to send this on WhatsApp after each upload. Change both with every release. */
-window.EP_VER = "2026.11.21-z74";
-window.EP_NOTES = "• New tab: Building Planner (भवन प्लानर) — house, office, school, college, hospital, hotel, hostel, canteen and community hall
-• Give the plot, the road side and what you need (bed rooms, staff, classes, beds, seats …) — the list of rooms comes from NBC 2016, CBSE, AICTE, IPHS and hotel norms, and you can tick, count and size every room
-• Get 3–4 scored layouts with setback, coverage, FAR, height, daylight, access and Vastu checks
-• One button builds the chosen plan in CAD Studio: walls, doors, windows, rooms, stairs, slabs, RCC frame, furniture, electrical + plumbing, elevations and a section — then 3D and quantities for the estimate
-• Menu arranged in groups";
+window.EP_VER = "2026.11.21-z75";
+window.EP_NOTES = "• Building Planner: L-shaped buildings (two wings) when a school, college or hospital is too long for the plot\n• Ready patterns in one tap: 1BHK, 2BHK, 3BHK, 3BHK / 4BHK duplex, row house, bungalow, small office, primary / higher secondary school, PHC / CHC, guest house\n• Built drawing now also gets: compound wall with gates, chajjas over windows, dimensions on every floor, door / window and room schedules, area statement and a print sheet with plan, elevations and section\n• Fixed: the update note file of the last version";
 /* pictures of this update: [file in /updates, caption]. Shown to the owner with the WhatsApp "what's new" message. */
 window.EP_PICS = [];
