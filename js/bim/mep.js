@@ -356,6 +356,126 @@
     return T;
   };
 
+  /* =====================================================================================================================
+     Part 3: more electrical and plumbing — points placed by room (POINTSAUTO), single line diagram with the load calculation,
+     plumbing isometric, and conduits in 3D.
+     ===================================================================================================================== */
+
+  /* ---------- POINTSAUTO: lights, fans, sockets, exhaust, 16 A points and the switch board, by room name and area ---------- */
+  function rtype(r) { var n = String(r.name || "").toLowerCase(); return /toilet|bath|wc|wash|lav/.test(n) ? "wet" : /kitchen|pantry|cook/.test(n) ? "kit" : /store|utility|lobby|passage|corridor|stair|verandah|balcony|porch/.test(n) ? "pass" : "room"; }
+  function inward(pts, i) { var a = pts[i], b = pts[(i + 1) % pts.length], u = G.norm(G.sub(b, a)), n = [-u[1], u[0]], m = G.mul(G.add(a, b), 0.5), c = B.polyBox(pts), cc = [(c[0] + c[2]) / 2, (c[1] + c[3]) / 2]; if ((cc[0] - m[0]) * n[0] + (cc[1] - m[1]) * n[1] < 0) n = [-n[0], -n[1]]; return { a: a, b: b, u: u, n: n, m: m, L: G.dist(a, b) }; }
+  function rotFor(n) { return Math.round((Math.atan2(n[1], n[0]) * 180 / Math.PI - 90) * 10) / 10; }
+  B.mepRoomPlan = function (doc, r) {
+    var pts = r.pts, A = B.area(pts) / 1e6, t = rtype(r), bb = B.polyBox(pts), W = bb[2] - bb[0], Hh = bb[3] - bb[1], out = [], cen = [(bb[0] + bb[2]) / 2, (bb[1] + bb[3]) / 2];
+    var add = function (kind, p, rot, o) { if (G.inPoly(p, pts)) out.push(Object.assign({ kind: kind, p: p, rot: rot || 0 }, o || {})); };
+    /* lights on a grid */
+    var nL = t === "wet" ? 1 : Math.max(1, Math.round(A / 10)), cols = Math.max(1, Math.round(Math.sqrt(nL * W / Math.max(Hh, 1)))), rows = Math.max(1, Math.ceil(nL / cols)), k = 0;
+    for (var iy = 0; iy < rows; iy++) for (var ix = 0; ix < cols && k < nL; ix++, k++) add("light", [bb[0] + W * (ix + 0.5) / cols, bb[1] + Hh * (iy + 0.5) / rows]);
+    /* fans */
+    if (t === "room" && A >= 6) { if (A > 20) { var lx = W >= Hh; add("fan", lx ? [bb[0] + W / 4, cen[1]] : [cen[0], bb[1] + Hh / 4]); add("fan", lx ? [bb[0] + 3 * W / 4, cen[1]] : [cen[0], bb[1] + 3 * Hh / 4]); } else add("fan", cen); }
+    /* edges, the door edge, and wall items */
+    var E = pts.map(function (q, i) { return inward(pts, i); }).filter(function (e) { return e.L > 600; }), doorAt = null;
+    doc.d.ents.forEach(function (o) { if (doorAt || o.t !== "door" || (o.lvl || null) !== (r.lvl || null) && B.hostOf(doc, o) && (B.hostOf(doc, o).lvl || null) !== (r.lvl || null)) return; var pl = B.place(doc, o); if (!pl) return;
+      E.forEach(function (e) { if (doorAt) return; var t2 = ((pl.p[0] - e.a[0]) * e.u[0] + (pl.p[1] - e.a[1]) * e.u[1]), d2 = Math.abs((pl.p[0] - e.a[0]) * e.n[0] + (pl.p[1] - e.a[1]) * e.n[1]); if (t2 > 0 && t2 < e.L && d2 < 400) doorAt = { e: e, t: t2, w: o.w || 900 }; }); });
+    var de = doorAt ? doorAt.e : E[0]; if (!de) return out;
+    var sbT = doorAt ? (doorAt.t + doorAt.w / 2 + 250 < de.L - 150 ? doorAt.t + doorAt.w / 2 + 250 : doorAt.t - doorAt.w / 2 - 250) : 300;
+    add("switchboard", G.add(G.add(de.a, G.mul(de.u, sbT)), G.mul(de.n, 60)), rotFor(de.n) + 0);
+    var others = E.filter(function (e) { return e !== de; }).sort(function (a, b) { return b.L - a.L; }), at = function (e, f) { return G.add(G.add(e.a, G.mul(e.u, e.L * f)), G.mul(e.n, 60)); };
+    var nS = t === "wet" ? 0 : t === "kit" ? 2 : t === "pass" ? 1 : Math.max(2, Math.round(A / 8));
+    for (var s = 0; s < nS; s++) { var e = others[s % Math.max(others.length, 1)] || de; add("socket", at(e, others.length ? (s < others.length ? 0.5 : 0.25) : 0.8), rotFor(e.n)); }
+    var n16 = t === "wet" || t === "kit" ? 1 : (t === "room" && A > 12 ? 1 : 0); if (n16 && others[0]) add("socket_15a", at(others[0], 0.8), rotFor(others[0].n));
+    if ((t === "wet" || t === "kit") && others.length) { var ex = others[others.length > 1 ? 1 : 0]; add("exhaust_fan", at(ex, 0.5), rotFor(ex.n)); }
+    return out;
+  };
+  cmd("POINTSAUTO", ["EPOINTS", "AUTOPOINTS", "ELECPOINTS"], async function (ed) {
+    var doc = ed.doc, d = doc.d, lv = B.ensure(d).cur, rooms = d.ents.filter(function (r) { return r.t === "room" && r.pts && (r.lvl || null) === (lv || null); });
+    if (!rooms.length) { ed.say("No rooms on this floor — make them with Building → Room (or Fit rooms to walls) and run POINTSAUTO again."); return; }
+    var has = function (r) { return d.ents.some(function (e) { return cls(e) && (e.lvl || null) === (lv || null) && G.inPoly(e.p, r.pts); }); }, todo = rooms.filter(function (r) { return !has(r); });
+    if (!todo.length) { ed.say("Every room on this floor already has electrical points. Delete them first to place them again."); return; }
+    var ok = await ed.getKw("Place lights, fans, sockets, exhaust fans, 16 A points and a switch board in " + todo.length + " room" + (todo.length > 1 ? "s" : "") + " that have none? (by room name: toilet / bath, kitchen, store, others)", ["Yes", "No"], "Yes"); if (ok !== "Yes") return;
+    ensureLayers(ed); var n = 0, needDB = !d.ents.some(function (e) { return cls(e) === "DB" && (e.lvl || null) === (lv || null); }), big = todo.slice().sort(function (a, b) { return B.area(b.pts) - B.area(a.pts); })[0], dbP = null;
+    doc.begin("Electrical points"); try {
+      if (!mep(d)) doc.set("mep", Object.assign({}, DEF, d.mep || {}, { on: true }));
+      todo.forEach(function (r) { B.mepRoomPlan(doc, r).forEach(function (it) { doc.add({ t: "asset", kind: it.kind, p: it.p, rot: it.rot, sc: 1, lvl: lv, layer: "E-POINT" }); n++; if (needDB && r === big && it.kind === "switchboard") dbP = it; }); });
+      if (needDB && dbP) { var a = dbP.rot * Math.PI / 180, u = [Math.cos(a), Math.sin(a)]; doc.add({ t: "asset", kind: "db", p: G.add(dbP.p, G.mul(u, -700)), rot: dbP.rot, sc: 1, lvl: lv, layer: "E-POINT", name: "DB1" }); n++; }
+    } finally { doc.commit(); }
+    ed.say(n + " electrical items placed in " + todo.length + " room" + (todo.length > 1 ? "s" : "") + (needDB && dbP ? ", with a DB next to the switch board of " + (big.name || "the largest room") : "") + ". Move any of them as you like, then run Auto wiring (WIREAUTO).");
+  });
+
+  /* ---------- SCHEDULE → Single line: DB, incomer, outgoing circuits, cables and the load calculation ---------- */
+  function circuitsOf(doc, db) {
+    var d = doc.d, ck = {}; d.ents.forEach(function (w) { if (w.t === "ewire" && (w.k === "ckt" || w.k === "pwr") && w.c) { (ck[w.c] = ck[w.c] || { k: w.k, sbs: [], ps: [], db: false }); if (w.k === "pwr") ck[w.c].ps.push(w.b); else ck[w.c].sbs.push(w.b); if (w.a === db.id) ck[w.c].db = true; } });
+    return Object.keys(ck).filter(function (c) { return ck[c].db; }).sort(function (a, b) { return a.localeCompare(b, undefined, { numeric: true }); }).map(function (c) {
+      var o = ck[c], pts = 0, w = 0, tx = {}; if (o.k === "pwr") { pts = 1; w = 1000; tx.P = 1; o.ps.forEach(function (id) { var t = doc.get(id); if (t && +t.w) w = +t.w; }); }
+      else o.sbs.forEach(function (sb) { d.ents.forEach(function (x) { if (x.t === "ewire" && x.k === "pt" && x.a === sb) { var t = doc.get(x.b), tc = cls(t); if (!tc) return; pts++; w += +t.w || LOAD[tc] || 60; tx[tc] = (tx[tc] || 0) + 1; } }); });
+      return { c: c, k: o.k, pts: pts, w: w, tx: tx, mcb: o.k === "pwr" ? 20 : (w > 1100 ? 16 : w > 700 ? 10 : 6) }; });
+  }
+  B.mepCircuits = circuitsOf;
+  B.SCH_EXTRA["Single line"] = function (ed, N, table) {
+    var doc = ed.doc, d = doc.d, m = mep(d) || DEF, ents = [], L = "A-SCHED", T = function (p, s, h, al) { ents.push({ t: "text", p: p, s: s, h: (h || 2) * N, rot: 0, al: al || "l", layer: L }); }, ln = function (a, b, o) { ents.push(Object.assign({ t: "line", a: a, b: b, layer: L }, o || {})); }, rect = function (x, y, w, h) { ln([x, y], [x + w, y]); ln([x + w, y], [x + w, y + h]); ln([x + w, y + h], [x, y + h]); ln([x, y + h], [x, y]); };
+    var DBs = d.ents.filter(function (e) { return cls(e) === "DB"; }); if (!DBs.length) return { ents: [{ t: "text", p: [0, 0], s: "No distribution board yet — place one and run WIREAUTO.", h: 2.5 * N, rot: 0, al: "l", layer: L }], bb: [0, -5 * N, 120 * N, 5 * N] };
+    var y = 0, x0 = 0, tot = 0, s = N, maxX = 0;
+    T([x0, y + 4 * s], "SINGLE LINE DIAGRAM — " + (d.name || "building"), 3.5);
+    DBs.forEach(function (db, di) {
+      var cs = circuitsOf(doc, db), load = cs.reduce(function (a, c) { return a + c.w; }, 0), md = Math.round(load * 0.75), I = md / (230 * 0.9), inc = [32, 40, 63, 80].filter(function (a) { return a >= 1.25 * I; })[0] || 100, cab = inc <= 32 ? "2 × 6" : inc <= 40 ? "2 × 10" : inc <= 63 ? "2 × 16" : "2 × 25"; tot += load;
+      var top = y - 8 * s, cx = x0 + 10 * s;
+      T([cx + 2 * s, top + 1 * s], "From the supply / meter board: 230 V, 1 phase, 50 Hz — " + cab + " sq mm Cu + earth", 1.8);
+      ln([cx, top], [cx, top - 6 * s]); rect(cx - 2 * s, top - 6 * s, 4 * s, 3 * s); T([cx + 3 * s, top - 5 * s], "Incomer: DP MCB " + inc + " A", 1.8);
+      ln([cx, top - 6 * s], [cx, top - 9 * s]); rect(cx - 2 * s, top - 12 * s, 4 * s, 3 * s); ln([cx - 2 * s, top - 12 * s], [cx + 2 * s, top - 9 * s]); if (m.rccb) T([cx + 3 * s, top - 11 * s], "RCCB DP " + inc + " A, 30 mA", 1.8);
+      ln([cx, top - 12 * s], [cx, top - 15 * s]);
+      var n = Math.max(cs.length, 1), bw = Math.max(40, n * 22) * s, bx = cx - 6 * s; ln([bx, top - 15 * s], [bx + bw, top - 15 * s], { lw: 0.7 }); T([bx + bw + 2 * s, top - 15.5 * s], (db.name || "DB" + (di + 1)) + " — SPN MCB DB, " + ([6, 8, 12, 16].filter(function (w2) { return w2 >= cs.length + 2; })[0] || 16) + " way", 2.2);
+      cs.forEach(function (c, i) { var x = bx + 8 * s + i * 22 * s, yb = top - 15 * s; ln([x, yb], [x, yb - 4 * s]); rect(x - 1.5 * s, yb - 7 * s, 3 * s, 3 * s); ln([x - 1.5 * s, yb - 7 * s], [x + 1.5 * s, yb - 4 * s]); ln([x, yb - 7 * s], [x, yb - 12 * s]);
+        T([x - 2 * s, yb - 14 * s], c.c, 2.2); T([x - 2 * s, yb - 17 * s], "MCB SP " + c.mcb + " A", 1.6); T([x - 2 * s, yb - 19.5 * s], c.k === "pwr" ? "2×4+4 sq mm" : "2×" + m.ckt + "+" + m.ckt + " sq mm", 1.6);
+        T([x - 2 * s, yb - 22 * s], c.w + " W", 1.6); T([x - 2 * s, yb - 24.5 * s], Object.keys(c.tx).map(function (k) { return c.tx[k] + k; }).join(" "), 1.6); });
+      if (!cs.length) T([bx + 2 * s, top - 20 * s], "No circuits yet — run WIREAUTO.", 1.8);
+      var ly = top - 42 * s; T([x0, ly], "Connected load " + (load / 1000).toFixed(2) + " kW · demand factor 0.75 → maximum demand " + (md / 1000).toFixed(2) + " kW · current " + I.toFixed(1) + " A at pf 0.9 → incomer " + inc + " A, cable " + cab + " sq mm Cu", 2);
+      if (md > 7000) T([x0, ly - 4 * s], "Maximum demand over 7 kW: ask the supply company for a three-phase connection and spread the circuits over R, Y and B.", 2);
+      maxX = Math.max(maxX, bx + bw + 60 * s); y = ly - 12 * s;
+    });
+    T([x0, y], "Loads: light / fan / exhaust 60 W, 6 A socket 100 W, 16 A socket 1000 W unless set on the item. MCB: lighting circuits 6–16 A by load, power circuits 20 A. Earth continuity conductor with every circuit.", 1.8);
+    return { ents: ents, bb: [0, y - 4 * s, maxX, 8 * s] };
+  };
+
+  /* ---------- SCHEDULE → Isometric: pipes at their heights, drops to the fittings, stacks ---------- */
+  var ISO = { c: Math.cos(Math.PI / 6), s: Math.sin(Math.PI / 6) };
+  B.SCH_EXTRA.Isometric = function (ed, N, table) {
+    var doc = ed.doc, d = doc.d, ents = [], Ly = "A-SCHED", pipes = d.ents.filter(function (e) { return e.t === "run" && e.svc && SVC[e.svc] && e.pts && e.pts.length > 1; });
+    if (!pipes.length) return { ents: [{ t: "text", p: [0, 0], s: "No plumbing pipes yet — draw them with PLUMB.", h: 2.5 * N, rot: 0, al: "l", layer: Ly }], bb: [0, -5 * N, 120 * N, 5 * N] };
+    var P = function (x, y, z) { return [(x - y) * ISO.c, (x + y) * ISO.s + z]; }, all = [], lines = [];
+    var fixtures = d.ents.filter(function (e) { return e.t === "asset" && A[e.kind] && /Plumbing|Sanitary|Taps|Water supply/.test(A[e.kind].cat || ""); });
+    pipes.forEach(function (e) { var S = SVC[e.svc], Lv = B.level(d, e.lvl), z0 = (Lv ? Lv.elev : 0) + (e.z != null ? +e.z : S.z), sl = S.flow && S.slope ? 1 / (+e.slope || S.slope) : 0, acc = 0, q = [];
+      e.pts.forEach(function (p, i) { if (i) acc += G.dist(e.pts[i - 1], p); q.push([p[0], p[1], z0 - acc * sl]); });
+      for (var i = 0; i < q.length - 1; i++) lines.push({ a: q[i], b: q[i + 1], col: S.col, lw: e.svc === "soil" || e.svc === "drain" ? 0.5 : 0.35 });
+      var top = (Lv ? Lv.elev + Lv.h : 3000);
+      if (e.svc === "vent") lines.push({ a: q[0], b: [q[0][0], q[0][1], top + 600], col: S.col, lw: 0.35, lab: "Vent Ø" + diaOf(e) + " to 600 above roof" });
+      if (e.svc === "rw") lines.push({ a: [q[0][0], q[0][1], top], b: [q[0][0], q[0][1], Lv ? Lv.elev : 0], col: S.col, lw: 0.35, lab: "RWP Ø" + diaOf(e) });
+      [q[0], q[q.length - 1]].forEach(function (end) { fixtures.forEach(function (f) { if (G.dist(f.p, end) > 450) return; var fz = (Lv ? Lv.elev : 0) + (DRN[e.svc] || e.svc === "drain" ? 0 : 900); if (Math.abs(fz - end[2]) < 20) return;
+        lines.push({ a: end, b: [end[0], end[1], fz], col: S.col, lw: 0.35, lab: (A[f.kind].n || "").split(" — ")[0].split(" (")[0] }); }); });
+      var best = 0, bi = 0; for (var j = 0; j < q.length - 1; j++) { var ln2 = G.dist(q[j], q[j + 1]); if (ln2 > best) { best = ln2; bi = j; } }
+      lines.push({ txt: "Ø" + diaOf(e) + " " + S.ab, at: [(q[bi][0] + q[bi + 1][0]) / 2, (q[bi][1] + q[bi + 1][1]) / 2, (q[bi][2] + q[bi + 1][2]) / 2], col: S.col }); });
+    lines.forEach(function (l) { if (l.a) { all.push(P(l.a[0], l.a[1], l.a[2]), P(l.b[0], l.b[1], l.b[2])); } });
+    var bx = [Infinity, Infinity, -Infinity, -Infinity]; all.forEach(function (p) { G.ext(bx, p); });
+    var off = [-bx[0], -bx[3] - 10 * N], tr = function (p) { return [p[0] + off[0], p[1] + off[1]]; };
+    lines.forEach(function (l) { if (l.a) { var a = tr(P(l.a[0], l.a[1], l.a[2])), b = tr(P(l.b[0], l.b[1], l.b[2])); ents.push({ t: "line", a: a, b: b, layer: Ly, color: l.col, lw: l.lw }); if (l.lab) ents.push({ t: "text", p: [b[0] + 1 * N, b[1] - 2.5 * N], s: l.lab, h: 1.6 * N, rot: 0, al: "l", layer: Ly, color: l.col }); }
+      else if (l.txt) { var tp = tr(P(l.at[0], l.at[1], l.at[2])); ents.push({ t: "text", p: [tp[0] + 1 * N, tp[1] + 1 * N], s: l.txt, h: 1.8 * N, rot: 0, al: "l", layer: Ly, color: l.col }); } });
+    ents.push({ t: "text", p: [0, 4 * N], s: "PLUMBING ISOMETRIC — true heights; drains fall at their slope", h: 3 * N, rot: 0, al: "l", layer: Ly });
+    var W2 = bx[2] - bx[0], yb = -(bx[3] - bx[1]) - 18 * N;
+    ents.push({ t: "text", p: [0, yb], s: "Blue cold water · red hot water · brown soil · green waste · magenta vent · cyan rain water · dark brown drain. Vertical lines: drops to the fittings, vent stacks and rain-water pipes.", h: 1.8 * N, rot: 0, al: "l", layer: Ly });
+    return { ents: ents, bb: [0, yb - 4 * N, W2, 8 * N] };
+  };
+  if (B.SCH_KINDS) ["Single line", "Isometric"].forEach(function (k) { if (B.SCH_KINDS.indexOf(k) < 0) B.SCH_KINDS.push(k); });
+
+  /* ---------- conduits in 3D: up from the board to the ceiling, along the run, down to the point ---------- */
+  B.EXT.ewire.mesh = function (M, doc, e, H) {
+    if (!mep(doc.d) || hideE(doc.d)) return; var ab = ends(doc, e); if (!ab) return; var ar = arcOf(ab[0].p, ab[1].p, e.bend); if (!ar) return;
+    var Lv = B.level(doc.d, ab[0].lvl), el = Lv ? Lv.elev : 0, zc = el + (Lv ? Lv.h : 3000) - 60, w = e.k === "pt" ? 20 : 25, lk = B.LOOKS.pipe_conduit ? B.look("pipe_conduit") : B.look("plastic_white");
+    var za = el + zOf(doc, ab[0]), zb = el + zOf(doc, ab[1]), seg = ar.seg, n = 6, pts = [];
+    for (var i = 0; i <= n; i++) { var aa = seg.s + (((seg.e - seg.s) % TAU + TAU) % TAU) * i / n, p = [seg.c[0] + seg.r * Math.cos(aa), seg.c[1] + seg.r * Math.sin(aa)]; pts.push(p); }
+    if (G.dist(pts[0], ab[0].p) > G.dist(pts[0], ab[1].p)) pts.reverse();
+    if (zc - za > 30) H.box(M, ab[0].p, w, w, 0, za, zc, lk); if (zc - zb > 30) H.box(M, ab[1].p, w, w, 0, zb, zc, lk);
+    for (var j = 0; j < pts.length - 1; j++) H.boxAlong(M, pts[j], pts[j + 1], w, zc - w, zc, lk);
+  };
+
   /* ---------- Properties panel (ui-assets.js adds these below an item's or pipe's own fields) ---------- */
   B.mepFields = function (e, ed, f, sel) {
     var d = ed.doc.d, h = "";
@@ -385,6 +505,6 @@
 
   /* ---------- ribbon ---------- */
   if (CAD.RSEC && CAD.RSEC["Site & services"]) CAD.RSEC["Site & services"].push(["Electrical", ["ELECSET", "WIREAUTO", "WIRE"]]);
-  if (CAD.RLABEL) Object.assign(CAD.RLABEL, { MEPVIEW: "Show layout", PLUMB: "Plumbing pipe", ELECSET: "Electrical settings", WIREAUTO: "Auto wiring", WIRE: "Wire / circuit" });
-  if (CAD.ICONS) Object.assign(CAD.ICONS, { WIRE: "M5 18a4 4 0 0 1 0-8M5 10c4-6 10-6 14 0M19 10a4 4 0 0 1 0 8M4 18h2M18 18h2", WIREAUTO: "M4 18c3-8 13-8 16 0M8 6l2 3 2-3 2 3 2-3M6 18h1M17 18h1", ELECSET: "M13 3 6 13h5l-1 8 7-10h-5z", PLUMB: "M4 8h7v8h9M4 6v4M20 14v4M8 8V5M14 16v3", MEPVIEW: "M3 12s3-6 9-6 9 6 9 6-3 6-9 6-9-6-9-6zM12 9a3 3 0 1 0 0 6 3 3 0 0 0 0-6z" });
+  if (CAD.RLABEL) Object.assign(CAD.RLABEL, { POINTSAUTO: "Points by room", MEPVIEW: "Show layout", PLUMB: "Plumbing pipe", ELECSET: "Electrical settings", WIREAUTO: "Auto wiring", WIRE: "Wire / circuit" });
+  if (CAD.ICONS) Object.assign(CAD.ICONS, { WIRE: "M5 18a4 4 0 0 1 0-8M5 10c4-6 10-6 14 0M19 10a4 4 0 0 1 0 8M4 18h2M18 18h2", WIREAUTO: "M4 18c3-8 13-8 16 0M8 6l2 3 2-3 2 3 2-3M6 18h1M17 18h1", ELECSET: "M13 3 6 13h5l-1 8 7-10h-5z", PLUMB: "M4 8h7v8h9M4 6v4M20 14v4M8 8V5M14 16v3", MEPVIEW: "M3 12s3-6 9-6 9 6 9 6-3 6-9 6-9-6-9-6zM12 9a3 3 0 1 0 0 6 3 3 0 0 0 0-6z", POINTSAUTO: "M4 4h16v16H4zM9 9a3 3 0 1 0 6 0 3 3 0 0 0-6 0M7 17h3M14 17h3" });
 })();

@@ -3,6 +3,13 @@
 This file is for the people maintaining the app. It is not published with the site (see `.assetsignore`).
 The text users see is `EP_NOTES` in `js/version.js`.
 
+## 2026.11.21-z60
+- `POINTSAUTO` (Site & services → Electrical → Points by room): for every room of the floor without electrical items — by name: toilet / bath (1 light, exhaust, 16 A geyser point), kitchen (lights by area, 2 × 6 A, 16 A, exhaust), store / passage (1 light, 1 socket), others (1 light per 10 m² on a grid, 1 fan or 2 over 20 m², 6 A sockets 1 per 8 m² min 2, 16 A over 12 m²); switch board beside the door (door found on the room edge), wall items on the other edges facing in; a DB beside the switch board of the largest room if the floor has none. `B.mepRoomPlan(doc, room)`.
+- `SCHEDULE` → "Single line": per DB — supply, DP incomer, RCCB (if set), busbar, outgoing MCBs with circuit, rating, cable, load and points; connected load, demand factor 0.75, current at pf 0.9, incomer 32 / 40 / 63 / 80 A and cable 2 × 6 / 10 / 16 / 25 Cu; three-phase advice over 7 kW. `B.mepCircuits(doc, db)`.
+- `SCHEDULE` → "Isometric": pipes at their real heights (drains falling at their slope) in 30° isometric, service colours, vent stacks to 600 above the roof, rain-water pipes from roof to ground, drops to fittings within 450 mm of a pipe end, size labels.
+- 3D: ewire conduits (up from the item to 60 below the ceiling, along the arc in 6 pieces, down) while the electrical layout is on and not hidden by MEPVIEW.
+- Tested in the app: 3 rooms → 20 items + DB, 2 lighting + 3 power circuits, 3.98 kW → 32 A incomer; isometric and 3D on the sample.
+
 ## 2026.11.21-z59
 - `cycle_shed`: new input "Member type" — tubular (SHS / RHS, as before) or rolled ISMB / ISMC (IS 808, E250). Rolled: purlins lightest ISMC (gravity with the top flange held by the sheet, uplift with LTB over the bay, L/150); rafters lightest ISMB / ISMC (gravity LLT = purlin spacing for two posts or the arm for a cantilever, uplift LLT = span / purlin spacing, L/180 or L/90); posts ISMB / ISHB ≥ 125 deep (IS 800 compression Kz 2.0 / Ky 1.0, bending with LTB over 2H, combined cl 9.3.2.2) — all with the DS.steel routines. Steel item 10.1 instead of 10.16.3. Module renamed "(tubular or rolled)".
   - 30 × 4.5 m, two rows: ISMB 125 posts, ISMC 125 rafters, ISMC 75 purlins, 2.72 t (20.1 kg/m²); T: ISMB 200 posts, 2.68 t; cantilever: ISHB 200 / ISMC 250, 4.04 t. Tubular unchanged (1.83 t).
