@@ -3,6 +3,9 @@
 This file is for the people maintaining the app. It is not published with the site (see `.assetsignore`).
 The text users see is `EP_NOTES` in `js/version.js`.
 
+## 2026.11.21-z80
+- Planner: paint colour schemes (outside/inside), front screens (louvre, fins, charcoal, stone), compound wall grill and gate pillars, premium interior panels.
+
 ## 2026.11.21-z79
 - Courtyard: spaces court (open "court", circ, ground) and void (upper floors); band layouts keep fixed items per row (stair and court → void) on every floor (fillRows / bandFloor take a fixed list); court is never stacked, goes to the middle of its row, marked down when it touches the outer wall; rooms beside it count it as an outer wall for daylight. Builder: no room entity for voids, slab holes over court / voids on every floor, parapet round the court on the terrace.
 - Design items entry (steps / steps + ramp / none), terrace (solar / pergola / both), stairType (dog-leg / winders). Builder: steps entity from NGL to plinth in front of the porch or a 0.9 m landing, ramp 1 : 12 with a 1.5 m landing beside the steps (turns left if it would leave the plot), solar_array_4 assets on free terrace (2 for houses, 8 otherwise), pergola in a free corner, stair.winder "3".
