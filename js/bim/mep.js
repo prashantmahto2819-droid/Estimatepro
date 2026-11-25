@@ -75,7 +75,7 @@
   /* plan and labels of library items: IS symbols while the electrical layout shows them */
   var plan0 = X0.plan, labels0 = X0.labels, qty0 = X0.qty;
   var EMPTY = function () { return { segs: [], fill: [], dashed: [] }; };
-  function view(d) { return (d && d.mep && d.mep.view) || "all"; }   /* all | E (electrical layout) | P (plumbing layout) | B (building only) */
+  function view(d) { return B._mepViewOv || (d && d.mep && d.mep.view) || "all"; }   /* all | E (electrical layout) | P (plumbing layout) | B (building only) */
   B.mepView = view;
   function hideE(d) { var v = view(d); return v === "P" || v === "B"; }
   function hideP(d) { var v = view(d); return v === "E" || v === "B"; }
@@ -192,11 +192,11 @@
   });
 
   /* ---------- WIREAUTO (a whole floor) ---------- */
-  cmd("WIREAUTO", ["AUTOWIRE", "WIRINGAUTO"], async function (ed) {
-    var doc = ed.doc, d = doc.d, lv = curLvl(ed), items = d.ents.filter(function (e) { return cls(e) && (e.lvl || null) === (lv || null); });
-    if (!items.some(function (e) { return cls(e) === "DB"; })) { ed.say("Place a distribution board first: Site & services → Place → Distribution board. Then run WIREAUTO again."); return; }
+  cmd("WIREAUTO", ["AUTOWIRE", "WIRINGAUTO"], async function (ed, o) {
+    o = o || {}; var doc = ed.doc, d = doc.d, lv = o.lvl !== undefined ? o.lvl : curLvl(ed), items = d.ents.filter(function (e) { return cls(e) && (e.lvl || null) === (lv || null); });
+    if (!items.some(function (e) { return cls(e) === "DB"; })) { if (o.auto) return null; ed.say("Place a distribution board first: Site & services → Place → Distribution board. Then run WIREAUTO again."); return; }
     var old = d.ents.filter(function (w) { return w.t === "ewire" && (w.lvl || null) === (lv || null); });
-    if (old.length) { var ok = await ed.getKw("Replace the " + old.length + " wires already on this floor?", ["Yes", "No"], "Yes"); if (ok !== "Yes") return; }
+    if (old.length && !o.auto) { var ok = await ed.getKw("Replace the " + old.length + " wires already on this floor?", ["Yes", "No"], "Yes"); if (ok !== "Yes") return; }
     ensureLayers(ed);
     var DBs = items.filter(function (e) { return cls(e) === "DB"; }), SBs = items.filter(function (e) { return cls(e) === "SB"; }), pts = items.filter(function (e) { return POINT[cls(e)]; }), pw = items.filter(function (e) { return cls(e) === "P"; });
     var room = function (e) { var r = B.roomAt ? B.roomAt(doc, e.p, e.lvl) : null; return r ? r.id : null; }, near = function (p, list) { var best = null, bd = Infinity; list.forEach(function (x) { var dd = G.dist(p, x.p); if (dd < bd) { bd = dd; best = x; } }); return best ? { e: best, d: bd } : null; };
@@ -218,6 +218,7 @@
       links.forEach(function (l, i) { doc.add({ t: "ewire", a: l.a, b: l.b, k: l.k, c: l.c, bend: i % 2 ? -1 : 1, lvl: lv, layer: "E-WIRE" }); });
       Object.keys(setCkt).forEach(function (id) { var o = CAD.clone(doc.get(id)); o.ckt = setCkt[id]; doc.mod(id, o); });
     } finally { doc.commit(); }
+    if (o.auto) return { pts: pts.length, sbs: used.length, ckt: ck, pwr: pc, noSb: noSb };
     ed.say(pts.length + " points wired to " + used.length + " switch boards in " + ck + " lighting circuit" + (ck === 1 ? "" : "s") + (pc ? " and " + pc + " power circuit" + (pc === 1 ? "" : "s") : "") + "." + (noSb ? " " + noSb + " point" + (noSb === 1 ? " has" : "s have") + " no switch board in the room — place one and run WIREAUTO again." : "") + " Check with SCHEDULE → Electrical.");
   });
 
@@ -269,7 +270,7 @@
   function kindFor(svc, dia) { if (svc === "cw" || svc === "hw") return "pipe_cpvc_" + ([15, 20, 25, 32].filter(function (x) { return x >= dia; })[0] || 32); if (svc === "drain") return "drain_sw_" + ([100, 150, 200].filter(function (x) { return x >= dia; })[0] || 200); return "pipe_rain_" + (dia >= 100 ? 110 : 75); }
   function diaOf(e) { var m = /_(\d+)$/.exec(e.kind || ""); return m ? +m[1] : (+e.dia || 0); }
   function plb(d) { return !!(d && d.mep && d.mep.plb); }
-  B.plbOn = plb;
+  B.plbOn = plb; B.mepKindFor = kindFor; B.mepEnsureLayers = ensureLayers; B.mepEnsurePLayers = ensurePLayers; B.mepDEF = DEF;
   var PLAY = { "P-CW": 5, "P-HW": 1, "P-SOIL": 30, "P-WASTE": 3, "P-VENT": 6, "P-RW": 4, "P-DRAIN": 32, "P-FIX": 7 };
   function ensurePLayers(ed) { var Ls = ed.doc.d.layers, miss = Object.keys(PLAY).filter(function (k) { return !Ls[k]; }); if (!miss.length) return; var Lc = CAD.clone(Ls); miss.forEach(function (k) { Lc[k] = { on: true, lock: false, frz: false, color: PLAY[k], lw: k === "P-SOIL" || k === "P-DRAIN" ? 0.5 : 0.35, lt: "CONTINUOUS" }; }); ed.doc.set("layers", Lc); }
 
@@ -387,18 +388,19 @@
     if ((t === "wet" || t === "kit") && others.length) { var ex = others[others.length > 1 ? 1 : 0]; add("exhaust_fan", at(ex, 0.5), rotFor(ex.n)); }
     return out;
   };
-  cmd("POINTSAUTO", ["EPOINTS", "AUTOPOINTS", "ELECPOINTS"], async function (ed) {
-    var doc = ed.doc, d = doc.d, lv = B.ensure(d).cur, rooms = d.ents.filter(function (r) { return r.t === "room" && r.pts && (r.lvl || null) === (lv || null); });
-    if (!rooms.length) { ed.say("No rooms on this floor — make them with Building → Room (or Fit rooms to walls) and run POINTSAUTO again."); return; }
+  cmd("POINTSAUTO", ["EPOINTS", "AUTOPOINTS", "ELECPOINTS"], async function (ed, o) {
+    o = o || {}; var doc = ed.doc, d = doc.d, lv = o.lvl !== undefined ? o.lvl : B.ensure(d).cur, rooms = d.ents.filter(function (r) { return r.t === "room" && r.pts && (r.lvl || null) === (lv || null); });
+    if (!rooms.length) { if (o.auto) return { n: 0, rooms: 0 }; ed.say("No rooms on this floor — make them with Building → Room (or Fit rooms to walls) and run POINTSAUTO again."); return; }
     var has = function (r) { return d.ents.some(function (e) { return cls(e) && (e.lvl || null) === (lv || null) && G.inPoly(e.p, r.pts); }); }, todo = rooms.filter(function (r) { return !has(r); });
-    if (!todo.length) { ed.say("Every room on this floor already has electrical points. Delete them first to place them again."); return; }
-    var ok = await ed.getKw("Place lights, fans, sockets, exhaust fans, 16 A points and a switch board in " + todo.length + " room" + (todo.length > 1 ? "s" : "") + " that have none? (by room name: toilet / bath, kitchen, store, others)", ["Yes", "No"], "Yes"); if (ok !== "Yes") return;
+    if (!todo.length) { if (o.auto) return { n: 0, rooms: 0, had: rooms.length }; ed.say("Every room on this floor already has electrical points. Delete them first to place them again."); return; }
+    var ok = o.auto ? "Yes" : await ed.getKw("Place lights, fans, sockets, exhaust fans, 16 A points and a switch board in " + todo.length + " room" + (todo.length > 1 ? "s" : "") + " that have none? (by room name: toilet / bath, kitchen, store, others)", ["Yes", "No"], "Yes"); if (ok !== "Yes") return;
     ensureLayers(ed); var n = 0, needDB = !d.ents.some(function (e) { return cls(e) === "DB" && (e.lvl || null) === (lv || null); }), big = todo.slice().sort(function (a, b) { return B.area(b.pts) - B.area(a.pts); })[0], dbP = null;
     doc.begin("Electrical points"); try {
       if (!mep(d)) doc.set("mep", Object.assign({}, DEF, d.mep || {}, { on: true }));
       todo.forEach(function (r) { B.mepRoomPlan(doc, r).forEach(function (it) { doc.add({ t: "asset", kind: it.kind, p: it.p, rot: it.rot, sc: 1, lvl: lv, layer: "E-POINT" }); n++; if (needDB && r === big && it.kind === "switchboard") dbP = it; }); });
       if (needDB && dbP) { var a = dbP.rot * Math.PI / 180, u = [Math.cos(a), Math.sin(a)]; doc.add({ t: "asset", kind: "db", p: G.add(dbP.p, G.mul(u, -700)), rot: dbP.rot, sc: 1, lvl: lv, layer: "E-POINT", name: "DB1" }); n++; }
     } finally { doc.commit(); }
+    if (o.auto) return { n: n, rooms: todo.length, db: !!(needDB && dbP) };
     ed.say(n + " electrical items placed in " + todo.length + " room" + (todo.length > 1 ? "s" : "") + (needDB && dbP ? ", with a DB next to the switch board of " + (big.name || "the largest room") : "") + ". Move any of them as you like, then run Auto wiring (WIREAUTO).");
   });
 

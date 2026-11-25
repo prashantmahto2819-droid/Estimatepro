@@ -133,7 +133,7 @@
   function ensureLayers(ed) { var L = ed.doc.d.layers, miss = Object.keys(LAYERS).filter(function (k) { return !L[k]; }); if (!miss.length) return; var Lc = CAD.clone(L); miss.forEach(function (k) { Lc[k] = Object.assign({ on: true, lock: false, frz: false }, LAYERS[k]); }); ed.doc.set("layers", Lc); }
   function scaleOf(d) { return (d.layouts && d.layouts[0] && d.layouts[0].scale) || (d.sheet && d.sheet.scale) || 100; }
   function isViewBlock(n) { return /^(EL|SEC)-/.test(n || ""); }
-  function isViewEnt(e) { return (e.t === "insert" && isViewBlock(e.block)) || e.layer === "A-SHEET" || e.layer === "A-SECT-MARK"; }
+  function isViewEnt(e) { return (e.t === "insert" && isViewBlock(e.block)) || e.layer === "A-SHEET" || e.layer === "A-SECT-MARK" || !!e.mepsh; }
   function planBox(ed) { var b = [Infinity, Infinity, -Infinity, -Infinity], doc = ed.doc; doc.d.ents.forEach(function (e) { if (isViewEnt(e) || e.t === "xline" || e.t === "ray" || !doc.visible(e)) return; var x = doc.bbox(e); if (isFinite(x[0])) { G.ext(b, [x[0], x[1]]); G.ext(b, [x[2], x[3]]); } }); return isFinite(b[0]) ? b : null; }
   function viewSpec(d, name) {
     if (/^EL-/.test(name)) { var k = name.slice(3); return DIRS[k] ? { dir: DIRS[k], cut: null, title: k.toUpperCase() + " ELEVATION" } : null; }
