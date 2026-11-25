@@ -1,6 +1,6 @@
 # Estimate Pro — pending work (kept with the code; not published)
 
-Last updated at version 2026.11.21-z66.
+Last updated at version 2026.11.21-z67.
 
 ## A. Waiting for the owner
 1. Server work: (-z21) module switches and a shared library of blocks and hatch patterns are built — the owner has to run `server/shared.sql` once in Supabase, then check that a switched-off module disappears for a normal user. Still open: shared 3D models / cut-outs / material pictures (large files — need Supabase Storage), WhatsApp update messages with real pictures attached (needs a sending gateway; links to the pictures are already added).
@@ -37,9 +37,9 @@ Last updated at version 2026.11.21-z66.
 6. Windows application: (21 Nov) first build for the owner's own use — Electron wrapper in `desktop/`, built by GitHub Actions (Actions → Windows app → Artifacts). Not yet confirmed that the build ran and the .exe opens — ask the owner. For the public release later: plan in `desktop/PLAN.md`. Owner to decide — publisher name / code-signing certificate, bundled files or live site, offline grace days, Microsoft Store or direct download. Then: Tauri wrapper + GitHub Actions build on windows-latest.
 
 ## B. 3D Studio — to build (no server needed)
-1. (done in -u for one device: My 3D models.) (-v: texture colours baked per vertex.) Still open: true per-pixel textures, Draco files, a shared library for all users (needs the server), thumbnails, plan symbol from the model outline.
+1. (done in -u for one device: My 3D models.) (-v: texture colours baked per vertex.) Still open: true per-pixel textures, Draco files, a shared library for all users (needs the server), thumbnails, (-z67: plan symbol from the model outline.)
 2. (done in -t: fittings light the scene, Night view.) (-z16: light stops at walls, columns and floors.) (-z19: furniture shadows from the nearest fitting, light through windows, nine storeys.) (-z64: the nearest nine fittings throw shadows, wall lights / spots along their beam, light cones.) Still open: shadows from fittings beyond the nearest nine, (-z23: light through doors shown open.) wall lights (the shadow map looks down only).
-3. (done in -w: up to 5 own material pictures per drawing.) (-z40: turn in 45° steps and half-width shift, per picture.) Still open: a different turn on each surface, more than 5, (-z66: a device library of material pictures.)
+3. (done in -w: up to 5 own material pictures per drawing.) (-z40: turn in 45° steps and half-width shift, per picture.) Still open: a different turn on each surface, (-z67: 8 pictures per drawing), (-z66: a device library of material pictures.)
 4. (done in -x: sky presets and an own background picture.) (-z66: the background picture lights the model.) (-r: sky saved per scene) ground materials by area.
 5. (-u: sky reflection on glass and polished surfaces.) (-z8: water surfaces with ripples.) (-z18: water mirrors what is on screen beside it.) (-z19: ✨ Reflections on glass and polished floors.) Still open: things outside the screen in the reflection, (-z38: moving water in Play.) softer shadows.
 6. (-z10: vehicles turn round and come back.) (-z18: walkers bob with each step.) (-z20: wheels that turn, walkers sway.) (-z22: DRIVEPATH — a vehicle follows its own route.) (-z39: slow at corners and ends.) Still open: vehicles that stop at gates, limbs that move (needs animated models).

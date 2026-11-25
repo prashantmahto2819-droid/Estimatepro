@@ -352,8 +352,20 @@
     return res;
   };
   function mxf(e, g) { var s = (e.sc || 1) * 1000, r = (e.rot || 0) * Math.PI / 180, c = Math.cos(r), sn = Math.sin(r), cx = (g.bbox[0] + g.bbox[3]) / 2, cy = (g.bbox[1] + g.bbox[4]) / 2; return function (x, y) { x -= cx; y -= cy; return [e.p[0] + (x * c - y * sn) * s, e.p[1] + (x * sn + y * c) * s]; }; }
+  /* outline of a model seen from above: convex hull of its points (cached on the model; at most ~40 000 points looked at) */
+  function hullOf(g) {
+    if (g._hull !== undefined) return g._hull; var P = g.pos; if (!P || P.length < 9) return (g._hull = null);
+    var n = P.length / 3, st = Math.max(1, Math.floor(n / 40000)), pts = []; for (var i = 0; i < n; i += st) pts.push([P[i * 3], P[i * 3 + 1]]);
+    pts.sort(function (a, c) { return a[0] - c[0] || a[1] - c[1]; }); var cr = function (o, a, c) { return (a[0] - o[0]) * (c[1] - o[1]) - (a[1] - o[1]) * (c[0] - o[0]); }, lo = [], up = [];
+    pts.forEach(function (q) { while (lo.length >= 2 && cr(lo[lo.length - 2], lo[lo.length - 1], q) <= 0) lo.pop(); lo.push(q); });
+    for (var j = pts.length - 1; j >= 0; j--) { var q = pts[j]; while (up.length >= 2 && cr(up[up.length - 2], up[up.length - 1], q) <= 0) up.pop(); up.push(q); }
+    var h = lo.slice(0, -1).concat(up.slice(0, -1)); if (h.length > 64) { var k = Math.ceil(h.length / 64), h2 = []; for (var m = 0; m < h.length; m += k) h2.push(h[m]); h = h2; }
+    return (g._hull = h.length > 2 ? h : null);
+  }
   B.EXT.model3d = {
-    plan: function (doc, e) { var g = B.GLB[e.asset], out = { segs: [], fill: [], dashed: [] }; if (!g) { out.dashed = G.polySegs(B.rectAt(e.p, 1000, 1000, e.rot || 0), true); return out; } var f = mxf(e, g), b = g.bbox; out.segs = G.polySegs([f(b[0], b[1]), f(b[3], b[1]), f(b[3], b[4]), f(b[0], b[4])], true); out.dashed = [L(f(b[0], b[1]), f(b[3], b[4])), L(f(b[3], b[1]), f(b[0], b[4]))]; return out; },
+    plan: function (doc, e) { var g = B.GLB[e.asset], out = { segs: [], fill: [], dashed: [] }; if (!g) { out.dashed = G.polySegs(B.rectAt(e.p, 1000, 1000, e.rot || 0), true); return out; } var f = mxf(e, g), b = g.bbox, hl = hullOf(g);
+      if (hl && hl.length > 2) { out.segs = G.polySegs(hl.map(function (q) { return f(q[0], q[1]); }), true); var cx = (b[0] + b[3]) / 2, cy = (b[1] + b[4]) / 2, dx = (b[3] - b[0]) * 0.08, dy = (b[4] - b[1]) * 0.08; out.dashed = [L(f(cx - dx, cy), f(cx + dx, cy)), L(f(cx, cy - dy), f(cx, cy + dy))]; return out; }   /* the plan symbol follows the model's own outline */
+      out.segs = G.polySegs([f(b[0], b[1]), f(b[3], b[1]), f(b[3], b[4]), f(b[0], b[4])], true); out.dashed = [L(f(b[0], b[1]), f(b[3], b[4])), L(f(b[3], b[1]), f(b[0], b[4]))]; return out; },
     labels: function (doc, e, h) { var a = (doc.d.assets || {})[e.asset]; return [{ p: e.p, s: (e.name || (a && a.name) || "3D model") + (B.GLB[e.asset] ? "" : " (loading…)"), h: h * 0.8, al: "cm" }]; },
     xform: function (e, M) { var o = JSON.parse(JSON.stringify(e)), det = M[0] * M[3] - M[1] * M[2], rr = Math.atan2(M[1], M[0]) * 180 / Math.PI; o.p = G.mApply(M, e.p); o.rot = (e.rot || 0) + rr; var sc = Math.sqrt(Math.abs(det)); if (Math.abs(sc - 1) > 1e-6) o.sc = (e.sc || 1) * sc; return o; },
     qty: function (doc, e) { return e.count === false ? [] : [{ k: "model_" + (e.key || "item"), dim: "N", v: 1, label: e.name || "Imported 3D model", f: "1 no.", z: e.lvl ? B.below(doc.d, e.lvl) : "super" }]; },

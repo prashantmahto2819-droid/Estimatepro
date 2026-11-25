@@ -89,14 +89,14 @@
      Up to 5 per drawing can be shown at once: each takes a picture slot of the 3D view (pattern 20 + slot). ----- */
   B.TEXSLOTS = [];
   B.regTex = function (d) {
-    var T = (d && d.bim && d.bim.texs) || {}, ids = Object.keys(T).slice(0, 5); B.TEXSLOTS = ids.map(function (id) { return T[id].src; }); B.TEXR = ids.map(function (id) { var t = T[id], wv = Math.max(50, t.w || 600); return [(+t.rot || 0) * Math.PI / 180, (+t.ox || 0) / wv, (+t.oy || 0) / wv]; });   /* turn and shift of each picture on the surface */
+    var T = (d && d.bim && d.bim.texs) || {}, ids = Object.keys(T).slice(0, 8); B.TEXSLOTS = ids.map(function (id) { return T[id].src; }); B.TEXR = ids.map(function (id) { var t = T[id], wv = Math.max(50, t.w || 600); return [(+t.rot || 0) * Math.PI / 180, (+t.ox || 0) / wv, (+t.oy || 0) / wv]; });   /* turn and shift of each picture on the surface */
     Object.keys(B.LOOKS).forEach(function (k) { if (/^tex_/.test(k) && ids.indexOf(k.slice(4)) < 0) delete B.LOOKS[k]; });
     ids.forEach(function (id, i) { var t = T[id]; B.LOOKS["tex_" + id] = { n: "My picture — " + t.name, c: t.avg || "#bdbdbd", p: 20 + i, s: Math.max(0.05, (t.w || 600) / 1000), g: t.g == null ? 0.25 : t.g }; });
   };
   /* w = real width in mm that one copy of the picture covers */
   B.addTex = function (ed, name, src, w, avg) {
-    var nb = EP.cad.clone(ed.doc.d.bim || B.ensure(ed.doc.d)); nb.texs = Object.assign({}, nb.texs || {}); if (Object.keys(nb.texs).length >= 5) return null;
-    var id = "t" + Date.now().toString(36); nb.texs[id] = { name: name, src: src, w: w || 600, avg: avg }; ed.doc.set("bim", nb); B.regTex(ed.doc.d); return "tex_" + id;
+    var nb = EP.cad.clone(ed.doc.d.bim || B.ensure(ed.doc.d)); nb.texs = Object.assign({}, nb.texs || {}); if (Object.keys(nb.texs).length >= 8) return null;
+    var id = "t" + Date.now().toString(36) + Math.random().toString(36).slice(2, 5); nb.texs[id] = { name: name, src: src, w: w || 600, avg: avg }; ed.doc.set("bim", nb); B.regTex(ed.doc.d); return "tex_" + id;
   };
   var meshes0 = B.meshes; if (meshes0) B.meshes = function (doc) { if (doc && doc.d) B.regTex(doc.d); return meshes0.apply(this, arguments); };
   var ext = B.EXT.asset; ["mesh", "qty", "plan", "segs", "bbox"].forEach(function (fn) { var f0 = ext[fn]; if (typeof f0 !== "function") return; ext[fn] = function (a, b) { var doc = fn === "mesh" ? b : a; if (doc && doc.d) B.regPics(doc.d); return f0.apply(this, arguments); }; });

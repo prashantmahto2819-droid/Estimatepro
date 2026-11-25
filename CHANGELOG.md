@@ -3,6 +3,10 @@
 This file is for the people maintaining the app. It is not published with the site (see `.assetsignore`).
 The text users see is `EP_NOTES` in `js/version.js`.
 
+## 2026.11.21-z67
+- Own material pictures: 8 slots (shader uTx0…uTx7, uTxR[8], patterns 20…27; units 2–6 and 13–15); `B.regTex` / `B.addTex` limits 8; unique picture ids (two added in the same millisecond overwrote each other).
+- `B.EXT.model3d.plan`: convex hull of the model's points from above (cached `g._hull`, ≤ 64 corners, sampled to ~40 000 points) with a small centre cross; the box remains only while the model is loading.
+
 ## 2026.11.21-z66
 - CAMPATH keywords Look (`bim.camLook` [x, y] mm; Tour turns to it) and Doors (`bim.camDoors`, default on): at Tour start doors within 0.9 m of the path get `open: "90"` (restored and rebuilt at the end / on stop via `C.v3tour.restore`).
 - view3d: `_skyTex` averages the sky / horizon / ground bands of the background picture (32 × 32, linear) into `t.amb`; `light()` with sky kind 5 mixes them into ambient sky / ground / horizon and tints the sun (`picLight !== false`).
