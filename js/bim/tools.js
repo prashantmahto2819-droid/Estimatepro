@@ -41,7 +41,7 @@
       for (var i = 0; i <= n; i++) { var t = t1 + sw * i / n; P.push([k.c[0] + k.r * Math.cos(t), k.c[1] + k.r * Math.sin(t)]); } P[0] = a; P[n] = c; return P; };
     ed.preview = function (w) { var P = chain(w), o = []; for (var i = 0; i + 1 < P.length; i++) o.push({ t: "wall", a: P[i], b: P[i + 1], th: th, h: H, mat: mat, just: "c", lvl: cur(ed), layer: layer }); return o; };
     var m = await ed.getPoint("A point on the curve (how far it bulges)"); ed.preview = null; var P = chain(m);
-    for (var i = 0; i + 1 < P.length; i++) ed.doc.add({ t: "wall", a: P[i], b: P[i + 1], th: th, h: H, mat: mat, just: "c", lvl: cur(ed), layer: layer, ext: false, curve: 1 });
+    var kC = G.circle3(a, m, c); for (var i = 0; i + 1 < P.length; i++) ed.doc.add(Object.assign({ t: "wall", a: P[i], b: P[i + 1], th: th, h: H, mat: mat, just: "c", lvl: cur(ed), layer: layer, ext: false, curve: 1 }, kC && P.length > 2 ? { cc: [Math.round(kC.c[0] * 10) / 10, Math.round(kC.c[1] * 10) / 10], cr: Math.round(kC.r * 10) / 10 } : {}));
     ed.say("Curved wall made of " + (P.length - 1) + " short walls. Doors and windows go on any piece; for an outer wall set Exterior in Properties.");
   });
   /* ---------- hosted: DOOR / WINDOW / OPENING ---------- */
@@ -470,4 +470,26 @@
   cmd("BBS", ["BARSCHEDULE"], async function (ed) { if (ed.onBbs) ed.onBbs(); });
   cmd("BIM3D", ["3D", "V3"], async function (ed) { if (ed.on3d) ed.on3d(); });
   cmd("QUANTITIES", ["QT", "BOQ"], async function (ed) { if (ed.onQto) ed.onQto(); });
+
+  /* a curved wall is drawn on the plan with true arcs: its straight face lines become arcs round the curve's centre
+     (walls made before this keep finding their centre from the next piece of the same curve) */
+  function curveOf(doc, e) {
+    if (e.cc && e.cr) return { c: e.cc, r: e.cr };
+    var nx = doc.d.ents.filter(function (o) { return o !== e && o.t === "wall" && o.curve && (o.lvl || null) === (e.lvl || null) && (G.dist(o.a, e.b) < 1 || G.dist(o.b, e.a) < 1); })[0]; if (!nx) return null;
+    var k = G.dist(nx.a, e.b) < 1 ? G.circle3(e.a, e.b, nx.b) : G.circle3(nx.a, e.a, e.b); return k && k.r < 1e6 ? k : null;
+  }
+  var plan0 = B.plan;
+  B.plan = function (doc, e) {
+    var pl = plan0.apply(this, arguments); if (!pl || !e || e.t !== "wall" || !e.curve || !pl.segs) return pl;
+    var k; try { k = curveOf(doc, e); } catch (er) { k = null; } if (!k) return pl;
+    var u = G.norm(G.sub(e.b, e.a)), L0 = G.dist(e.a, e.b);
+    pl.segs = pl.segs.map(function (sg) {
+      if (sg.k !== "L") return sg; var d = G.sub(sg.b, sg.a), l = G.len(d); if (l < 20 || l < L0 * 0.05) return sg;
+      if (Math.abs(d[0] * u[1] - d[1] * u[0]) / l > 0.03) { var md = G.mid(sg.a, sg.b), endP = G.dist(md, e.a) < (e.th || 230) ? e.a : G.dist(md, e.b) < (e.th || 230) ? e.b : null;   /* a joint between two pieces of the same curve is not drawn */
+        if (endP && doc.d.ents.some(function (o) { return o !== e && o.t === "wall" && o.curve && (o.lvl || null) === (e.lvl || null) && (G.dist(o.a, endP) < 1 || G.dist(o.b, endP) < 1); })) return null; return sg; }
+      var r = (G.dist(sg.a, k.c) + G.dist(sg.b, k.c)) / 2, s1 = Math.atan2(sg.a[1] - k.c[1], sg.a[0] - k.c[0]), s2 = Math.atan2(sg.b[1] - k.c[1], sg.b[0] - k.c[0]), sw = s2 - s1; while (sw > Math.PI) sw -= 2 * Math.PI; while (sw < -Math.PI) sw += 2 * Math.PI;
+      return sw >= 0 ? { k: "A", c: k.c, r: r, s: s1, e: s1 + sw } : { k: "A", c: k.c, r: r, s: s1 + sw, e: s1 };
+    }).filter(Boolean);
+    return pl;
+  };
 })();

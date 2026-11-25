@@ -3,6 +3,12 @@
 This file is for the people maintaining the app. It is not published with the site (see `.assetsignore`).
 The text users see is `EP_NOTES` in `js/version.js`.
 
+## 2026.11.21-z66
+- CAMPATH keywords Look (`bim.camLook` [x, y] mm; Tour turns to it) and Doors (`bim.camDoors`, default on): at Tour start doors within 0.9 m of the path get `open: "90"` (restored and rebuilt at the end / on stop via `C.v3tour.restore`).
+- view3d: `_skyTex` averages the sky / horizon / ground bands of the background picture (32 × 32, linear) into `t.amb`; `light()` with sky kind 5 mixes them into ambient sky / ground / horizon and tints the sun (`picLight !== false`).
+- CURVEDWALL stores `cc` / `cr`; `B.plan` wrap (tools.js) turns the face lines of curve pieces into arcs round the centre (older pieces find it from the next piece) and drops joint lines between pieces of the same curve.
+- ui-assets: device library `localStorage["ep.matlib"]` (≤ 24, fewer if full); every added material picture is kept; Library panel lists them (click = add to this drawing, ✕ = remove).
+
 ## 2026.11.21-z65
 - Door `frm`: "" 50 × 100, slim 40 × 75, heavy 75 × 125, stone 50 × 150 (granite look, key `stone_door_frame` → non-SOR), none (no frame boxes, no frame row). Door kind `double_fixed` with `fixR` (0.2–0.5, default ⅓): plan shows one swing arc + the shut fixed leaf; 3D opens only the main leaf. Schedule: horseshoe arch, frame type, "double, one leaf fixed".
 - assets9: part type "br" (box turned by its own angle); `B.chairParts(x, y, a, style)` / `B.CHAIRS` (plain, uph, arm, cane, stool, metal); `dining_p` takes `chair` and `ends`; new `dining_round_p` (chairs all round, `seats`), `sofa_bed_p` (var open), `recliner_p` (1–4 seats by width, var open = footrests up).

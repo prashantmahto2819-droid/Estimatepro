@@ -924,6 +924,9 @@ P.prototype.light=function(){
   if(sk===2){ const g=0.25+0.55*dayFrac; return{sunCol:[sunCol[0]*0.22,sunCol[1]*0.22,sunCol[2]*0.22],sky:[0.62*g+0.05,0.65*g+0.05,0.70*g+0.05],gnd:[0.30*g,0.29*g,0.27*g],zen:[0.42*g,0.45*g,0.50*g],hor:[0.72*g,0.74*g,0.77*g]}; }
   if(sk===3){ return{sunCol:[1.15*dayFrac,0.62*dayFrac,0.34*dayFrac],sky:[0.42*dayFrac+0.08,0.36*dayFrac+0.07,0.50*dayFrac+0.10],gnd:[0.26*dayFrac+0.04,0.18*dayFrac+0.03,0.14*dayFrac+0.03],zen:[0.10,0.14,0.36],hor:[0.98,0.52,0.26]}; }
   if(sk===4){ return{sunCol:[sunCol[0]*0.8,sunCol[1]*0.8,sunCol[2]*0.8],sky:[0.72,0.74,0.76],gnd:[0.34,0.34,0.34],zen:[0.80,0.82,0.85],hor:[0.93,0.94,0.95]}; }
+  if(sk===5 && this.picLight!==false && this._sky && this._sky.amb){ const A=this._sky.amb, mx=function(a,b,k){ return [a[0]+(b[0]-a[0])*k,a[1]+(b[1]-a[1])*k,a[2]+(b[2]-a[2])*k]; }, sky0=[0.48*dayFrac+0.06,0.58*dayFrac+0.06,0.78*dayFrac+0.06], gnd0=[0.28*dayFrac+0.04,0.26*dayFrac+0.04,0.20*dayFrac+0.03], hor0=[0.62+0.28*warmth,0.68+0.12*warmth,0.78-0.08*warmth];
+    const hb=(A.hor[0]+A.hor[1]+A.hor[2])/3+0.05, tint=[A.hor[0]/hb*0.34+0.66,A.hor[1]/hb*0.34+0.66,A.hor[2]/hb*0.34+0.66].map(function(v){ return Math.max(0.6,Math.min(1.3,v)); });
+    return{sunCol:[sunCol[0]*tint[0],sunCol[1]*tint[1],sunCol[2]*tint[2]],sky:mx(sky0,A.sky,0.7),gnd:mx(gnd0,A.gnd,0.7),zen:A.sky,hor:mx(hor0,A.hor,0.8)}; }   /* 🖼 the background picture lights the model */
   const sky=[0.48*dayFrac+0.06,0.58*dayFrac+0.06,0.78*dayFrac+0.06];
   const gnd=[0.28*dayFrac+0.04,0.26*dayFrac+0.04,0.20*dayFrac+0.03];
   const zen=[0.24,0.38,0.70];
@@ -1628,6 +1631,10 @@ P.prototype._skyTex=function(src){
   img.onload=function(){ if(self.dead||self._sky!==t) return; try{
     const mx=Math.min(4096,gl.getParameter(gl.MAX_TEXTURE_SIZE)), k=Math.min(1,mx/Math.max(img.naturalWidth,img.naturalHeight)), cw=Math.max(2,Math.round(img.naturalWidth*k)), ch=Math.max(2,Math.round(img.naturalHeight*k));
     const cv=document.createElement('canvas'); cv.width=cw; cv.height=ch; cv.getContext('2d').drawImage(img,0,0,cw,ch); t.asp=cw/ch;
+    /* the picture lights the model: average colours of its sky, horizon and ground bands become the ambient light */
+    try{ const sc2=document.createElement('canvas'); sc2.width=32; sc2.height=32; const c2=sc2.getContext('2d'); c2.drawImage(img,0,0,32,32); const px=c2.getImageData(0,0,32,32).data, lin=function(v){ v/=255; return v<=0.04045?v/12.92:Math.pow((v+0.055)/1.055,2.4); };
+      const band=function(y0,y1){ const o=[0,0,0]; let n=0; for(let y=y0;y<y1;y++) for(let x=0;x<32;x++){ const i=(y*32+x)*4; o[0]+=lin(px[i]); o[1]+=lin(px[i+1]); o[2]+=lin(px[i+2]); n++; } return o.map(function(v){ return Math.pow(v/n,1/2.2); }); };
+      t.amb={sky:band(0,12),hor:band(12,21),gnd:band(21,32)}; }catch(eA){ t.amb=null; }
     gl.activeTexture(gl.TEXTURE7); gl.bindTexture(gl.TEXTURE_2D,t.tex); gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL,true);
     gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,gl.RGBA,gl.UNSIGNED_BYTE,cv); gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL,false); gl.generateMipmap(gl.TEXTURE_2D);
     gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.LINEAR_MIPMAP_LINEAR); gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,gl.LINEAR);
