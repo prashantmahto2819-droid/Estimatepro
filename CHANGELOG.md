@@ -3,6 +3,9 @@
 This file is for the people maintaining the app. It is not published with the site (see `.assetsignore`).
 The text users see is `EP_NOTES` in `js/version.js`.
 
+## 2026.11.21-z72
+- steel_shed: span min 6 → 3 m, eave min 3 → 2.4 m (all six styles checked at 4.5 m span × 5 bays @ 6 m, eave 3 m: design, free, quantities and 3D run).
+
 ## 2026.11.21-z71
 - New `js/bim/runs2.js`: run kinds groove_v / groove_u / groove_band (key run_groove, band ×3), look groove_dark; RUNWALL (whole wall face from the picked side, or round a room inside it; runs with z < 2.2 m are split at door / opening gaps on the room's sides); RUNPROFILE (closed polyline section → stacked bands, saved in `bim.runProf`, registered on use by wrapping run plan / mesh / qty / labels).
 - DWG: `server/dwg` (Dockerfile building LibreDWG 0.13.3 dwg2dxf, Node service POST /convert with x-key, 40 MB, 3 at a time, temp folder removed); worker `/api/dwg` (GET configured; POST checks the Supabase sign-in and "AC10" header, forwards to DWG_URL with DWG_KEY); CAD Import / Open accept .dwg and convert first. Not configured → a clear message.
