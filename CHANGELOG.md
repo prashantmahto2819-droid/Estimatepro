@@ -3,6 +3,11 @@
 This file is for the people maintaining the app. It is not published with the site (see `.assetsignore`).
 The text users see is `EP_NOTES` in `js/version.js`.
 
+## 2026.11.21-z71
+- New `js/bim/runs2.js`: run kinds groove_v / groove_u / groove_band (key run_groove, band ×3), look groove_dark; RUNWALL (whole wall face from the picked side, or round a room inside it; runs with z < 2.2 m are split at door / opening gaps on the room's sides); RUNPROFILE (closed polyline section → stacked bands, saved in `bim.runProf`, registered on use by wrapping run plan / mesh / qty / labels).
+- DWG: `server/dwg` (Dockerfile building LibreDWG 0.13.3 dwg2dxf, Node service POST /convert with x-key, 40 MB, 3 at a time, temp folder removed); worker `/api/dwg` (GET configured; POST checks the Supabase sign-in and "AC10" header, forwards to DWG_URL with DWG_KEY); CAD Import / Open accept .dwg and convert first. Not configured → a clear message.
+- Fix: ALIGNWALL picked through getEnt now reads `.e`.
+
 ## 2026.11.21-z70
 - New `js/bim/ceil.js`: element `czone` (CEILZONE) — kinds gypsum / grid / wpc / wood / acp / baffle / louvre (`B.CZ_KINDS`), underside `z` (else `B.fceilH` of the room), `dir`, `pw`, `gap`, `start` corner, `slope` (planks step up across it), fascia to the soffit where it steps (not when sloping); plan dashed outline + layout lines; qty area ÷ cos(slope) + fascia; keys grid_ceiling (12.45.3), wpc_ceiling, wood_ceiling, baffle_ceiling, louvre_ceiling (non-SOR), acp_panel, false_ceiling. Properties in ui-assets. `ALIGNWALL`: selected assets turned square to the nearest wall (front = local +y away from it) and set against its face (any angle; one-face walls handled).
 - view3d: "More shadows" 16 more fittings (4 × 4 tiles of 512 in 2048²) — 17 shadowed fittings; SSR rays that leave the screen return the blurred edge colour at 0.35 (horizontal reflections only); drive paths: `mv.stops` (gates gate_ms / sliding / collapsible / rolling within 3 m of the route, mesh.js) — slows and waits 3 s 3.5 m before.

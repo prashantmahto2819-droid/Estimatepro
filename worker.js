@@ -54,6 +54,18 @@ async function waEstimate(request, env, ctx) {
   return json({ ok: true, to: "…" + phone.slice(-4) });
 }
 
+/* DWG → DXF: a signed-in user's DWG goes to the converter on our own server (server/dwg) and the DXF comes back */
+async function dwgConvert(request, env) {
+  if (!env.DWG_URL || !env.DWG_KEY) return fail(503, "not_configured", "DWG opening is not set up on the server yet. Save the drawing as DXF in AutoCAD and open that.");
+  const tok = (request.headers.get("authorization") || "").replace(/^Bearer\s+/i, ""); if (!tok) return fail(401, "unauthorized", "Sign in first.");
+  const ur = await fetch(env.SUPABASE_URL + "/auth/v1/user", { headers: { apikey: env.SUPABASE_ANON, authorization: "Bearer " + tok } }); if (!ur.ok) return fail(401, "unauthorized", "Sign in again.");
+  const buf = await request.arrayBuffer(), h = new Uint8Array(buf.slice(0, 4));
+  if (buf.byteLength < 64 || buf.byteLength > 40 * 1024 * 1024 || String.fromCharCode(h[0], h[1], h[2], h[3]) !== "AC10") return fail(400, "not_dwg", "That is not a DWG file, or it is larger than 40 MB.");
+  const r = await fetch(env.DWG_URL.replace(/\/$/, "") + "/convert", { method: "POST", headers: { "x-key": env.DWG_KEY, "content-type": "application/octet-stream" }, body: buf });
+  if (!r.ok) { let j = {}; try { j = await r.json(); } catch (e) {} return fail(r.status === 422 ? 422 : 502, j.error || "convert_failed", r.status === 422 ? "This DWG could not be converted (it may be a very new or damaged file). Save it as DXF in AutoCAD and open that." : "The DWG converter did not answer. Try again in a minute."); }
+  return new Response(r.body, { headers: { "content-type": "application/dxf", "cache-control": "no-store" } });
+}
+
 export default {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
@@ -61,6 +73,11 @@ export default {
       if (request.method === "GET") return json({ ok: true, configured: !!(env.RELAY_KEY && env.RELAY_URL) });
       if (request.method !== "POST") return fail(405, "method", "POST only.");
       try { return await waEstimate(request, env, ctx); } catch (e) { return fail(500, "server", "Something went wrong on the server."); }
+    }
+    if (url.pathname === "/api/dwg") {
+      if (request.method === "GET") return json({ ok: true, configured: !!(env.DWG_URL && env.DWG_KEY) });
+      if (request.method !== "POST") return fail(405, "method", "POST only.");
+      try { return await dwgConvert(request, env); } catch (e) { return fail(500, "server", "Something went wrong on the server."); }
     }
     if (url.pathname.startsWith("/api/")) return fail(404, "not_found", "No such endpoint.");
     return env.ASSETS.fetch(request);

@@ -94,7 +94,7 @@
   /* ---------- furniture against a slanting wall ---------- */
   cmd("ALIGNWALL", ["ALIGNTOWALL", "WALLALIGN", "TOWALL"], async function (ed) {
     var doc = ed.doc, d = doc.d, sel = Array.from(ed.sel || []).map(function (id) { return doc.map[id]; }).filter(function (e) { return e && e.t === "asset"; });
-    if (!sel.length) { var pk = await ed.getEnt("Pick the furniture to set against a wall"); if (pk && pk.t === "asset") sel = [pk]; }
+    if (!sel.length) { var pk = await ed.getEnt("Pick the furniture to set against a wall"); if (pk && pk.e && pk.e.t === "asset") sel = [pk.e]; }
     if (!sel.length) { ed.say("Select furniture (library items) first."); return; }
     var n = 0; doc.begin("Align to wall"); try {
       sel.forEach(function (e) {

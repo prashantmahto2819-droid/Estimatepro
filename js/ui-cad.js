@@ -127,7 +127,7 @@
     "Draw": [["Lines", ["LINE", "PLINE", "XLINE", "RAY"]], ["Shapes", ["RECTANG", "CIRCLE", "ARC", "POLYGON", "ELLIPSE", "SPLINE", "POINT"]], ["Fill", ["HATCH", "BOUNDARY"]]],
     "Modify": [["Move and copy", ["MOVE", "COPY", "ROTATE", "SCALE", "MIRROR", "ARRAY", "STRETCH"]], ["Edit shape", ["OFFSET", "TRIM", "EXTEND", "FILLET", "CHAMFER", "BREAK", "JOIN", "EXPLODE"]], ["Properties", ["MATCHPROP", "GRIPLINK", "ERASE"]], ["Clipboard", ["COPYCLIP", "CUTCLIP", "PASTECLIP"]]],
     "Annotate": [["Text", ["TEXT", "MTEXT", "LEADER"]], ["Dimensions", ["DIMLINEAR", "DIMALIGNED", "DIMCONTINUE", "DIMBASELINE", "DIMANGULAR", "DIMRADIUS", "DIMDIAMETER", "DIMORDINATE"]], ["Building", ["DIMWALLS"]], ["Style", ["DIMSTYLE"]]],
-    "Building (BIM)": [["Structure", ["WALL", "CURVEDWALL", "COLUMN", "BEAM", "SLAB", "FOOTING"]], ["Openings", ["DOOR", "WINDOW", "OPENING"]], ["Roof, stairs and edges", ["ROOF", "DOME", "VAULT", "STAIR", "STAIRWELL", "STAIRUP", "STEPS", "RAMP", "RAILING", "PARAPET"]], ["Rooms and floors", ["ROOM", "ROOMSFIT", "LEVEL", "FLOORCOPY"]], ["Wall finishes and lines", ["WALLFINISH", "CLADDING", "CEILZONE", "RUN", "CABINET", "PIPE", "ALIGNWALL"]], ["Steel", ["REBAR", "BBS"]], ["Drawings from the model", ["ELEVATION", "SECTION", "SHEET", "SHEETADD", "DETAILVIEW", "SCHEDULE", "NORTHPOINT", "SCALEBAR", "VIEWSUPDATE", "VIEWSAUTO"]], ["Results", ["DIMWALLS", "BIM3D", "CAMPATH", "DRIVEPATH", "QUANTITIES"]]],
+    "Building (BIM)": [["Structure", ["WALL", "CURVEDWALL", "COLUMN", "BEAM", "SLAB", "FOOTING"]], ["Openings", ["DOOR", "WINDOW", "OPENING"]], ["Roof, stairs and edges", ["ROOF", "DOME", "VAULT", "STAIR", "STAIRWELL", "STAIRUP", "STEPS", "RAMP", "RAILING", "PARAPET"]], ["Rooms and floors", ["ROOM", "ROOMSFIT", "LEVEL", "FLOORCOPY"]], ["Wall finishes and lines", ["WALLFINISH", "CLADDING", "CEILZONE", "RUN", "RUNWALL", "RUNPROFILE", "CABINET", "PIPE", "ALIGNWALL"]], ["Steel", ["REBAR", "BBS"]], ["Drawings from the model", ["ELEVATION", "SECTION", "SHEET", "SHEETADD", "DETAILVIEW", "SCHEDULE", "NORTHPOINT", "SCALEBAR", "VIEWSUPDATE", "VIEWSAUTO"]], ["Results", ["DIMWALLS", "BIM3D", "CAMPATH", "DRIVEPATH", "QUANTITIES"]]],
     "Site & services": [["Place", ["ASSET", "LANDAREA"]], ["Electrical", ["ELECSET", "POINTSAUTO", "WIREAUTO", "WIRE"]], ["Plumbing", ["PLUMBAUTO", "PLUMB", "PIPE"]], ["MEP drawings", ["MEPAUTO", "MEPSHEETS", "MEPVIEW", "SCHEDULE"]], ["Site", ["PLOTBOUNDARY", "SETBACK", "AREASTATEMENT", "SPOTLEVEL", "CONTOURS", "CUTFILL", "NORTHPOINT", "SCALEBAR"]]],
     "Block": [["Blocks", ["BLOCK", "INSERT"]], ["Library on this device", ["BLOCKKEEP", "BLOCKLIB", "HATCHLOAD"]], ["For all users (admin)", ["BLOCKSHARE", "HATCHSHARE"]], ["Groups and order", ["GROUP", "UNGROUP", "DRAWORDER"]]],
     "Measure": [["Enquiry", ["DIST", "AREA", "ID", "LIST"]], ["Mark points", ["DIVIDE", "MEASURE"]], ["To estimate", ["TAKEOFF", "QUANTITIES"]]],
@@ -351,7 +351,7 @@
       case "expdxf": dl(new Blob([CAD.exportDxf(ed.doc)], { type: "application/dxf" }), fname(ed.doc.d.name) + ".dxf"); if (U.logAct) U.logAct("cad_export", "DXF " + ed.doc.d.name); return;
       case "exppng": var url = CAD.plotPng(ed, null, 3000), b = await (await fetch(url)).blob(); dl(b, fname(ed.doc.d.name) + ".png"); return;
       case "exppdf": return plotDialog();
-      case "impdxf": return pickFile(".dxf", function (f) { importDxfFile(f, true); });
+      case "impdxf": return pickFile(".dxf,.dwg", function (f) { importDxfFile(f, true); });
       case "img": return pickFile("image/*", attachImage);
       case "pdf": return pickFile("application/pdf,.pdf", attachPdf);
       case "takeoff": ed.exec("TAKEOFF"); return;
@@ -404,7 +404,19 @@
   }
 
   /* ----- import DXF ----- */
+  /* a DWG goes to the converter on our server (signed-in users only) and comes back as DXF */
+  async function dwgToDxf(file) {
+    if (file.size > 40 * 1024 * 1024) { U.toast("That DWG is larger than 40 MB. Save it as DXF in AutoCAD and open that."); return null; }
+    var tok = null; try { var ss = await U.db().auth.getSession(); tok = ss && ss.data && ss.data.session && ss.data.session.access_token; } catch (e) {}
+    if (!tok) { U.toast("Sign in to open DWG files."); return null; }
+    U.toast("Converting the DWG to DXF…");
+    try { var r = await fetch("/api/dwg", { method: "POST", headers: { authorization: "Bearer " + tok, "content-type": "application/octet-stream" }, body: file });
+      if (!r.ok) { var j = {}; try { j = await r.json(); } catch (e2) {} U.toast(j.message || j.error || "The DWG could not be converted. Save it as DXF in AutoCAD and open that."); return null; }
+      var t = await r.text(); return new File([t], file.name.replace(/\.dwg$/i, ".dxf"), { type: "application/dxf" });
+    } catch (e3) { U.toast("The DWG converter could not be reached. Check the internet and try again."); return null; }
+  }
   async function importDxfFile(file, into) {
+    if (/\.dwg$/i.test(file.name || "")) { var cf = await dwgToDxf(file); if (!cf) return; file = cf; }
     var txt = await file.text(), res;
     try { res = CAD.parseDxf(txt); } catch (e) { U.toast("Couldn't read the DXF: " + e.message); return; }
     if (!res.ents.length && !Object.keys(res.blocks).length) { U.toast("No drawing entities found in this file (is it a DXF?)"); return; }
@@ -654,7 +666,7 @@
         function (b, dlg) { if (!b.dataset.nd) return; var nm = dlg.querySelector("#nd-n").value.trim() || "Drawing", u = dlg.querySelector("#nd-u").value, sc = +dlg.querySelector("#nd-s").value || 100; closeDialog(); var d = CAD.newDoc(nm, u); d.dim.sc = sc; d.sheet.scale = sc; newDrawing(nm, u, d); });
       return;
     }
-    if (ds.cadh === "imp") { pickFile(".dxf", function (f) { importDxfFile(f, false); }); return; }
+    if (ds.cadh === "imp") { pickFile(".dxf,.dwg", function (f) { importDxfFile(f, false); }); return; }
     if (ds.cadh === "imppdf") { pickFile("application/pdf,.pdf", async function (f) { var nm = f.name.replace(/\.pdf$/i, ""); var d = CAD.newDoc(nm, "m"); await newDrawing(nm, "m", d); attachPdf(f); }); return; }
   });
   document.addEventListener("focusin", function (ev) { if (C.root && C.root.contains(ev.target)) C.lastFocus = ev.target; });
