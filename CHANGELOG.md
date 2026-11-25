@@ -3,6 +3,14 @@
 This file is for the people maintaining the app. It is not published with the site (see `.assetsignore`).
 The text users see is `EP_NOTES` in `js/version.js`.
 
+## 2026.11.21-z58
+- Design Studio: new module `cycle_shed` (`js/ds/modules_extra6.js`, added to ui-design FILES and the service-worker cache) — two-wheeler / cycle parking shed in hollow sections (IS 4923 SHS / RHS, properties from outer size and thickness with square corners [approx 2–5 % above the tables]).
+  - Schemes: two rows of posts with a mono-slope roof (rafter on two posts, fixed bases), one row of posts with a T roof (rigid post-top joint, unbalanced and wind cases), one row cantilever.
+  - Loads: IS 875-2 roof live load, IS 875-3 design pressure with canopy net coefficients +0.5 / −1.3 (T −1.2) for frames and −1.8 for purlins [approx — Tables 17 / 18 to be verified], horizontal = inclined pressure + friction.
+  - Members (lightest passing): purlins (bending, shear, L/150), rafters (L/180, cantilever L/90), posts SHS (K = 2.0, curve b, N/Nd + M/Md ≤ 1); base plate from the actual bearing pressure (IS 800 cl 7.4.3.1), 4 anchor bolts 4.6; isolated footing for bearing (1.25 SBC), overturning (FoS 1.5) and uplift (weight ≥ 1.5 × uplift); footing steel by `designStrip`.
+  - Quantities: tubular steel cpwd 10.16.3, plates 10.2, rod bracing 10.1, HD bolts 10.19, sheet 12.50, painting 13.61.1, excavation, PCC, RCC, shuttering, rebar, grout, back-fill. Drawing CS-01 (cross section, front elevation, base & footing). Design mode only.
+  - 30 × 4.5 m, Korba wind: two rows → SHS 80×80×3.2 posts, RHS 122×61×3.6 rafters, RHS 66×33×2.9 purlins, 1.83 t (13.5 kg/m²); T → SHS 113.5 posts, 1.80 t; cantilever → SHS 150 / RHS 200×100, 2.79 t. Checked in the app (Design Studio runs it, PASS, drawing renders).
+
 ## 2026.11.21-z57
 - New `js/bim/mep.js` (after site.js; in the service-worker cache). Electrical and plumbing drawings in CAD Studio.
 - Electrical: `d.mep = { on, grp A|B|C, cond pvc|steel, sw mod|piano, ckt 1.5|2.5|4, sym, rccb, view }` set by `ELECSET`. Library items are classed (light, fan, exhaust, bell, 6 A / 16 A socket, TV, switch board, regulator, DB, meter board, earth pit, AC); with symbols on they draw IS-style symbols at paper size (2 × scale). New items: earth pit (→ em22 5.2), meter board.
