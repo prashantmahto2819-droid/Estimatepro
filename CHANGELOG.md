@@ -3,6 +3,14 @@
 This file is for the people maintaining the app. It is not published with the site (see `.assetsignore`).
 The text users see is `EP_NOTES` in `js/version.js`.
 
+## 2026.11.21-z112
+Gumti (portable shelter for mines) — SOR first now follows the way it is actually built:
+• Roof: MS sheet 2 mm welded on the frame with EPS thermocol 50 mm under it — no GI sheet, no false ceiling. Cool-roof (high-albedo) paint stays.
+• Door and windows: MS sheet door (DSR 10.5.1); MS sheet window shutters in angle frames as DSR steel work, with MS grill (DSR 9.48.1). Sunshades in MS sheet as steel work.
+• Plywood: good BWP / marine plywood for the wall lining, floor and bench (kept as Non-SOR — the DSR particle-board items do not last in a gumti).
+• Electrical work (wiring, DB, lights, fan, sockets) is now an option under Inside, off by default.
+• With the defaults about 80 % of the value is SOR (steel work, thermocol, door, grill, paint, earthing) and 20 % Non-SOR (plywood, water cooler, first aid, extinguisher, signs).
+
 ## 2026.11.21-z111
 Design Studio — new choice for every design: Estimate basis
 • 🏛️ SOR first (government) — the default. The design takes specifications that have a schedule item wherever one fits: CPWD DSR 2023 / 2021, DSR (E&M) 2022 and MPPWD SOR 2025. Non-SOR items stay only where no SOR item exists.

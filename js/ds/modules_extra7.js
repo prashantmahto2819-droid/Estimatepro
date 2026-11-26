@@ -51,15 +51,14 @@
     var c = new C.Calc("Portable shelter / gumti for mines");
     var L = num(inp.L, 2), W = num(inp.W, 2), H = num(inp.H, 2.8), nos = Math.max(1, Math.round(num(inp.nos, 1)));
     var wall = pickN(WALLS, inp.wall), roof = pickN(ROOFS, inp.roof), flr = pickN(FLOORS, inp.floor), fr = pickN(FRAMES, inp.frame);
-    /* SOR first: plywood → pre-laminated particle board (DSR 8.26 / 9.18), PUF roof panel → pre-coated GI profile sheet + EPS 50 + false
-       ceiling (DSR 12.50 / 12.36 / 12.45), vinyl dropped; PUF wall panels stay (no DSR item) if the engineer chooses them */
+    /* SOR first (as built for the mines): MS sheet roof welded on the frame with EPS thermocol under it (no false ceiling), MS sheet
+       door and windows, MS grill, cool-roof paint — nearly all of it DSR steel work; good BWP plywood lining / floor / bench stays as a
+       Non-SOR item (the DSR particle-board items do not last in a gumti) */
     var SORM = !(C.ctx && C.ctx.basis === "mix"), CP = "CPWD_DSR_2023", EM = "DSR_EM_2022";
     if (SORM) {
-      var pb = function (t) { return ["Pre-laminated particle board " + t + " mm wall lining", t, 0.13, t * 0.7, 1430]; };
-      wall = Object.assign({}, wall, { L: wall.L.map(function (l) { return /plywood/i.test(l[0]) ? pb(12) : l; }) });
-      if (roof.L.some(function (l) { return /PUF/.test(l[0]); })) roof = Object.assign({}, roof, { n: roof.n.replace(/PUF (roof )?panel 50 mm/, "pre-coated GI profile sheet + EPS 50 mm + false ceiling"), L: [["Pre-coated GI profile sheet 0.50 mm", 0.5, 50, 4.7, 740], ["EPS thermocol 50 mm under the sheet", 50, 0.036, 0.8, 320], ["False ceiling on GI grid", 12, 0.13, 9, 1360]] });
-      roof = Object.assign({}, roof, { L: roof.L.map(function (l) { return /plywood 9 mm ceiling/i.test(l[0]) ? ["False ceiling on GI grid", 12, 0.13, 9, 1360] : l; }) });
-      flr = Object.assign({}, flr, { vinyl: false, n: flr.n.replace(/BWP plywood|marine plywood/, "pre-laminated particle board").replace(" + vinyl sheet", "") });
+      if (roof.L.some(function (l) { return /PUF/.test(l[0]); })) roof = Object.assign({}, roof, { n: roof.n.replace(/PUF (roof )?panel 50 mm/, "MS sheet 2 mm with EPS thermocol 50 mm under it"), ms: 2, L: [["MS sheet 2 mm roof (14 G), welded", 2, 50, 15.7, 0], ["EPS thermocol 50 mm under the roof sheet", 50, 0.036, 0.8, 320]] });
+      roof = Object.assign({}, roof, { L: roof.L.filter(function (l) { return !/ceiling/i.test(l[0]); }) });
+      flr = Object.assign({}, flr, { vinyl: false, n: flr.n.replace(" + vinyl sheet", "") });
     }
     var nWin = Math.max(0, Math.round(num(inp.windows, 3))), dW = /800/.test(String(inp.door)) ? 0.8 : 0.75, dH0 = 2.0, ww = num(inp.win_w, 1.2), wh = 0.6, wS = ww;
     var skidH = fr.skid[0] === "ISMC 75" ? 0.075 : 0.1, dbl = roof.dbl, pyr = !!roof.pyr, rise = pyr ? num(inp.rise, 0.8) : 0, ov = pyr ? 0.3 : 0, Hroof = pyr ? rise : dbl ? 0.25 : 0.06, flTh = (flr.ply + flr.chq + 50) / 1000, Heave = H - Hroof, Hwall = Heave - skidH;
@@ -82,7 +81,7 @@
     c.info("Outside design temperature " + G(To) + " °C, inside " + G(Ti) + " °C", "sol-air excess on the roof " + F(dTr, ".1f") + " K" + (dbl ? " (shaded by the second roof)" : pyr ? " (sloped roof, attic air below)" : "") + (refl ? ", reflective coat × 0.7" : "") + "; walls " + F(dTw, ".1f") + " K", "ASHRAE / ISHRAE practice [APPROX]");
     var nP = Math.max(1, Math.round(num(inp.persons, 4)));
     var Qw = Uw * Awall * (To - Ti + dTw), Qr = Ur * Aroof * (To - Ti + dTr), Qg = 5.8 * nWin * ww * wh * (To - Ti) + nWin * ww * wh * 0.6 * (inp.x_canopy ? 60 : 180), Qd = 2.5 * dW * dH * (To - Ti);
-    var Qp = nP * 130, Ql = num(inp.lights, 2) * 20 + (inp.fan === "None" ? 0 : 60), Qinf = 0.33 * 1.0 * L * W * clearH * (To - Ti);
+    var Qp = nP * 130, Ql = inp.x_elec ? num(inp.lights, 2) * 20 + (inp.fan === "None" ? 0 : 60) : 0, Qinf = 0.33 * 1.0 * L * W * clearH * (To - Ti);
     var Qt = c.calc("Total heat gain (walls + roof + windows + door + people 130 W + lights / fan + air leakage 1 ACH)", "Q", "Qw + Qr + Qg + Qd + Qp + Ql + Qinf", "W", "ISHRAE practice", { Qw: Math.round(Qw), Qr: Math.round(Qr), Qg: Math.round(Qg), Qd: Math.round(Qd), Qp: Qp, Ql: Ql, Qinf: Math.round(Qinf) });
     var Ubare = 1 / (Rsi + Rso + 0.0001), Qbare = Ubare * (Awall * (To - Ti + 12) + Aroof * (To - Ti + 30)) + Qp + Ql;
     c.info("Same box in bare MS sheet (no insulation)", "≈ " + F(Qbare / 1000, ".1f") + " kW — the insulated shell keeps out about " + F(100 * (1 - Qt / Qbare), ".0f") + " % of that heat", "for comparison");
@@ -141,7 +140,7 @@
     var mu = 0.4, Ffr = mu * Wt * 9.81 / 1000 / 1.5; c.ok("Sliding: wind force " + F(Fw, ".2f") + " kN vs friction 0.4 × weight / 1.5 = " + F(Ffr, ".2f") + " kN", Fw <= Ffr, { detail: Fw <= Ffr ? "does not slide" : "can slide in a storm — bolt the skid to the pedestals or chain it to ground anchors (" + F((Fw - Ffr) / 2, ".1f") + " kN shear per side)", clause: "practice", warn_only: true });
 
     /* ----- quantities (per gumti × nos) ----- */
-    var q = [], N = nos, benchL = /two walls/.test(String(inp.seat)) ? L + W - 0.9 : /one wall/.test(String(inp.seat)) ? Math.max(L, W) - 0.2 : 0, nL = Math.max(0, Math.round(num(inp.lights, 2))), nS = Math.max(0, Math.round(num(inp.sockets, 2))), hasFan = inp.fan && inp.fan !== "None";
+    var q = [], N = nos, benchL = /two walls/.test(String(inp.seat)) ? L + W - 0.9 : /one wall/.test(String(inp.seat)) ? Math.max(L, W) - 0.2 : 0, elec = !!inp.x_elec, nL = elec ? Math.max(0, Math.round(num(inp.lights, 2))) : 0, nS = elec ? Math.max(0, Math.round(num(inp.sockets, 2))) : 0, hasFan = elec && inp.fan && inp.fan !== "None";
     var hipL = 4 * Math.sqrt(Math.pow(Math.hypot(L + 2 * ov, W + 2 * ov) / 2, 2) + rise * rise), eaveL = 2 * (L + W + 4 * ov);
     if (SORM) {
       /* SOR first: every part written as a CPWD DSR / DSR (E&M) item; Non-SOR only where the schedule has nothing (PUF panel, LED / fan supply) */
@@ -149,25 +148,24 @@
       q.push(Q("Structural steel work in built-up sections — base skid " + fr.skid[0] + " (2 runners + 3 cross members)", "kg", [row("Skid ≈ " + F(2 * L + 3 * W, ".1f") + " m × " + G(fr.skid[1]) + " kg/m", N, skidKg)], [CP, "10.2"], 90, ""));
       q.push(Q("Steel work welded — " + (apex ? "apex hub 16 mm with lifting eye " + G(tL) + " mm and gussets" : "4 lifting lugs " + G(tL) + " mm plate at the wall-top corners") + " (load-tested)", "kg", [row(apex ? "Hub + eye + gussets" : "4 lugs 150 × 120", N, apex ? 0.2 * 0.2 * 0.016 * 7850 + 0.15 * 0.12 * tL / 1000 * 7850 * 3 : 4 * 0.15 * 0.12 * tL / 1000 * 7850)], [CP, "10.25.2"], 120, ""));
       if (wall.outer) q.push(Q("Steel work welded in framed work — outer wall skin " + wall.outer + " welded to the frame", "kg", [row("Outer skin " + F(Awall, ".2f") + " m² × " + G(wall.L[0][3]) + " kg/m²", N, Awall * wall.L[0][3])], [CP, "10.25.2"], 85, ""));
-      wall.L.forEach(function (l) { if (!l[4]) return; var lk = /thermocol|polystyrene/i.test(l[0]) ? [CP, "12.36.1"] : /glass wool/i.test(l[0]) ? [CP, "12.35"] : /particle board/i.test(l[0]) ? [CP, "8.26.1"] : null; q.push(Q("Walls — " + l[0] + (lk ? "" : " (no SOR item)"), "sqm", [row("Four walls less door / windows", N, Awall)], lk, l[4], lk ? "" : NS)); });
+      wall.L.forEach(function (l) { if (!l[4]) return; var lk = /thermocol|polystyrene/i.test(l[0]) ? [CP, "12.36.1"] : /glass wool/i.test(l[0]) ? [CP, "12.35"] : null; q.push(Q("Walls — " + l[0] + (lk ? "" : /plywood/i.test(l[0]) ? " — good BWP / marine grade (no matching DSR item)" : " (no SOR item)"), "sqm", [row("Four walls less door / windows", N, Awall)], lk, l[4], lk ? "" : NS)); });
       roof.L.forEach(function (l) { if (!l[4] && !/profile sheet/i.test(l[0])) return; var lk = /profile sheet/i.test(l[0]) ? [CP, "12.50"] : /thermocol|polystyrene/i.test(l[0]) ? [CP, "12.36.1"] : /false ceiling/i.test(l[0]) ? [CP, "12.45.1"] : null, A2 = /false ceiling/i.test(l[0]) ? (L - 0.1) * (W - 0.1) : Aroof;
         q.push(Q("Roof — " + l[0] + (lk ? "" : " (no SOR item)"), "sqm", [row(/false ceiling/i.test(l[0]) ? "Ceiling " + F(L - 0.1, ".2f") + " × " + F(W - 0.1, ".2f") : pyr ? "Four slopes of the pyramid roof incl. 300 overhang" : "Roof " + F(L + 0.1, ".2f") + " × " + F(W + 0.1, ".2f"), N, A2)], lk, l[4] || 700, lk ? "" : NS)); });
-      if (roof.ms) q.push(Q("Steel work welded — roof MS sheet " + roof.ms + " mm, sloped 1:40", "kg", [row("Roof sheet", N, (L + 0.1) * (W + 0.1) * roof.ms * 7.85)], [CP, "10.25.2"], 85, ""));
-      if (pyr) { q.push(Q("Pre-coated GI ridge / hip capping 500–600 girth on the 4 hips", "m", [row("4 hips", N, hipL)], [CP, "12.51.1"], 220, "")); q.push(Q("Pre-coated GI flashing / apron at the eaves", "m", [row("Eaves", N, eaveL)], [CP, "12.51.2"], 200, "")); }
+      if (roof.ms) q.push(Q("Steel work welded — roof MS sheet " + roof.ms + " mm" + (pyr ? " on the four pyramid slopes, hips welded and sealed" : ", sloped 1:40"), "kg", [row(pyr ? "Slopes " + F(Aroof, ".2f") + " m² × " + F(roof.ms * 7.85, ".1f") + " kg/m²" : "Roof sheet", N, (pyr ? Aroof : (L + 0.1) * (W + 0.1)) * roof.ms * 7.85)], [CP, "10.25.2"], 85, ""));
       if (dbl) { q.push(Q("Second roof — pre-coated GI profile sheet 0.5 mm on stools, 150 mm ventilated gap", "sqm", [row("Second roof", N, L + 0.6, W + 0.6)], [CP, "12.50"], 650, "")); q.push(Q("Structural steel work — purlins / stools for the second roof", "kg", [row("3 purlins + 6 stools", N, (3 * (L + 0.6) + 6 * 0.15) * 2.93)], [CP, "10.2"], 95, "")); }
       if (flr.chq) q.push(Q("Steel work welded — floor MS chequered plate " + flr.chq + " mm with joists at 600", "kg", [row("Floor plate " + F(Afl, ".2f") + " m² × " + F(flr.chq * 7.85 + 2, ".1f") + " kg/m²", N, Afl * (flr.chq * 7.85 + 2))], [CP, "10.25.2"], 88, ""));
-      if (flr.ply) q.push(Q("Floor deck — pre-laminated particle board 18 mm screwed over the plate (wall-lining item used as deck)", "sqm", [row("Floor", N, L - 0.1, W - 0.1)], [CP, "8.26.2"], 1500, ""));
+      if (flr.ply) q.push(Q("Floor — " + flr.ply + " mm BWP / marine plywood screwed over the plate (no matching DSR item)", "sqm", [row("Floor", N, L - 0.1, W - 0.1)], null, 1650, NS));
       if (flr.mat) q.push(Q("Floor — 6 mm rubber mat (anti-slip) (no SOR item)", "sqm", [row("Floor", N, L - 0.1, W - 0.1)], null, 650, NS));
       q.push(Q("MS sheet door 1 mm with 40×40×6 angle frame and braces, fittings, primed — " + G(dW * 1000) + " × " + G(Math.round(dH * 1000)), "sqm", [row("Door", N, dW, dH)], [CP, "10.5.1"], 5800, ""));
       if (/closer/.test(String(inp.door))) q.push(Q("Hydraulic door closer (tubular, die-cast body)", "each", [row("Closer", N)], [CP, "9.83"], 1100, ""));
-      if (nWin) { q.push(Q("uPVC sliding glazed window " + G(ww * 1000) + " × 600 with wire mesh", "sqm", [row("Windows", N * nWin, ww, wh)], [CP, "9.147.A1.1"], 8300, "")); q.push(Q("M.S. grill (12 mm bars @ 100 in 25×5 flat frame) welded to the window frames", "kg", [row("Grills ≈ 11 kg/m²", N * nWin, ww, wh, 11)], [CP, "9.48.1"], 220, "")); }
+      if (nWin) { q.push(Q("Steel work welded — MS sheet window " + G(ww * 1000) + " × 600: 1.6 mm sheet sliding / side-hung shutters in 40×40×5 angle frame, fittings", "kg", [row("Windows ≈ " + F(ww * wh * 12.6 * 1.1 + 4 * (ww + wh) * 2.97, ".1f") + " kg each", N * nWin, ww * wh * 12.6 * 1.1 + 4 * (ww + wh) * 2.97)], [CP, "10.25.2"], 120, "")); q.push(Q("M.S. grill (12 mm bars @ 100 in 25×5 flat frame) welded to the window frames", "kg", [row("Grills ≈ 11 kg/m²", N * nWin, ww, wh, 11)], [CP, "9.48.1"], 220, "")); }
       q.push(Q("Painting outside — synthetic enamel over primer on the steel sheet", "sqm", [row("Walls + roof edge", N, per * Hwall + per * 0.15)], [CP, "13.53.1"], 180, ""));
       if (refl) q.push(Q("High-albedo (cool roof) paint, two coats, SRI ≥ 108", "sqm", [row("Roof", N, pyr ? Aroof : (L + (dbl ? 0.6 : 0.1)) * (W + (dbl ? 0.6 : 0.1)))], [CP, "12.63"], 360, ""));
-      if (benchL) { q.push(Q("Bench — pre-laminated particle board 18 mm (seat 400 + front 450)", "sqm", [row("Bench along the wall" + (benchL > Math.max(L, W) ? "s" : ""), N, benchL, 0.85)], [CP, "9.18.1"], 1250, "")); q.push(Q("Steel work welded — MS angle brackets for the bench @ 600", "kg", [row("Brackets ≈ 3 kg each", N * Math.ceil(benchL / 0.6 + 1), 3)], [CP, "10.25.2"], 120, "")); }
-      if (/table/.test(String(inp.seat))) q.push(Q("Small table — pre-laminated particle board 18 mm top on MS legs", "sqm", [row("Table top", N, 0.6, 0.45)], [CP, "9.18.1"], 1250, ""));
+      if (benchL) { q.push(Q("Bench — 18 mm BWP / marine plywood with laminate, seat 400 + front 450 (no matching DSR item)", "sqm", [row("Bench along the wall" + (benchL > Math.max(L, W) ? "s" : ""), N, benchL, 0.85)], null, 2200, NS)); q.push(Q("Steel work welded — MS angle brackets for the bench @ 600", "kg", [row("Brackets ≈ 3 kg each", N * Math.ceil(benchL / 0.6 + 1), 3)], [CP, "10.25.2"], 120, "")); }
+      if (/table/.test(String(inp.seat))) q.push(Q("Small table — 18 mm BWP plywood top on MS legs (no matching DSR item)", "each", [row("Table", N)], null, 3500, NS));
       if (/chairs/.test(String(inp.seat))) q.push(Q("Plastic / moulded chairs with arms (no SOR item)", "each", [row("Chairs", N * 2)], null, 900, NS));
-      q.push(Q("MCB distribution board SPN, 6-way, double door", "each", [row("DB", N)], [EM, "2.3.1"], 2200, ""));
-      q.push(Q("MCB 5–32 A, C curve, single pole", "each", [row("Lights, sockets, AC / spare", N * 3)], [EM, "2.10.1"], 260, ""));
+      if (elec) { q.push(Q("MCB distribution board SPN, 6-way, double door", "each", [row("DB", N)], [EM, "2.3.1"], 2200, ""));
+      q.push(Q("MCB 5–32 A, C curve, single pole", "each", [row("Lights, sockets, AC / spare", N * 3)], [EM, "2.10.1"], 260, "")); }
       if (nL + (hasFan ? 1 : 0)) q.push(Q("Wiring for light / fan point, 1.5 sq mm FRLS copper in steel conduit with switch", "point", [row("Light points + fan point", N * (nL + (hasFan ? 1 : 0)))], [EM, "1.1.1"], 1230, ""));
       if (nS) q.push(Q("6 pin 15 / 16 A socket outlet on the switch box", "each", [row("Sockets", N * nS)], [EM, "1.23.5"], 140, ""));
       if (nL) { q.push(Q("Installation of LED batten / ceiling fittings", "each", [row("Lights", N * nL)], [EM, "1.35"], 120, "")); q.push(Q("Supply of LED batten 20 W (4 ft) (no SOR item — supply only)", "each", [row("Lights", N * nL)], null, 650, NS)); }
@@ -196,10 +194,10 @@
       if (/table/.test(String(inp.seat))) q.push(Q("Small table 600 × 450, plywood top on MS legs / wall-folding", "each", [row("Table", N)], null, 3500, NS));
       if (/chairs/.test(String(inp.seat))) q.push(Q("Plastic / moulded chairs with arms", "each", [row("Chairs", N * 2)], null, 900, NS));
       nL = Math.max(0, Math.round(num(inp.lights, 2)));
-      q.push(Q("Electrical: MCB DB 4-way with RCCB 30 mA, 2.5 / 1.5 sq mm FR wiring in conduit, industrial 3-pin inlet socket outside", "job", [row("Wiring of the cabin", N)], null, 6500, NS));
+      if (elec) q.push(Q("Electrical: MCB DB 4-way with RCCB 30 mA, 2.5 / 1.5 sq mm FR wiring in conduit, industrial 3-pin inlet socket outside", "job", [row("Wiring of the cabin", N)], null, 6500, NS));
       if (nL) q.push(Q("LED batten 20 W (4 ft) with fitting", "each", [row("Lights", N * nL)], null, 650, NS));
       nS = Math.max(0, Math.round(num(inp.sockets, 2))); if (nS) q.push(Q("Switch socket 6 / 16 A (mobile charging, kettle)", "each", [row("Sockets", N * nS)], null, 450, NS));
-      if (inp.fan && inp.fan !== "None") q.push(Q(String(inp.fan) + " with regulator / switch", "each", [row("Fan", N)], null, /Ceiling/.test(inp.fan) ? 2600 : /Exhaust/.test(inp.fan) ? 1600 : 2400, NS));
+      if (hasFan) q.push(Q(String(inp.fan) + " with regulator / switch", "each", [row("Fan", N)], null, /Ceiling/.test(inp.fan) ? 2600 : /Exhaust/.test(inp.fan) ? 1600 : 2400, NS));
     }
     /* along with the gumti */
     var sum2 = [];
@@ -207,7 +205,7 @@
     if (inp.x_water) { q.push(Q("Drinking water (no SOR item): bottle-type water cooler / dispenser (hot & cold) with 20 L jar stand — DGMS asks for cool water 10–15 °C", "each", [row("Water dispenser", N)], null, 9500, NS)); sum2.push("water cooler"); }
     if (inp.x_first) { q.push(Q("First-aid box (as per Mines Rules) with ORS packets and a heat-stress chart", "each", [row("First-aid box", N)], null, 2500, NS)); sum2.push("first aid + ORS"); }
     if (inp.x_fire) { q.push(Q("Fire extinguisher ABC (MAP 90) 4 kg with bracket", "each", [row("Extinguisher", N)], null, 2200, NS)); sum2.push("fire extinguisher"); }
-    if (inp.x_canopy) { if (SORM) { q.push(Q("Sunshades 600 deep over the door and windows — pre-coated GI profile sheet", "sqm", [row("Over door + windows", N, dW + 0.4 + nWin * (ww + 0.3), 0.6)], [CP, "12.50"], 740, "")); q.push(Q("Steel work welded — sunshade brackets and frame", "kg", [row("≈ 4 kg per metre", N, dW + 0.4 + nWin * (ww + 0.3), 4)], [CP, "10.25.2"], 120, "")); } else q.push(Q("Sunshade / canopy 600 mm deep over the door and windows, MS frame with pre-coated sheet", "m", [row("Over door + windows", N, dW + 0.4 + nWin * (ww + 0.3))], null, 1400, NS)); sum2.push("sunshades"); }
+    if (inp.x_canopy) { if (SORM) q.push(Q("Steel work welded — MS sheet sunshades 600 deep (1.6 mm sheet on angle brackets) over the door and windows", "kg", [row("≈ 12 kg per metre", N, dW + 0.4 + nWin * (ww + 0.3), 12)], [CP, "10.25.2"], 120, "")); else q.push(Q("Sunshade / canopy 600 mm deep over the door and windows, MS frame with pre-coated sheet", "m", [row("Over door + windows", N, dW + 0.4 + nWin * (ww + 0.3))], null, 1400, NS)); sum2.push("sunshades"); }
     if (inp.x_solar) { q.push(Q("Off-grid solar: 2 × 540 Wp panels on the roof frame, 1.5 kVA solar inverter, 150 Ah tubular battery in a box", "set", [row("Solar set", N)], null, 62000, NS)); sum2.push("solar 1.08 kWp + battery"); }
     if (inp.x_earth) { q.push(Q(SORM ? "Earthing with G.I. earth pipe 4.5 m × 40 mm, masonry chamber with cover" : "Earthing: GI pipe earth electrode with chamber, GI strip to the frame at two points", "set", [row("Earthing", N)], SORM ? [EM, "5.1"] : null, 5500, SORM ? "" : NS)); sum2.push("earthing"); }
     if (inp.x_pedestal) { if (SORM) { q.push(Q("PCC 1:2:4 pedestals 450 × 450 × 450 under the skid", "cum", [row("4 pedestals", N * 4, 0.45, 0.45, 0.45)], [CP, "4.1.3"], 7900, "")); q.push(Q("Holding-down bolts 16 mm with nuts and washer plates", "kg", [row("8 bolts ≈ 0.9 kg", N * 8, 0.9)], [CP, "10.19"], 100, "")); } else q.push(Q("Pedestals: 4 PCC blocks 450 × 450 × 450 (M20) with a 12 mm plate and 2 anchor bolts for the skid", "cum", [row("4 pedestals", N * 4, 0.45, 0.45, 0.45)], null, 9000, NS)); sum2.push("4 pedestals"); }
@@ -217,7 +215,7 @@
 
     var seats = benchL ? Math.floor(benchL / 0.5) : /chairs/.test(String(inp.seat)) ? 2 : 0;
     var summary = { "Gumti": nos + " no. " + F(L, ".2f") + " × " + F(W, ".2f") + " m, total height " + F(H, ".2f") + " m = walls " + F(Heave, ".2f") + (pyr ? " + pyramid roof " + F(rise, ".2f") : " + roof") + " (clear inside at the walls " + F(clearH, ".2f") + " m)", "Frame": fr.n, "Walls": wall.n + " — U = " + F(Uw, ".2f") + " W/m²K", "Roof": roof.n + " — U = " + F(Ur, ".2f") + " W/m²K",
-      "Floor": flr.n, "Door / windows": "door " + G(dW * 1000) + " × " + G(Math.round(dH * 1000)) + " insulated, " + nWin + " windows " + G(ww * 1000) + " × 600 sliding", "Inside": nL + " LED battens, " + (inp.fan || "no fan") + ", " + nS + " sockets; " + (inp.seat || "no seats") + (seats ? " (" + seats + " seats)" : ""),
+      "Floor": flr.n, "Door / windows": "door " + G(dW * 1000) + " × " + G(Math.round(dH * 1000)) + " insulated, " + nWin + " windows " + G(ww * 1000) + " × 600 sliding", "Inside": (elec ? nL + " LED battens, " + (inp.fan || "no fan") + ", " + nS + " sockets; " : "no electrical work; ") + (inp.seat || "no seats") + (seats ? " (" + seats + " seats)" : ""),
       "Heat gain": F(Qt / 1000, ".2f") + " kW (bare MS box ≈ " + F(Qbare / 1000, ".1f") + " kW) → " + G(acT) + " ton AC if cooled", "Weight": "≈ " + F(Wt, ".0f") + " kg empty", "Lifting": apex ? "1 lifting eye " + G(tL) + " mm at the roof apex, sling SWL ≥ " + F(swl, ".1f") + " t" : "4 lugs " + G(tL) + " mm at the wall-top corners, sling legs SWL ≥ " + F(swl, ".1f") + " t at " + G(ang) + "°",
       "Wind": fos < 1.5 ? "tie down — " + F(tie, ".1f") + " kN at each windward end" : "stable empty (FOS " + F(fos, ".2f") + ")", "Along with": sum2.join(", ") || "—" };
     var sheet = drawing(inp, L, W, Heave, Hwall, skidH, Hroof, dbl, dW, dH, nWin, ww, wall, roof, flr, fr, tL, benchL, summary, pyr, rise, ov, apex);
@@ -284,6 +282,7 @@
     P("door", "Door", "Insulated MS door 750 × 2000 with lock", { kind: "select", options: ["Insulated MS door 750 × 2000 with lock", "Insulated MS door 800 × 2000 with lock + hydraulic closer"], group: "Inside" }),
     P("windows", "Windows (sliding, with grill) — back, left, right, front", 3, "nos", { min: 0, max: 4, step: 1, group: "Inside" }),
     P("win_w", "Window width (height 600)", 1.2, "m", { kind: "select", options: [0.6, 0.9, 1.2], group: "Inside" }),
+    P("x_elec", "Electrical work (wiring, DB, lights, fan, sockets)", false, { kind: "bool", group: "Inside", help: "usually not taken in a mine gumti" }),
     P("lights", "LED battens 20 W", 2, "nos", { min: 0, max: 6, step: 1, group: "Inside" }),
     P("fan", "Fan", FANS[0], { kind: "select", options: FANS, group: "Inside" }),
     P("sockets", "Sockets (mobile charging etc.)", 2, "nos", { min: 0, max: 6, step: 1, group: "Inside" }),

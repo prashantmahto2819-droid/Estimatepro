@@ -49,7 +49,7 @@
       if (/two walls/.test(sb)) P.push(H.bx(-L / 2 + t, -W / 2 + t + 300, -L / 2 + t + 400, W / 2 - t - 400, zf + 400, zf + 450, "wood_light")); }
     if (/table/.test(sb)) P.push(H.box(L / 2 - t - 350, 0, 450, 600, zf + 700, zf + 730, "wood_light"));
     if (/chairs/.test(sb)) [-300, 300].forEach(function (x) { P.push(H.box(x, W / 2 - t - 350, 450, 450, zf + 420, zf + 450, "upvc")); });
-    var nL = Math.max(0, Math.round(num(v.lights, 2))); for (var i = 0; i < nL; i++) P.push(H.box(nL > 1 ? -L / 4 + i * L / 2 / (nL - 1) : 0, 0, 1200, 60, zt - 60, zt - 30, "paint_white"));
+    var nL = v.x_elec ? Math.max(0, Math.round(num(v.lights, 2))) : 0; for (var i = 0; i < nL; i++) P.push(H.box(nL > 1 ? -L / 4 + i * L / 2 / (nL - 1) : 0, 0, 1200, 60, zt - 60, zt - 30, "paint_white"));
     if (v.x_ac) P.push(H.box(-L / 2 + t + 110, 0, 200, 800, zt - 450, zt - 150, "paint_white"), H.box(-L / 2 - 300, W / 4, 260, 700, zf + 300, zf + 850, "paint_grey"));
     if (v.x_solar) P.push(H.member([-L / 2, -W / 2 - ov, zt + 80], [L / 2, -W / 2 - ov, zt + 80], 40, 40, "steel_member", 0), H.quad([-L / 2, -W / 2 - ov - 20, zt + 120], [L / 2, -W / 2 - ov - 20, zt + 120], [L / 2, -W / 4, zt + (pyr ? rise * 0.6 : 150) + 120], [-L / 2, -W / 4, zt + (pyr ? rise * 0.6 : 150) + 120], "glass_tint"));
     if (v.x_water) P.push(H.box(L / 2 - t - 200, W / 2 - t - 650, 320, 320, zf, zf + 1050, "paint_white"), H.cyl(L / 2 - t - 200, W / 2 - t - 650, 130, zf + 1050, zf + 1450, "glass"));
