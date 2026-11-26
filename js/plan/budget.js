@@ -10,7 +10,7 @@
      o: { type, plot, rules, rate, factor, budget (₹), facing } → { rows: [{ v, floors, built, cost, label, beds }], area, note } */
   PL.budgetPlan = function (o) {
     var T = PL.TYPES[o.type], rate = o.rate * (o.factor || 1), area = o.budget / rate, rows = [];
-    var gen = function (v, floors, compact) { try { var its = T.program(v, floors).filter(function (x) { return !x.off && !(compact && /^(dining|store|pooja|utility)$/.test(x.key)); }); var r = PL.generate({ type: o.type, items: its, plot: o.plot, rules: o.rules, floors: floors, facing: o.facing || "E", vastu: false, rate: 0 });
+    var gen = function (v, floors, compact) { try { var its = T.program(v, floors).filter(function (x) { return !x.off && !(compact && /^(dining|store|pooja|utility)$/.test(x.key)); }); var r = PL.generate({ type: o.type, items: its, plot: o.plot, rules: o.rules, plotArea: o.plotArea, floors: floors, facing: o.facing || "E", vastu: false, rate: 0 });
       if (!r || r.err || !r.opts || !r.opts.length) return null; if ((r.warn || []).some(function (w) { return /^(FAR|Height|Ground coverage|The rooms)/.test(w); })) return null;
       var built = r.opts[0].stats ? r.opts[0].stats.built : r.info.built; return { built: built, cost: built * rate, nF: r.info.nF }; } catch (e) { return null; } };
     var base = {}; T.inputs.forEach(function (i) { base[i.k] = i.def; });

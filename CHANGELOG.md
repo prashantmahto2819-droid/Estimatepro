@@ -3,6 +3,9 @@
 This file is for the people maintaining the app. It is not published with the site (see `.assetsignore`).
 The text users see is `EP_NOTES` in `js/version.js`.
 
+## 2026.11.21-z96
+- Planner: js/plan/plot.js — plots from four sides (+ diagonal), inset by setbacks, biggest rectangle, virtual plot for the engine; plot line / compound wall / services / lawn on the real polygon; plotArea for coverage / FAR; Full plot button. MEP bldBox ignores site walls; planner services marked pauto (kept by MEPAUTO).
+
 ## 2026.11.21-z95
 - Planner modes: js/plan/p_colony.js (colony layout), js/plan/p_interior.js (room interior), js/plan/p_renov.js (renovation / extension, new floor over the old house).
 

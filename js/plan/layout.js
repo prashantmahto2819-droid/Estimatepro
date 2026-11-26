@@ -523,7 +523,7 @@
         var k = [r.warn.length, r.info.nF, -(r.opts[0].sc.score || 0)]; if (!best || best.err || !best.k || k[0] < best.k[0] || (k[0] === best.k[0] && (k[1] < best.k[1] || (k[1] === best.k[1] && k[2] < best.k[2] - 5)))) { r.k = k; best = r; } });
       return best;
     }
-    var T = PL.TYPES[cfg.type]; T.id = cfg.type; if (cfg._band) { T = Object.assign({}, T, { band: cfg._band }); } var R = cfg.rules, plotA = cfg.plot.w * cfg.plot.d, warn = [];
+    var T = PL.TYPES[cfg.type]; T.id = cfg.type; if (cfg._band) { T = Object.assign({}, T, { band: cfg._band }); } var R = cfg.rules, plotA = cfg.plotArea || cfg.plot.w * cfg.plot.d, warn = [];
     var bw = r2(cfg.plot.w - R.l - R.rt), bd = r2(cfg.plot.d - R.f - R.r), maxFoot = Math.min(bw * bd, R.cov / 100 * plotA);
     if (!(bw > 3 && bd > 3)) return { err: "With these setbacks there is no room left to build on the plot (" + bw + " × " + bd + " m)." };
     var gf = T.mode === "corr" ? 1.06 : 1.24, opts = [], nF, F, W, D, info = {};

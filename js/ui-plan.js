@@ -8,8 +8,8 @@
   var EP = window.EP, S = EP.S, U = EP.ui, esc = U.esc, PL = EP.plan;
   var KEY = "ep_planner_v1";
   var P = S.pl = { type: "house", inp: {}, plot: { w: 12, d: 18 }, facing: "E", set: "mbbl", rules: null, rulesEdited: false, floors: 2, frame: "rcc", vastu: true, furn: true, mep: true, views: true, rate: {}, sanc: {}, sbc: 150, des: {}, items: null, res: null, sel: {}, busy: false, open: {} };
-  try { var sv = JSON.parse(localStorage.getItem(KEY) || "{}"); ["type", "inp", "plot", "facing", "set", "rules", "rulesEdited", "floors", "frame", "vastu", "furn", "mep", "views", "rate", "sanc", "sbc", "des", "items", "itemsType", "phase", "budL", "mode"].forEach(function (k) { if (sv[k] != null) P[k] = sv[k]; }); } catch (e) {}
-  function save() { try { localStorage.setItem(KEY, JSON.stringify({ mode: P.mode, phase: P.phase, budL: P.budL, type: P.type, inp: P.inp, plot: P.plot, facing: P.facing, set: P.set, rules: P.rules, rulesEdited: P.rulesEdited, floors: P.floors, frame: P.frame, vastu: P.vastu, furn: P.furn, mep: P.mep, views: P.views, rate: P.rate, sanc: P.sanc, sbc: P.sbc, des: P.des, items: P.items, itemsType: P.itemsType })); } catch (e) {} }
+  try { var sv = JSON.parse(localStorage.getItem(KEY) || "{}"); ["type", "inp", "plot", "facing", "set", "rules", "rulesEdited", "floors", "frame", "vastu", "furn", "mep", "views", "rate", "sanc", "sbc", "des", "items", "itemsType", "phase", "budL", "mode", "shape", "sides"].forEach(function (k) { if (sv[k] != null) P[k] = sv[k]; }); } catch (e) {}
+  function save() { try { localStorage.setItem(KEY, JSON.stringify({ shape: P.shape, sides: P.sides, mode: P.mode, phase: P.phase, budL: P.budL, type: P.type, inp: P.inp, plot: P.plot, facing: P.facing, set: P.set, rules: P.rules, rulesEdited: P.rulesEdited, floors: P.floors, frame: P.frame, vastu: P.vastu, furn: P.furn, mep: P.mep, views: P.views, rate: P.rate, sanc: P.sanc, sbc: P.sbc, des: P.des, items: P.items, itemsType: P.itemsType })); } catch (e) {} }
   /* ready patterns: one tap sets the plot, the needs and the floors (house) */
   var PRESETS = { house: [
     { id: "1bhk", size: "S", n: "1BHK", hi: "25×40 ft", plot: [7.62, 12.19], v: { beds: 1, attached: 0, persons: 3, cars: 0, kitchenOpen: 0 }, fl: 1 },
@@ -31,15 +31,22 @@
   /* the plot's estimate is checked with the real layout engine: step the count down until the layout keeps FAR, height and
      coverage (a few tries, remembered per plot / rules / choices) */
   var fitCache = {};
-  function fitNow(t, v) { var R = rulesNow(), f = t.fit(v, P.plot, R); if (!f || !f.n) return f; var vk = Object.assign({}, v); delete vk[f.k]; var key = JSON.stringify([t.id, P.plot, R, vk, P.set]); if (fitCache[key]) return fitCache[key];
-    var ok = function (n) { try { var v2 = Object.assign({}, v); v2[f.k] = n; var its = t.program(v2, 2).filter(function (x) { return !x.off; }); var r = PL.generate({ type: t.id, items: its, plot: { w: +P.plot.w, d: +P.plot.d }, rules: R, floors: 0, facing: P.facing || "E", vastu: false, rate: 0 });
+  function fitNow(t, v) { var R = rulesNow(), f = t.fit(v, P.shape === "poly" && geo().vp ? geo().plot : P.plot, P.shape === "poly" && geo().vp ? geo().rules : R); if (!f || !f.n) return f; var vk = Object.assign({}, v); delete vk[f.k]; var key = JSON.stringify([t.id, P.plot, R, vk, P.set]); if (fitCache[key]) return fitCache[key];
+    var ok = function (n) { try { var v2 = Object.assign({}, v); v2[f.k] = n; var its = t.program(v2, 2).filter(function (x) { return !x.off; }); var g0 = geo(), r = PL.generate({ type: t.id, items: its, plot: g0.plot, rules: g0.rules, plotArea: g0.plotArea, floors: 0, facing: P.facing || "E", vastu: false, rate: 0 });
       return r && !r.err && !(r.warn || []).some(function (w) { return /^(FAR|Height|Ground coverage)/.test(w); }); } catch (e) { return true; } };
     var n = f.n, up = n; for (var k = 0; k < 6 && n > 1 && !ok(n); k++) n--; if (n === up) { for (var k2 = 0; k2 < 3 && ok(up + 1); k2++) up++; n = up; }
     var g = Object.assign({}, f); if (n !== f.n) { g.n = n; g.msg = f.msg.replace(/about \d+ flats/, "about " + n + " flats"); g.hi = f.hi.replace(/\d+/, n); } return (fitCache[key] = g); }
   function vals() { var t = T(), v = {}, cur = P.inp[t.id] || {}; t.inputs.forEach(function (i) { v[i.k] = cur[i.k] != null ? cur[i.k] : i.def; });
     /* a count nobody has typed yet starts at what the plot can take */
     if (t.fit) { var f = fitNow(t, v); if (f && cur[f.k] == null && f.n > 0 && f.n < v[f.k]) v[f.k] = f.n; } return v; }
-  function rulesNow() { if (!P.rules || !P.rulesEdited) P.rules = PL.rulesFor(P.set, T().rules, P.plot.w * P.plot.d); return P.rules; }
+  /* plot: a rectangle (width × depth) or four sides from the deed (P.shape "poly") */
+  function plotPts() { return P.shape === "poly" && PL.plotFromSides ? PL.plotFromSides(P.sides || {}) : null; }
+  function areaNow() { var pp = plotPts(); return pp ? PL.polyArea(pp) : P.plot.w * P.plot.d; }
+  function rulesNow() { if (!P.rules || !P.rulesEdited) P.rules = PL.rulesFor(P.set, T().rules, areaNow()); return P.rules; }
+  /* what the layout engine gets: for an odd-shaped plot a virtual rectangle whose setbacks put the building on the biggest
+     rectangle that fits inside the plot less its setbacks */
+  function geo() { var R = rulesNow(), pp = plotPts(); if (pp) { var v = PL.virtualPlot(pp, R); if (v) return { plot: v.plot, rules: v.rules, plotPoly: pp, plotArea: v.area, vp: v }; }
+    return { plot: { w: +P.plot.w, d: +P.plot.d }, rules: R }; }
   function regen() { var t = T(), it = t.program(vals(), P.floors > 0 ? P.floors : 2); P.items = it.map(function (x) { return Object.assign({}, x, { on: !x.off, size: "M" }); }); P.res = null; P.sel = {}; save(); }
   function items() { if (!P.items || P.itemsType !== P.type) { P.itemsType = P.type; regen(); } return P.items; }
   function sp(k) { return PL.SPACES[k] || {}; }
@@ -54,7 +61,7 @@
     return '<div class="row" role="tablist" aria-label="What to plan" style="gap:6px;flex-wrap:wrap">' + ms.map(function (m) { var on = (P.mode || "building") === m[0]; return '<button type="button" role="tab" aria-selected="' + on + '" class="btn ' + (on ? "pri" : "sec") + ' small" data-plmode="' + m[0] + '">' + m[3] + " " + esc(m[1]) + ' <span style="opacity:.75">' + esc(m[2]) + "</span></button>"; }).join("") + "</div>"; }
   U.views.planner = function () {
     if (P.mode && P.mode !== "building" && PL.MODES[P.mode]) return '<div class="pl" style="display:flex;flex-direction:column;gap:14px;max-width:1200px">' + modeBar() + "</div>" + PL.MODES[P.mode].render();
-    var t = T(), v = vals(), R = rulesNow(), L = items(), A = P.plot.w * P.plot.d;
+    var t = T(), v = vals(), R = rulesNow(), L = items(), A = areaNow();
     var h = '<div class="pl" style="display:flex;flex-direction:column;gap:14px;max-width:1200px">' + modeBar();
     h += '<div class="row" style="gap:10px;align-items:flex-end;flex-wrap:wrap"><div class="grow"><h1 style="margin:0">Building Planner <span class="muted" style="font-size:.55em;font-weight:500">भवन प्लानर — नक्शा, 2D, 3D, एस्टीमेट</span></h1>' +
       '<p class="muted" style="margin:4px 0 0">Choose the building, give the plot and what you need — get 3–4 scored layouts by NBC 2016 and the standards for that building, then build the chosen one in CAD Studio with walls, doors, windows, stairs, frame, furniture, MEP, 3D and quantities for the estimate.</p></div></div>';
@@ -64,11 +71,15 @@
     /* 2. plot and rules */
     var fld = function (k, lab, val, step, w) { return '<label style="display:flex;flex-direction:column;gap:2px;flex:0 0 auto"><span class="muted small">' + lab + '</span><input class="in small" style="width:' + (w || 90) + 'px" type="number" step="' + (step || 0.1) + '" data-plf="' + k + '" value="' + esc(String(val)) + '"></label>'; };
     h += '<section class="panel" style="padding:12px 14px"><h3 style="margin:0 0 8px">2. Plot and rules <span class="muted" style="font-weight:500">प्लॉट और नियम</span></h3><div class="row" style="gap:10px;flex-wrap:wrap;align-items:flex-end">' +
-      fld("plot.w", "Plot width along the road (m) / सामने की चौड़ाई", P.plot.w, 0.1, 150) + fld("plot.d", "Plot depth (m) / गहराई", P.plot.d, 0.1, 120) +
+      '<label style="display:flex;flex-direction:column;gap:2px"><span class="muted small">Plot shape / प्लॉट का आकार</span><select class="in small" data-plf="shape"><option value="rect"' + (P.shape !== "poly" ? " selected" : "") + '>Rectangle / आयताकार</option><option value="poly"' + (P.shape === "poly" ? " selected" : "") + ">Odd shape — four sides / टेढ़ा-मेढ़ा</option></select></label>" +
+      (P.shape === "poly" ? fld("sides.front", "Front side on the road m / सामने", (P.sides || {}).front || "", 0.01, 110) + fld("sides.right", "Right side m / दायाँ", (P.sides || {}).right || "", 0.01, 100) + fld("sides.rear", "Rear side m / पीछे", (P.sides || {}).rear || "", 0.01, 100) + fld("sides.left", "Left side m / बायाँ", (P.sides || {}).left || "", 0.01, 100) + fld("sides.diag", "Diagonal front-left → rear-right m (blank = left side square to the front)", (P.sides || {}).diag || "", 0.01, 150)
+        : fld("plot.w", "Plot width along the road (m) / सामने की चौड़ाई", P.plot.w, 0.1, 150) + fld("plot.d", "Plot depth (m) / गहराई", P.plot.d, 0.1, 120)) +
       '<label style="display:flex;flex-direction:column;gap:2px"><span class="muted small">Road is on the plot\'s … side / सड़क किस दिशा में</span><select class="in small" data-plf="facing">' + [["N", "North / उत्तर"], ["E", "East / पूर्व"], ["S", "South / दक्षिण"], ["W", "West / पश्चिम"]].map(function (o) { return '<option value="' + o[0] + '"' + (P.facing === o[0] ? " selected" : "") + ">" + o[1] + "</option>"; }).join("") + "</select></label>" +
       '<span class="muted small" style="align-self:center">Plot area <b>' + n1(A, 2) + " m²</b> (" + n1(A * 10.7639) + " sq ft)</span></div>" +
+      (P.shape === "poly" ? (function () { var pp = plotPts(), g = geo(); return pp ? '<div class="row" style="gap:12px;align-items:flex-start;flex-wrap:wrap;margin-top:8px"><div style="flex:0 0 auto">' + PL.plotSVG(pp, g.vp) + '</div><p class="small" style="flex:1;min-width:200px;margin:0">' + (g.vp ? "The building goes in the biggest rectangle that fits inside the plot less its setbacks — <b>" + (g.vp.rect[2] - g.vp.rect[0]).toFixed(2) + " × " + (g.vp.rect[3] - g.vp.rect[1]).toFixed(2) + " m</b> (blue). The cut-off corners stay open for parking, garden, tank and septic." : "The setbacks leave no room for a building — check the sides.") + ' <span class="muted">Sides as in the sale deed / patwari map; give the diagonal if no corner is square.</span></p></div>' : '<p class="small" style="color:var(--bad,#b42318)">These four sides do not close into a plot — check the lengths and the diagonal.</p>'; })() : "") +
       '<div class="row" style="gap:10px;flex-wrap:wrap;align-items:flex-end;margin-top:8px"><label style="display:flex;flex-direction:column;gap:2px"><span class="muted small">Rules / नियम</span><select class="in small" data-plf="set">' + Object.keys(PL.RULESETS).map(function (k) { return '<option value="' + k + '"' + (P.set === k ? " selected" : "") + ">" + esc(PL.RULESETS[k].n) + "</option>"; }).join("") + "</select></label>" +
       fld("r.f", "Front setback m", R.f) + fld("r.r", "Rear m", R.r) + fld("r.l", "Left m", R.l) + fld("r.rt", "Right m", R.rt) + fld("r.cov", "Coverage %", R.cov, 1) + fld("r.far", "FAR", R.far, 0.05) + fld("r.h", "Height m", R.h, 0.5) +
+      '<button type="button" class="btn sec small" data-plact="fullplot" title="Row house, shop or market plot: no side, rear or front setback, 100 % coverage — only where your town allows it">Full plot / पूरे प्लॉट पर</button>' +
       (P.rulesEdited ? '<button type="button" class="btn sec small" data-plact="rules-reset">Reset from rules</button>' : "") + "</div>" +
       '<p class="muted small" style="margin:6px 0 0">Setbacks, coverage, FAR and height are typical values for this plot size — check them with your town\'s building rules (नगर निगम / T&CP) and change them here if they differ.</p>' +
       '<div class="row" style="gap:14px;flex-wrap:wrap;align-items:flex-end;margin-top:8px"><label style="display:flex;flex-direction:column;gap:2px"><span class="muted small">Floors / मंज़िल</span><select class="in small" data-plf="floors">' + [[0, "Auto (as many as needed)"]].concat(t.single ? [[1, "Ground only"]] : [1, 2, 3, 4, 5, 6, 7, 8].map(function (n) { return [n, n === 1 ? "Ground only (G)" : "G+" + (n - 1)]; })).map(function (o) { return '<option value="' + o[0] + '"' + (+P.floors === o[0] ? " selected" : "") + ">" + o[1] + "</option>"; }).join("") + "</select></label>" +
@@ -155,7 +166,7 @@
     });
     return h + "</div>";
   }
-  function cfgNow() { var t = T(); return { type: t.id, items: items().map(function (x) { var y = Object.assign({}, x); if (y.fl === "") delete y.fl; return y; }), plot: { w: +P.plot.w, d: +P.plot.d }, rules: rulesNow(), floors: +P.floors || 0, facing: P.facing, vastu: !!P.vastu, rate: +(P.rate[t.id] || t.rate), frame: P.frame, furn: P.furn, sbc: P.sbc || 150, cars: t.id === "house" ? (+vals().cars || 0) : null, phase: +P.phase || 0, persons: t.id === "house" ? (+vals().persons || 5) : Math.max(5, (P.res && P.res.info && P.res.info.occ) || 10), sanction: P.sanc || {}, des: Object.assign({}, des()), name: t.n + " " + P.plot.w + "×" + P.plot.d + " m" }; }
+  function cfgNow() { var t = T(); return { type: t.id, items: items().map(function (x) { var y = Object.assign({}, x); if (y.fl === "") delete y.fl; return y; }), plot: geo().plot, rules: geo().rules, plotPoly: geo().plotPoly || null, plotArea: geo().plotArea || null, setbackPoly: geo().vp ? geo().vp.inner : null, floors: +P.floors || 0, facing: P.facing, vastu: !!P.vastu, rate: +(P.rate[t.id] || t.rate), frame: P.frame, furn: P.furn, sbc: P.sbc || 150, cars: t.id === "house" ? (+vals().cars || 0) : null, phase: +P.phase || 0, persons: t.id === "house" ? (+vals().persons || 5) : Math.max(5, (P.res && P.res.info && P.res.info.occ) || 10), sanction: P.sanc || {}, des: Object.assign({}, des()), name: t.n + " " + P.plot.w + "×" + P.plot.d + " m" }; }
   function make() { P.busy = true; U.render(); setTimeout(function () { try { P.res = PL.generate(cfgNow()); P.sel = {}; } catch (er) { console.error(er); P.res = { err: "Could not make the layouts: " + (er && er.message) }; } P.busy = false; U.render(); }, 30); }
   async function build(i) {
     var o = P.res && P.res.opts[i]; if (!o) return; var cfg = cfgNow(), t = T(), d;
@@ -195,6 +206,8 @@
     var t = T();
     if (k === "plot.w" || k === "plot.d") { var n = +val; if (!(n > 3)) { U.toast("Enter the plot size in metres"); return; } P.plot[k.slice(5)] = n; if (!P.rulesEdited) P.rules = null; }
     else if (k.indexOf("r.") === 0) { var R = Object.assign({}, rulesNow()); R[k.slice(2)] = Math.max(0, +val || 0); P.rules = R; P.rulesEdited = true; }
+    else if (k === "shape") { P.shape = val; if (val === "poly" && !(P.sides && P.sides.front)) P.sides = { front: +P.plot.w, right: +P.plot.d, rear: +P.plot.w, left: +P.plot.d, diag: "" }; if (!P.rulesEdited) P.rules = null; }
+    else if (k.indexOf("sides.") === 0) { P.sides = P.sides || {}; P.sides[k.slice(6)] = val === "" ? "" : Math.max(0, +val || 0); if (!P.rulesEdited) P.rules = null; }
     else if (k === "set") { P.set = val; P.rulesEdited = false; P.rules = null; }
     else if (k === "phase") { P.phase = +val; }
     else if (k === "floors") { P.floors = +val; if (t.mode === "corr" || /school|college|hospital|office|hostel/.test(t.id)) regen(); }
@@ -294,12 +307,13 @@
     if (ds.plmode) { P.mode = ds.plmode; save(); U.render(); window.scrollTo(0, 0); return; }
     if (ds.pltype) { if (P.type !== ds.pltype) { P.type = ds.pltype; P.rulesEdited = false; P.rules = null; var t = T(); if (t.plot) P.plot = { w: t.plot[0], d: t.plot[1] }; P.floors = t.single ? 1 : ds.pltype === "house" ? 2 : 0; P.itemsType = null; regen(); } U.render(); return; }
     if (ds.plbudgo != null) { var inp = document.querySelector(".pl [data-plbudin]"), L0 = +(inp && inp.value) || 0; if (!(L0 > 0)) { U.toast("Type the budget in lakh first"); return; } P.budL = L0; var t3 = T(); U.toast("Trying the usual sizes…");
-      setTimeout(function () { var dz = P.des[t3.id] || PL.desDefault(t3.id); P.bud = Object.assign({ type: t3.id }, PL.budgetPlan({ type: t3.id, plot: { w: +P.plot.w, d: +P.plot.d }, rules: rulesNow(), rate: P.rate[t3.id] || t3.rate, factor: PL.styleFactor(dz), budget: L0 * 1e5, facing: P.facing })); save(); U.render(); }, 30); return; }
+      setTimeout(function () { var dz = P.des[t3.id] || PL.desDefault(t3.id); P.bud = Object.assign({ type: t3.id }, PL.budgetPlan({ type: t3.id, plot: geo().plot, rules: geo().rules, plotArea: geo().plotArea, rate: P.rate[t3.id] || t3.rate, factor: PL.styleFactor(dz), budget: L0 * 1e5, facing: P.facing })); save(); U.render(); }, 30); return; }
     if (ds.plbud != null) { var rb = P.bud && P.bud.rows[+ds.plbud]; if (!rb) return; var t4 = T(); P.inp[t4.id] = Object.assign({}, rb.v); P.floors = rb.floors; regen(); if (rb.compact) P.items.forEach(function (x) { if (/^(dining|store|pooja|utility)$/.test(x.key)) x.on = false; }); save(); U.render(); U.toast("Set: " + rb.label + " — now press Make layouts"); return; }
     if (ds.plfit) { var t2 = T(), cur2 = P.inp[t2.id] = P.inp[t2.id] || {}; cur2[ds.plfit] = +ds.n; save(); regen(); U.render(); return; }
     if (ds.plpre) { var pr = (PRESETS[P.type] || []).filter(function (x) { return x.id === ds.plpre; })[0]; if (!pr) return; P.plot = { w: pr.plot[0], d: pr.plot[1] }; P.inp[P.type] = Object.assign({}, pr.v); P.floors = pr.fl; if (pr.rules) { P.rules = Object.assign({}, pr.rules); P.rulesEdited = true; } else { P.rulesEdited = false; P.rules = null; } regen(); if (pr.size) P.items.forEach(function (x) { if (!x.occ) { x.size = pr.size; delete x.area; } }); if (pr.on) P.items.forEach(function (x) { if (pr.on.indexOf(x.key) >= 0) x.on = true; }); save(); make(); return; }
     if (ds.plsty) { var st = PL.STYLES.filter(function (x) { return x.id === ds.plsty; })[0]; if (st) { P.des[T().id] = Object.assign({ style: st.id }, st.v); save(); U.render(); U.toast(st.n + " — every item below is set; change any of them"); } return; }
     if (ds.plact === "regen") { regen(); U.render(); return; }
+    if (ds.plact === "fullplot") { var Rf = Object.assign({}, rulesNow(), { f: 0, r: 0, l: 0, rt: 0, cov: 100 }); P.rules = Rf; P.rulesEdited = true; P.res = null; save(); U.render(); U.toast("Setbacks 0 and coverage 100 % — allowed only for row houses / shops where your town's rules say so; check light and ventilation (a court or a shaft)"); return; }
     if (ds.plact === "rules-reset") { P.rulesEdited = false; P.rules = null; P.res = null; save(); U.render(); return; }
     if (ds.plact === "make") { make(); return; }
     if (ds.plfl) { var kv = ds.plfl.split(":"); P.sel[kv[0]] = +kv[1]; U.render(); return; }

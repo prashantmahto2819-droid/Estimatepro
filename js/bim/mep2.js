@@ -68,7 +68,7 @@
   }
   function bbox(pts) { var b = [Infinity, Infinity, -Infinity, -Infinity]; pts.forEach(function (p) { G.ext(b, p); }); return b; }
   function bldBox(d, lv) {
-    var pts = []; d.ents.forEach(function (e) { if (!same(e.lvl, lv)) return; if (e.t === "wall") { pts.push(e.a, e.b); } else if (e.t === "room" && e.pts) pts = pts.concat(e.pts); });
+    var pts = []; d.ents.forEach(function (e) { if (!same(e.lvl, lv)) return; if (e.t === "wall") { if (e.site || e.layer === "A-SITE" || e.layer === "R-DRAIN") return; pts.push(e.a, e.b); } else if (e.t === "room" && e.pts) pts = pts.concat(e.pts); });
     if (!pts.length) d.ents.forEach(function (e) { if (e.t === "wall") pts.push(e.a, e.b); });
     return pts.length ? bbox(pts) : null;
   }
@@ -313,7 +313,7 @@
         R("5.22A.6", "N", Math.round(Lo * Bo * 100 / 1e9 * 80), "Septic tank — steel in the cover slab (≈ 80 kg/cum)", "≈ 80 kg/cum"),
         R("2.25", "V", Math.max(0, exc - outer), "Septic tank — filling the excavated earth round it", "excavation − tank")];
     }
-    if (k === "soak_pit" && e.mauto) { var big = (B.plumbDesign(d).P > 10); return [R(big ? "19.32.1" : "19.33", "N", 1, big ? "Soak pit 2.5 m dia × 3.0 m deep with honeycomb shaft" : "Soak pit 1.2 × 1.2 × 1.2 m filled with brick bats", "1 no.")]; }
+    if (k === "soak_pit" && (e.mauto || e.pauto)) { var big = (B.plumbDesign(d).P > 10); return [R(big ? "19.32.1" : "19.33", "N", 1, big ? "Soak pit 2.5 m dia × 3.0 m deep with honeycomb shaft" : "Soak pit 1.2 × 1.2 × 1.2 m filled with brick bats", "1 no.")]; }
     if (k === "rwp_110" && e.rwp) { var g = B.level(d, groundId(d)), Lr = roofTop(d) - (g ? g.elev : 0) + 450;
       return [{ k: "pipe_rain_110", dim: "L", v: Lr, label: "uPVC rain-water pipe 110 mm from the roof to the ground (vertical)", f: f2(Lr) + " m", z: z },
         R("12.42.6.2", "N", 1, "uPVC shoe 110 mm at the foot of the rain-water pipe", "1 no."), R("12.46", "N", 1, "Grating at the roof inlet of the rain-water pipe", "1 no."),
