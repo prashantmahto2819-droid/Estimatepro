@@ -1,0 +1,87 @@
+/* Planner — colony / layout: a piece of land cut into plots with internal roads, a spine road from the entrance, a park and the
+   services (drains along the roads, street lights). Rectangular land; plots face the roads, two rows back to back between roads.
+   Typical layout rules (check the town's T&CP rules): roads 9 m spine / 7.5–6 m internal, open space at least 10 %, amenity 5 %. */
+(function () {
+  "use strict";
+  var EP = window.EP, U = EP.ui, esc = U.esc, PL = EP.plan, KEY = "ep_plan_colony_v1";
+  var S = { name: "New colony", W: 120, D: 150, pw: 9.14, pd: 15.24, ws: 9, wr: 7.5, park: 10, amen: 5, front: 1, rate: { road: 1450, drain: 2400, light: 28000, pillar: 900, park: 350, culv: 0 } };
+  try { Object.assign(S, JSON.parse(localStorage.getItem(KEY) || "{}")); } catch (e) {}
+  var save = function () { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) {} };
+  var SIZES = [["6.10x9.14", "20 × 30 ft"], ["9.14x12.19", "30 × 40 ft"], ["9.14x15.24", "30 × 50 ft"], ["12.19x15.24", "40 × 50 ft"], ["12.19x18.29", "40 × 60 ft"], ["15.24x24.38", "50 × 80 ft"]];
+  function layout() {
+    var W = +S.W, D = +S.D, pw = +S.pw, pd = +S.pd, ws = +S.ws, wr = +S.wr, roads = [], blocks = [], y = 0;
+    /* rows from the front: plots facing the outside road first (if chosen), then road + two rows, road + two rows … */
+    if (S.front) { blocks.push({ y: 0, d: pd, rows: [{ y: 0, face: "front" }] }); y = pd; }
+    while (true) { if (D - y >= wr + 2 * pd) { roads.push({ x: 0, y: y, w: W, d: wr, n: "Road " + (roads.length + 1) }); y += wr; blocks.push({ y: y, d: 2 * pd, rows: [{ y: y, face: "front" }, { y: y + pd, face: "back" }] }); y += 2 * pd; }
+      else if (D - y >= wr + pd) { roads.push({ x: 0, y: y, w: W, d: wr, n: "Road " + (roads.length + 1) }); y += wr; blocks.push({ y: y, d: pd, rows: [{ y: y, face: "front" }] }); y += pd; }
+      else break; }
+    /* the back row of the last double block needs a road behind it: add one, or keep a single row */
+    var lb = blocks[blocks.length - 1]; if (lb && lb.rows.length === 2) { if (D - y >= wr) { roads.push({ x: 0, y: y, w: W, d: wr, n: "Road " + (roads.length + 1) }); y += wr; } else { lb.rows.pop(); lb.d = pd; y -= pd; } }
+    var spineEnd = roads.length ? roads[roads.length - 1].y + wr : 0, sx = (W - ws) / 2;
+    if (spineEnd > 0) roads.unshift({ x: sx, y: 0, w: ws, d: spineEnd, n: "Spine road", spine: 1 });
+    var plots = [], n = 0, green = [];
+    blocks.forEach(function (b, bi) { b.rows.forEach(function (r) {
+      /* the back row of a double block faces the next road (behind it) */
+      var faceRoad = r.face === "back" ? "road behind" : (bi === 0 && S.front ? "outside road" : "road in front");
+      [[0, sx], [sx + ws, W]].forEach(function (seg, si) { var len = seg[1] - seg[0], k = Math.floor(len / pw + 1e-6); if (k < 1) { green.push({ x: seg[0], y: r.y, w: len, d: pd }); return; }
+        var extra = len - k * pw; for (var i = 0; i < k; i++) { var x0 = seg[0] + i * pw + (si === 0 ? 0 : 0), w = pw + (i === (si === 0 ? 0 : k - 1) ? extra : 0); if (si === 0 && i > 0) x0 += extra; plots.push({ no: 0, x: x0, y: r.y, w: w, d: pd, face: faceRoad, blk: String.fromCharCode(65 + bi) }); } }); }); });
+    if (D - y > 0.5) green.push({ x: 0, y: y, w: W, d: D - y, strip: 1 });
+    /* park and amenity: whole plots near the middle of the back blocks until the share is reached */
+    var A = W * D, need = A * (+S.park || 0) / 100, needAm = A * (+S.amen || 0) / 100, have = green.reduce(function (a, g) { return a + g.w * g.d; }, 0);
+    var cand = plots.slice().sort(function (a, b) { return (b.y - a.y) || (Math.abs(a.x + a.w / 2 - W / 2) - Math.abs(b.x + b.w / 2 - W / 2)); });
+    cand.forEach(function (p) { if (have < need) { p.use = "park"; have += p.w * p.d; } });
+    var am = 0; cand.forEach(function (p) { if (!p.use && am < needAm) { p.use = "amenity"; am += p.w * p.d; } });
+    plots.filter(function (p) { return !p.use; }).sort(function (a, b) { return a.blk < b.blk ? -1 : a.blk > b.blk ? 1 : a.y - b.y || a.x - b.x; }).forEach(function (p) { p.no = ++n; });
+    var sale = plots.filter(function (p) { return !p.use; }), rA = roads.reduce(function (a, r) { return a + r.w * r.d; }, 0) - (roads.length > 1 ? (roads.length - 1) * ws * wr : 0);
+    var parkA = have, amA = am, saleA = sale.reduce(function (a, p) { return a + p.w * p.d; }, 0), roadLen = roads.reduce(function (a, r) { return a + (r.spine ? r.d : r.w); }, 0);
+    return { W: W, D: D, A: A, roads: roads, plots: plots, green: green, sale: sale, saleA: saleA, roadA: rA, parkA: parkA, amA: amA, roadLen: roadLen, drains: 2 * roadLen, lights: Math.ceil(roadLen / 30) };
+  }
+  function svg(L, big) {
+    var sc = Math.min((big ? 900 : 620) / L.W, (big ? 1100 : 760) / L.D), o = [], X = function (v) { return (v * sc).toFixed(1); }, Y = function (v) { return ((L.D - v) * sc).toFixed(1); };
+    var rect = function (x, y, w, d, f, s) { return "<rect x='" + X(x) + "' y='" + Y(y + d) + "' width='" + X(w) + "' height='" + (d * sc).toFixed(1) + "' fill='" + f + "' stroke='" + (s || "#555") + "' stroke-width='.6'/>"; };
+    o.push(rect(0, 0, L.W, L.D, "#f1f8e9", "#222"));
+    L.green.forEach(function (g) { o.push(rect(g.x, g.y, g.w, g.d, "#c5e1a5")); });
+    L.roads.forEach(function (r) { o.push(rect(r.x, r.y, r.w, r.d, "#cfd8dc", "#90a4ae")); });
+    L.plots.forEach(function (p) { o.push(rect(p.x, p.y, p.w, p.d, p.use === "park" ? "#a5d6a7" : p.use === "amenity" ? "#ffe0b2" : "#fff")); if (p.w * sc > 14) o.push("<text x='" + X(p.x + p.w / 2) + "' y='" + Y(p.y + p.d / 2 - 0.8) + "' font-size='" + Math.min(10, p.w * sc / 3).toFixed(1) + "' text-anchor='middle'>" + (p.use === "park" ? "P" : p.use === "amenity" ? "A" : p.no) + "</text>"); });
+    o.push("<text x='" + X(L.W / 2) + "' y='" + (L.D * sc + 14).toFixed(1) + "' font-size='11' text-anchor='middle'>▲ entrance / outside road</text>");
+    return "<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 " + (L.W * sc).toFixed(0) + " " + (L.D * sc + 20).toFixed(0) + "' style='width:100%;max-width:" + (big ? 900 : 620) + "px;height:auto'>" + o.join("") + "</svg>";
+  }
+  var fld = function (k, lab, v, step, w) { return '<label style="display:flex;flex-direction:column;gap:2px"><span class="muted small">' + lab + '</span><input class="in small" style="width:' + (w || 100) + 'px" type="' + (step ? "number" : "text") + '" step="' + (step || "") + '" data-pcf="' + k + '" value="' + esc(String(v)) + '"></label>'; };
+  PL.MODES.colony = { n: "Colony layout", hi: "कॉलोनी / लेआउट", icon: "🏘", render: function () {
+    var L = layout(), R = S.rate, pct = function (a) { return (a / L.A * 100).toFixed(1) + " %"; }, inr = function (v) { return "₹ " + Math.round(v).toLocaleString("en-IN"); };
+    var cost = L.roadA * R.road + L.drains * R.drain + L.lights * R.light + L.sale.length * 4 * R.pillar + L.parkA * R.park;
+    var h = '<div class="plm" data-plmode-root="colony" style="display:flex;flex-direction:column;gap:14px;max-width:1200px">';
+    h += '<div><h1 style="margin:0">Colony / layout planner <span class="muted" style="font-size:.55em;font-weight:500">ज़मीन को प्लॉट, सड़क, पार्क में बाँटें</span></h1><p class="muted" style="margin:4px 0 0">Give the land and the plot size — get the plots, roads, park and services with the area statement, the plot list for sale and the development cost; build it in CAD for the drawing.</p></div>';
+    h += '<section class="panel" style="padding:12px 14px"><h3 style="margin:0 0 8px">1. Land and plots</h3><div class="row" style="gap:10px;flex-wrap:wrap;align-items:flex-end">' + fld("name", "Name", S.name, 0, 170) + fld("W", "Land width (along the entrance road) m", S.W, 1, 120) + fld("D", "Land depth m", S.D, 1) +
+      '<label style="display:flex;flex-direction:column;gap:2px"><span class="muted small">Plot size</span><select class="in small" data-pcf="size">' + SIZES.map(function (z) { var on = z[0] === (+S.pw).toFixed(2) + "x" + (+S.pd).toFixed(2); return '<option value="' + z[0] + '"' + (on ? " selected" : "") + ">" + z[1] + " (" + z[0].replace("x", " × ") + " m)</option>"; }).join("") + '<option value="">Other — type below</option></select></label>' + fld("pw", "Plot front m", S.pw, 0.01, 80) + fld("pd", "Plot depth m", S.pd, 0.01, 80) + "</div>" +
+      '<div class="row" style="gap:10px;flex-wrap:wrap;align-items:flex-end;margin-top:8px">' + fld("ws", "Spine road width m", S.ws, 0.5, 90) + fld("wr", "Internal road width m", S.wr, 0.5, 90) + fld("park", "Open space / park %", S.park, 1, 80) + fld("amen", "Amenity (school, shops, temple) %", S.amen, 1, 110) +
+      '<label class="row" style="gap:6px;align-items:center"><input type="checkbox" data-pcf="front"' + (S.front ? " checked" : "") + "> First row of plots faces the outside road</label></div></section>";
+    h += '<section class="panel" style="padding:12px 14px"><h3 style="margin:0 0 8px">2. Layout and area statement</h3><div class="row" style="gap:14px;align-items:flex-start;flex-wrap:wrap"><div style="flex:1.4;min-width:260px">' + svg(L) + '<div class="small muted">White = plots for sale (numbered) · green = park · orange = amenity · grey = roads</div></div><div style="flex:1;min-width:240px"><table class="tbl" style="width:100%;font-size:13px;border-collapse:collapse"><tr><th style="text-align:left">Use</th><th>Area m²</th><th>%</th></tr>' +
+      [["Plots for sale (" + L.sale.length + ")", L.saleA], ["Roads", L.roadA], ["Park / open space", L.parkA], ["Amenity", L.amA], ["Left-over / green strips", Math.max(0, L.A - L.saleA - L.roadA - L.parkA - L.amA)]].map(function (r) { return "<tr><td>" + esc(r[0]) + '</td><td style="text-align:right">' + Math.round(r[1]).toLocaleString("en-IN") + '</td><td style="text-align:right">' + pct(r[1]) + "</td></tr>"; }).join("") +
+      '<tr><td><b>Total land</b></td><td style="text-align:right"><b>' + Math.round(L.A).toLocaleString("en-IN") + '</b></td><td style="text-align:right">' + (L.A / 4046.86).toFixed(2) + " acre</td></tr></table>" +
+      '<h3 style="margin:12px 0 6px">Development cost (rough)</h3><table class="tbl" style="width:100%;font-size:13px;border-collapse:collapse">' +
+      [["CC roads " + Math.round(L.roadA) + " m² @ ₹" + R.road, L.roadA * R.road], ["Drains both sides " + Math.round(L.drains) + " m @ ₹" + R.drain, L.drains * R.drain], ["Street lights " + L.lights + " @ ₹" + R.light.toLocaleString("en-IN"), L.lights * R.light], ["Plot corner pillars " + L.sale.length * 4 + " @ ₹" + R.pillar, L.sale.length * 4 * R.pillar], ["Park development " + Math.round(L.parkA) + " m² @ ₹" + R.park, L.parkA * R.park]].map(function (r) { return "<tr><td>" + esc(r[0]) + '</td><td style="text-align:right">' + Math.round(r[1]).toLocaleString("en-IN") + "</td></tr>"; }).join("") +
+      '<tr><td><b>Total</b></td><td style="text-align:right"><b>' + inr(cost) + "</b></td></tr><tr><td>Per plot</td><td style=\"text-align:right\">" + inr(L.sale.length ? cost / L.sale.length : 0) + "</td></tr></table>" +
+      '<p class="small muted">Rates are indicative; water supply, sewer and electric lines are extra. Check road widths, open space and amenity shares with the town\'s layout rules (T&CP).</p></div></div>' +
+      '<div class="row" style="gap:8px;margin-top:10px;flex-wrap:wrap"><button type="button" class="btn pri" data-pcbuild>Build in CAD — layout drawing</button><button type="button" class="btn sec" data-pclist>Plot list / PDF</button></div></section>';
+    return h + "</div>";
+  } };
+  document.addEventListener("change", function (e) { var el = e.target; if (!el.closest || !el.closest(".plm[data-plmode-root=colony]")) return; var k = el.dataset.pcf; if (!k) return;
+    if (k === "size") { if (el.value) { var z = el.value.split("x"); S.pw = +z[0]; S.pd = +z[1]; } } else S[k] = el.type === "checkbox" ? (el.checked ? 1 : 0) : (el.type === "number" ? +el.value : el.value); save(); U.render(); });
+  document.addEventListener("click", async function (e) { var b = e.target.closest && e.target.closest("[data-pcbuild],[data-pclist]"); if (!b || !b.closest(".plm")) return; var L = layout();
+    if (b.dataset.pclist != null) { var html = "<!doctype html><html><head><meta charset='utf-8'><title>" + esc(S.name) + " — plot list</title><style>body{font-family:system-ui,sans-serif;font-size:12px;margin:10mm}table{border-collapse:collapse;width:100%}td,th{border:1px solid #bbb;padding:3px 5px;text-align:right}.l{text-align:left}@media print{.np{display:none}}</style></head><body><div class='np'><button onclick='print()'>🖨 Print / Save as PDF</button></div><h2>" + esc(S.name) + " — layout and plot list</h2>" + svg(L, true) +
+        "<table><tr><th>Plot no.</th><th>Block</th><th>Front m</th><th>Depth m</th><th>Area m²</th><th>Area sq ft</th><th class='l'>Faces</th></tr>" + L.sale.slice().sort(function (a, b) { return a.no - b.no; }).map(function (p) { return "<tr><td>" + p.no + "</td><td>" + p.blk + "</td><td>" + p.w.toFixed(2) + "</td><td>" + p.d.toFixed(2) + "</td><td>" + (p.w * p.d).toFixed(2) + "</td><td>" + Math.round(p.w * p.d * 10.764) + "</td><td class='l'>" + p.face + "</td></tr>"; }).join("") + "</table></body></html>";
+      var w = null; try { w = window.open("", "_blank"); } catch (er) {} if (w) { w.document.open(); w.document.write(html); w.document.close(); } else if (EP.download) EP.download(new Blob([html], { type: "text/html" }), S.name.replace(/\W+/g, "_") + "_plots.html"); return; }
+    var CAD = EP.cad, B = EP.bim, d = CAD.newDoc(S.name || "Colony", "mm"); B.ensure(d); var ents = d.ents, add = function (o) { o.id = CAD.uid(); ents.push(o); return o; }, M = function (v) { return Math.round(v * 1000); };
+    [["C-PLOT", 7], ["C-ROAD", 8], ["C-PARK", 82], ["C-TXT", 2], ["E-POINT", 1]].forEach(function (l) { if (!d.layers[l[0]]) d.layers[l[0]] = { color: l[1], lw: 0.25, lt: "CONTINUOUS", on: true, lock: false, frz: false }; });
+    var box = function (x, y, w, dd, lay) { return add({ t: "pline", pts: [[M(x), M(y), 0], [M(x + w), M(y), 0], [M(x + w), M(y + dd), 0], [M(x), M(y + dd), 0]], closed: true, layer: lay }); };
+    box(0, 0, L.W, L.D, "C-PLOT");
+    L.roads.forEach(function (r) { box(r.x, r.y, r.w, r.d, "C-ROAD"); add({ t: "text", p: [M(r.x + r.w / 2), M(r.y + r.d / 2)], s: r.n + " " + (r.spine ? r.w : r.d) + " m wide", h: 900, rot: r.spine ? 90 : 0, al: "c", layer: "C-TXT" }); });
+    L.plots.forEach(function (p) { box(p.x, p.y, p.w, p.d, p.use === "park" ? "C-PARK" : "C-PLOT"); add({ t: "text", p: [M(p.x + p.w / 2), M(p.y + p.d / 2)], s: p.use === "park" ? "PARK" : p.use === "amenity" ? "AMENITY" : String(p.no), h: 1200, rot: 0, al: "c", layer: "C-TXT" }); if (!p.use) add({ t: "text", p: [M(p.x + p.w / 2), M(p.y + p.d / 2) - 1500], s: (p.w * p.d).toFixed(1) + " m²", h: 600, rot: 0, al: "c", layer: "C-TXT" }); });
+    L.green.forEach(function (g) { box(g.x, g.y, g.w, g.d, "C-PARK"); });
+    /* street lights every 30 m on alternate sides */
+    if (B.ASSET_LIB && B.ASSET_LIB.street_light) L.roads.forEach(function (r) { var len = r.spine ? r.d : r.w, n = Math.max(1, Math.floor(len / 30)); for (var i = 0; i < n; i++) { var s2 = (i + 0.5) * len / n, sd = i % 2 ? 1 : -1; add({ t: "asset", kind: "street_light", p: r.spine ? [M(r.x + r.w / 2 + sd * (r.w / 2 - 0.5)), M(r.y + s2)] : [M(r.x + s2), M(r.y + r.d / 2 + sd * (r.d / 2 - 0.5))], rot: 0, lvl: "L0", layer: "E-POINT" }); } });
+    add({ t: "text", p: [0, -M(6)], s: S.name + " — " + L.sale.length + " plots, " + Math.round(L.A) + " m² (" + (L.A / 4046.86).toFixed(2) + " acre); roads " + (L.roadA / L.A * 100).toFixed(1) + " %, park " + (L.parkA / L.A * 100).toFixed(1) + " %", h: 1500, rot: 0, al: "l", layer: "C-TXT" });
+    U.toast("Making the layout drawing…"); await CAD.newDrawing(d.name, "mm", d); window.scrollTo(0, 0); U.toast("Layout built in CAD Studio");
+  });
+})();
