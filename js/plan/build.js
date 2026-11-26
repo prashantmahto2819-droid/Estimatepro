@@ -349,6 +349,19 @@
         add({ t: "asset", kind: "solar_water_heater", p: P(xx2 + 0.95, yy2 + 0.75), rot: 180, lvl: "LT", layer: "P-FIX", name: "Solar water heater 200 L" }); bz.push([q4[0] - 0.3, q4[1] - 0.3, q4[2] + 0.3, q4[3] + 0.3]); swhN++;
       }
     }
+    /* outside stair (G+1): a straight flight along the side wall in the side setback, from the front part of the house up to a
+       landing at the first floor, with a door into the first floor there */
+    if (cfg.outStair && nF >= 2) { var sgn = cfg.outStair === "right" ? 1 : -1, wsO = 1.0, nO = Math.ceil(H / 175), RO = H / nO, TO = 250, lenO = (nO - 1) * TO / 1000, y0 = 0.6, yL = y0 + lenO;
+      if (yL + 1.2 <= D) { var xf = sgn > 0 ? W + 0.115 + 0.05 : -0.115 - 0.05;
+        add({ t: "stair", p: P(xf, y0), dir: 90, w: Math.round(wsO * 1000), n: nO, R: Math.round(RO * 10) / 10, T: TO, wt: 150, kind: "straight", lvl: "L0", side: sgn > 0 ? -1 : 1, rail: "out", layer: "A-STAIR", outside: 1 });
+        var xo = xf + sgn * wsO, land = [P(xf, yL), P(xo, yL), P(xo, yL + 1.2), P(xf, yL + 1.2)]; add({ t: "slab", pts: land, th: 150, lvl: "L1", off: 0, kind: "floor", layer: "S-SLAB", outside: 1 });
+        add({ t: "railing", pts: [P(xo, yL), P(xo, yL + 1.2), P(xf, yL + 1.2)], h: 1000, lvl: "L1", style: des.rail || "ms_bars", layer: "A-RAIL" });
+        if (frame) [[xo - sgn * 0.15, yL + 1.05]].forEach(function (q) { add({ t: "column", p: P(q[0], q[1]), w: 230, d: 230, rot: 0, shape: "rect", lvl: "L0", layer: "S-COL", outside: 1 }); });
+        /* the first-floor door at the landing */
+        var xw = P(sgn > 0 ? W : 0, 0)[0], yc = P(0, yL + 0.6)[1], hostW = ents.filter(function (e) { return e.t === "wall" && e.lvl === "L1" && !e.site && Math.abs(e.a[0] - xw) < 5 && Math.abs(e.b[0] - xw) < 5 && Math.min(e.a[1], e.b[1]) < yc - 500 && Math.max(e.a[1], e.b[1]) > yc + 500; })[0];
+        if (hostW) { var dv = B.DOORS.filter(function (q) { return q.id === (des.mainDoor || "D1"); })[0] || B.DOORS[0]; add({ t: "door", host: hostW.id, at: Math.abs(yc - hostW.a[1]), w: Math.min(dv.w, 1000), h: dv.h, sill: 0, preset: dv.id, mat: dv.mat, kind: dv.kind, style: dv.style, mark: dv.id, flip: sgn < 0, swing: "l", layer: "A-DOOR" }); }
+        PL._outNote = "Outside stair along the " + cfg.outStair + " wall: " + nO + " risers of " + Math.round(RO) + " mm, treads 250 mm, 1.0 m wide, landing 1.0 × 1.2 m and a door into the first floor"; }
+      else PL._outNote = "The house is too short for an outside straight stair — put the stair inside"; }
     /* porch / portico in front of the main door (into the front setback) */
     var md = perFloor[0] && perFloor[0].mainDoor, fset = cfg.rules.f || 0;
     if (md && des.porch && des.porch !== "none" && md.p.hz && Math.abs(md.p.c) < 1e-3 && fset >= 2.0) {
@@ -544,6 +557,7 @@
     }
     if (cfg.phase > 0 && cfg.phase < nF) { svcNote.unshift("Phase 1 now: " + (cfg.phase === 1 ? "ground floor" : "G+" + (cfg.phase - 1)) + " with foundation, columns and stair designed for " + (nF === 1 ? "G" : "G+" + (nF - 1)) + "; column bars left 750 mm above the roof for the next floors; temporary roof waterproofing");
       bs.levels.forEach(function (L, li) { if (li >= cfg.phase && L.id !== "LT") L.name = L.name + " (phase 2)"; }); }
+    if (PL._outNote) { svcNote.unshift(PL._outNote); PL._outNote = null; }
     d.planner_svc = svcNote;
     /* frame sizing by load (rule of thumb, IS 456 / IS 875): load on each column from the floor area it carries (half way to the next columns),
        w kN/m² per floor (slab + finishes + walls + live load), M20 / Fe500 column with 0.8 % steel, footing on the safe bearing capacity */

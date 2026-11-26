@@ -3,6 +3,9 @@
 This file is for the people maintaining the app. It is not published with the site (see `.assetsignore`).
 The text users see is `EP_NOTES` in `js/version.js`.
 
+## 2026.11.21-z98
+- Planner: outside straight stair (des.stairPos, cfg.outStair) in the side setback for G+1 houses, with landing, railing and first-floor door; inside stair removed from the program.
+
 ## 2026.11.21-z97
 - Planner: corner plots (P.corner, side setback = front), full-width verandah porch type with columns every ≤ 3.5 m and railings.
 
