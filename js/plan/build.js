@@ -349,19 +349,27 @@
         add({ t: "asset", kind: "solar_water_heater", p: P(xx2 + 0.95, yy2 + 0.75), rot: 180, lvl: "LT", layer: "P-FIX", name: "Solar water heater 200 L" }); bz.push([q4[0] - 0.3, q4[1] - 0.3, q4[2] + 0.3, q4[3] + 0.3]); swhN++;
       }
     }
-    /* outside stair (G+1): a straight flight along the side wall in the side setback, from the front part of the house up to a
-       landing at the first floor, with a door into the first floor there */
-    if (cfg.outStair && nF >= 2) { var sgn = cfg.outStair === "right" ? 1 : -1, wsO = 1.0, nO = Math.ceil(H / 175), RO = H / nO, TO = 250, lenO = (nO - 1) * TO / 1000, y0 = 0.6, yL = y0 + lenO;
-      if (yL + 1.2 <= D) { var xf = sgn > 0 ? W + 0.115 + 0.05 : -0.115 - 0.05;
-        add({ t: "stair", p: P(xf, y0), dir: 90, w: Math.round(wsO * 1000), n: nO, R: Math.round(RO * 10) / 10, T: TO, wt: 150, kind: "straight", lvl: "L0", side: sgn > 0 ? -1 : 1, rail: "out", layer: "A-STAIR", outside: 1 });
-        var xo = xf + sgn * wsO, land = [P(xf, yL), P(xo, yL), P(xo, yL + 1.2), P(xf, yL + 1.2)]; add({ t: "slab", pts: land, th: 150, lvl: "L1", off: 0, kind: "floor", layer: "S-SLAB", outside: 1 });
-        add({ t: "railing", pts: [P(xo, yL), P(xo, yL + 1.2), P(xf, yL + 1.2)], h: 1000, lvl: "L1", style: des.rail || "ms_bars", layer: "A-RAIL" });
-        if (frame) [[xo - sgn * 0.15, yL + 1.05]].forEach(function (q) { add({ t: "column", p: P(q[0], q[1]), w: 230, d: 230, rot: 0, shape: "rect", lvl: "L0", layer: "S-COL", outside: 1 }); });
-        /* the first-floor door at the landing */
-        var xw = P(sgn > 0 ? W : 0, 0)[0], yc = P(0, yL + 0.6)[1], hostW = ents.filter(function (e) { return e.t === "wall" && e.lvl === "L1" && !e.site && Math.abs(e.a[0] - xw) < 5 && Math.abs(e.b[0] - xw) < 5 && Math.min(e.a[1], e.b[1]) < yc - 500 && Math.max(e.a[1], e.b[1]) > yc + 500; })[0];
-        if (hostW) { var dv = B.DOORS.filter(function (q) { return q.id === (des.mainDoor || "D1"); })[0] || B.DOORS[0]; add({ t: "door", host: hostW.id, at: Math.abs(yc - hostW.a[1]), w: Math.min(dv.w, 1000), h: dv.h, sill: 0, preset: dv.id, mat: dv.mat, kind: dv.kind, style: dv.style, mark: dv.id, flip: sgn < 0, swing: "l", layer: "A-DOOR" }); }
-        PL._outNote = "Outside stair along the " + cfg.outStair + " wall: " + nO + " risers of " + Math.round(RO) + " mm, treads 250 mm, 1.0 m wide, landing 1.0 × 1.2 m and a door into the first floor"; }
-      else PL._outNote = "The house is too short for an outside straight stair — put the stair inside"; }
+    /* outside stair: in the side or rear setback — a straight flight for G+1, a dog-leg (two flights, turning) for any height —
+       with a landing and a door into each upper floor, columns at the outer corners and a canopy over the top */
+    if (cfg.outStair && nF >= 2) { var OS = typeof cfg.outStair === "string" ? { side: cfg.outStair, kind: "straight" } : cfg.outStair, sideO = OS.side, dog = OS.kind === "dogleg";
+      var o2 = sideO === "back" ? { o: [0, D], r: [1, 0], n: [0, 1], L: W } : sideO === "left" ? { o: [0, 0], r: [0, 1], n: [-1, 0], L: D } : { o: [W, 0], r: [0, 1], n: [1, 0], L: D };
+      var at2 = function (s, c) { return [o2.o[0] + o2.r[0] * s + o2.n[0] * c, o2.o[1] + o2.r[1] * s + o2.n[1] * c]; }, pr = [-o2.r[1], o2.r[0]], sdO = pr[0] * o2.n[0] + pr[1] * o2.n[1] > 0 ? 1 : -1, dirO = Math.round(Math.atan2(o2.r[1], o2.r[0]) * 180 / Math.PI);
+      var wsO = 1.0, nO = Math.ceil(H / 175), RO = H / nO, TO = 250, c0 = 0.165, s0 = dog ? 1.5 : 0.6, lenO = dog ? (nO / 2 - 1) * TO / 1000 + 1.0 : (nO - 1) * TO / 1000, wdO = dog ? 2 * wsO + 0.1 : wsO, sEnd = s0 + lenO + (dog ? 0 : 1.2);
+      var hostAt = function (lv, p) { var q = P(p[0], p[1]); return ents.filter(function (e) { if (e.t !== "wall" || e.lvl !== lv || e.site) return false; var dx = e.b[0] - e.a[0], dy = e.b[1] - e.a[1], L = Math.hypot(dx, dy); if (L < 900) return false; var t = ((q[0] - e.a[0]) * dx + (q[1] - e.a[1]) * dy) / (L * L), dd = Math.abs((q[0] - e.a[0]) * dy - (q[1] - e.a[1]) * dx) / L; return dd < 30 && t * L > 500 && t * L < L - 500; })[0]; };
+      var doorAt = function (lv, s) { var w = hostAt(lv, at2(s, 0)); if (!w) return; var q = P(at2(s, 0)[0], at2(s, 0)[1]), dv = B.DOORS.filter(function (x) { return x.id === (des.mainDoor || "D1"); })[0] || B.DOORS[0]; add({ t: "door", host: w.id, at: Math.round(Math.hypot(q[0] - w.a[0], q[1] - w.a[1])), w: Math.min(dv.w, 1000), h: dv.h, sill: 0, preset: dv.id, mat: dv.mat, kind: dv.kind, style: dv.style, mark: dv.id, flip: false, swing: "l", layer: "A-DOOR" }); };
+      var rect2 = function (sa, sb, ca, cb) { return [P.apply(null, at2(sa, ca)), P.apply(null, at2(sb, ca)), P.apply(null, at2(sb, cb)), P.apply(null, at2(sa, cb))]; };
+      if (sEnd <= o2.L - 0.3) {
+        var flights = dog ? nF - 1 : 1;
+        for (var k = 0; k < flights; k++) {
+          var lvO = "L" + k; add({ t: "stair", p: P.apply(null, at2(s0, c0)), dir: dirO, w: Math.round(wsO * 1000), n: nO, R: Math.round(RO * 10) / 10, T: TO, wt: 150, kind: dog ? "dogleg" : "straight", land: 1000, lvl: lvO, side: sdO, rail: "out", layer: "A-STAIR", outside: 1 });
+          var ls = dog ? [s0 - 1.2, s0] : [s0 + lenO, s0 + lenO + 1.2]; add({ t: "slab", pts: rect2(ls[0], ls[1], c0, c0 + wdO), th: 150, lvl: "L" + (k + 1), off: 0, kind: "floor", layer: "S-SLAB", outside: 1 });
+          add({ t: "railing", pts: dog ? [P.apply(null, at2(s0, c0 + wdO)), P.apply(null, at2(ls[0], c0 + wdO)), P.apply(null, at2(ls[0], c0))] : [P.apply(null, at2(ls[0], c0 + wdO)), P.apply(null, at2(ls[1], c0 + wdO)), P.apply(null, at2(ls[1], c0))], h: 1000, lvl: "L" + (k + 1), style: des.rail || "ms_bars", layer: "A-RAIL" });
+          doorAt("L" + (k + 1), (ls[0] + ls[1]) / 2);
+        }
+        if (frame) [[dog ? s0 - 1.1 : s0 + lenO + 1.05, c0 + wdO - 0.12]].concat(dog ? [[s0 + lenO - 0.12, c0 + wdO - 0.12]] : []).forEach(function (q) { for (var k2 = 0; k2 < (dog ? nF : 1); k2++) add({ t: "column", p: P.apply(null, at2(q[0], q[1])), w: 230, d: 230, rot: 0, shape: "rect", lvl: "L" + k2, layer: "S-COL", outside: 1 }); });
+        if (dog) add({ t: "slab", pts: rect2(s0 - 1.3, s0 + lenO + 0.1, c0 - 0.05, c0 + wdO + 0.1), th: 100, lvl: "L" + (nF - 1), off: H, kind: "ceiling", layer: "S-SLAB", outside: 1 });
+        PL._outNote = "Outside " + (dog ? "dog-leg" : "straight") + " stair along the " + sideO + " wall: " + nO + " risers of " + Math.round(RO) + " mm a floor, treads 250 mm, 1.0 m wide, a landing and a door at every upper floor" + (dog ? ", canopy over the top" : "");
+      } else PL._outNote = "The wall is too short for the outside stair — put the stair inside"; }
     /* porch / portico in front of the main door (into the front setback) */
     var md = perFloor[0] && perFloor[0].mainDoor, fset = cfg.rules.f || 0;
     if (md && des.porch && des.porch !== "none" && md.p.hz && Math.abs(md.p.c) < 1e-3 && fset >= 2.0) {

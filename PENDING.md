@@ -1,6 +1,6 @@
 # Estimate Pro — pending work (kept with the code; not published)
 
-Last updated at version 2026.11.21-z100
+Last updated at version 2026.11.21-z101
 
 ## A. Waiting for the owner
 1. Server work: (-z21) module switches and a shared library of blocks and hatch patterns are built — the owner has to run `server/shared.sql` once in Supabase, then check that a switched-off module disappears for a normal user. Still open: shared 3D models / cut-outs / material pictures (large files — need Supabase Storage), WhatsApp update messages with real pictures attached (needs a sending gateway; links to the pictures are already added).
@@ -69,7 +69,7 @@ Last updated at version 2026.11.21-z100
 9. Electrical and plumbing (MEP): done in -z57 … -z63 — symbols, wiring, points by room, single line diagram, plumbing pipes, isometric, auto plumbing and drainage, tank, septic tank, rain-water pipes, cables and earthing, separate E / P sheets, MEPAUTO for the whole building. Still open: check on a real drawing of the owner.
 
 ## C2. Stairs
-1. (-z27: corner fitting, side, clear distances, wall warning, opening in the slab above.) (-z28: railing on the flights, headroom check.) (-z29: rail at the landing and round the opening above, landing length and gap as fields, STAIRUP repeats the stair on the floors above.) (-z30: L-shaped stair with a quarter landing.) (-z31: U-shaped stair, spiral stair, rails on the outer edges of landings.) (-z32: three winders on the L stair, warning for the height between the turns of a spiral.) (-z33: steel spiral weighed under structural steel, top platform.) (-z46: winders on the dog-leg stair.) (-z47: winders on the U stair.) Still open: a top platform for the spiral, an opening that leaves the slab over the low end, railing on the outer edge of the landing.
+1. (-z27: corner fitting, side, clear distances, wall warning, opening in the slab above.) (-z28: railing on the flights, headroom check.) (-z29: rail at the landing and round the opening above, landing length and gap as fields, STAIRUP repeats the stair on the floors above.) (-z30: L-shaped (done z101) stair with a quarter landing.) (-z31: U-shaped stair, spiral stair, rails on the outer edges of landings.) (-z32: three winders on the L stair, warning for the height between the turns of a spiral.) (-z33: steel spiral weighed under structural steel, top platform.) (-z46: winders on the dog-leg stair.) (-z47: winders on the U stair.) Still open: a top platform for the spiral, an opening that leaves the slab over the low end, railing on the outer edge of the landing.
 
 ## C3. Floors
 1. (-z34: skirting at doors, flooring at openings, shuttering of opening sides, raised-floor edge.) (-z35: ceiling plaster net of walls, sunk floor filling and waterproofing.) (-z38: plaster net of beams.) Still open: a brick-bat / cinder filling rate item, (-z36: rooms follow their walls.) (-z37: slabs and roofs follow walls on the plan.) stair openings and beams that follow, false ceiling less openings, flooring in door thresholds.
@@ -82,7 +82,7 @@ Last updated at version 2026.11.21-z100
 5. (-z86: done — flats fitted to the plot.) (-z87: two per floor on small plots via shallower flats and no lift up to 3 storeys.)
 6. Not yet checked by the owner on a real phone.
 7. Owner's list of 26 Nov — to build: budget plan (-z91 done), construction programme + payment stages (-z91 done), client proposal (-z91 done), floor-by-floor (phased) plan (-z92 done), sun and wind check (-z92 done), auto 3D walkthrough video (-z93: path made on Build; Tour / Record by the user), colony / layout planner (-z95 done), road / drain / culvert planner (-z94 done), interior planner (-z95 done), renovation / extension planner (-z95 done). Open: colony on irregular land, interior for kitchen / toilet, renovation from an existing drawing.
-9. Owner's plot list of 26 Nov (build step by step): odd-shaped plot from four sides (-z96 done), full-plot button (-z96 done); draw the plot by tapping corners / CAD polyline (-z99 done); still open: plots with an inward corner (L-shaped plots), building following a slanted side, corner plot (-z97 done), outside stair (-z98: side, G+1; front / back / G+2 still open), full-width front verandah (-z97 done).
+9. Owner's plot list of 26 Nov (build step by step): odd-shaped plot from four sides (-z96 done), full-plot button (-z96 done); draw the plot by tapping corners / CAD polyline (-z99 done); still open: plots with an inward corner (L-shaped (done z101) plots), building following a slanted side, corner plot (-z97 done), outside stair (-z98: side, G+1; front / back / G+2 still open), full-width front verandah (-z97 done).
 8. Owner's list of 26 Nov — kept for later (owner said: pending): rental house (shop below / tenant floor with own stair), farmhouse / village house (cow shed, grain store, biogas, well, solar pump), government scheme buildings (PMAY house, community hall, toilet block, godown) to their type designs.
 
 ## D. Other

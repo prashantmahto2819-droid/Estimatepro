@@ -182,7 +182,10 @@
     return h + "</div>";
   }
   /* an outside stair: only for a house of G+1 with a side setback of 1.3 m or more; the inside stair then leaves the plan */
-  function outStair() { var t = T(), dz = P.des[t.id] || {}, R = geo().rules; if (t.id !== "house" || dz.stairPos !== "outside" || +P.floors !== 2) return null; return R.rt >= 1.3 && R.rt >= R.l ? "right" : R.l >= 1.3 ? "left" : null; }
+  /* a straight flight needs a 1.3 m setback (G+1 only); a dog-leg 2.5 m (any number of floors) */
+  function outStair() { var t = T(), dz = P.des[t.id] || {}, R = geo().rules, nf = +P.floors; if (t.id !== "house" || !/^outside/.test(dz.stairPos || "") || !(nf >= 2)) return null;
+    var pick = function (side, sb) { if (sb >= 2.5) return { side: side, kind: nf === 2 && sb < 2.5 ? "straight" : (nf === 2 ? "straight" : "dogleg") }; if (sb >= 1.3 && nf === 2) return { side: side, kind: "straight" }; return null; };
+    if (dz.stairPos === "outside_back") return pick("back", R.r); return R.rt >= R.l ? (pick("right", R.rt) || pick("left", R.l)) : (pick("left", R.l) || pick("right", R.rt)); }
   function cfgNow() { var t = T(), os = outStair(); return { type: t.id, outStair: os, items: items().filter(function (x) { return !(os && x.key === "stair"); }).map(function (x) { var y = Object.assign({}, x); if (y.fl === "") delete y.fl; return y; }), plot: geo().plot, rules: geo().rules, plotPoly: geo().plotPoly || null, plotArea: geo().plotArea || null, corner: P.corner || "", setbackPoly: geo().vp ? geo().vp.inner : null, floors: +P.floors || 0, facing: P.facing, vastu: !!P.vastu, rate: +(P.rate[t.id] || t.rate), frame: P.frame, furn: P.furn, sbc: P.sbc || 150, cars: t.id === "house" ? (+vals().cars || 0) : null, phase: +P.phase || 0, persons: t.id === "house" ? (+vals().persons || 5) : Math.max(5, (P.res && P.res.info && P.res.info.occ) || 10), sanction: P.sanc || {}, des: Object.assign({}, des()), name: t.n + " " + P.plot.w + "×" + P.plot.d + " m" }; }
   function make() { P.busy = true; U.render(); setTimeout(function () { try { P.res = PL.generate(cfgNow()); P.sel = {}; } catch (er) { console.error(er); P.res = { err: "Could not make the layouts: " + (er && er.message) }; } P.busy = false; U.render(); }, 30); }
   async function build(i) {

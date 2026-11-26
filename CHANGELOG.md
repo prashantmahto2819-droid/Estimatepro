@@ -3,6 +3,12 @@
 This file is for the people maintaining the app. It is not published with the site (see `.assetsignore`).
 The text users see is `EP_NOTES` in `js/version.js`.
 
+## 2026.11.21-z101
+Building Planner:
+• Plots with an inward corner (L / T shape): draw the outline and the building goes in the biggest rectangle of the open part, keeping every side's setback.
+• Outside stair for G+2 and higher: a dog-leg stair in the side setback (needs 2.5 m), with a landing and a door at every upper floor and a canopy over the top.
+• New choice: outside stair along the back wall.
+
 ## 2026.11.21-z100
 - CAD: .epcad drawing file export (File ▾) and “Open drawing file…” in the drawings list.
 
