@@ -3,6 +3,11 @@
 This file is for the people maintaining the app. It is not published with the site (see `.assetsignore`).
 The text users see is `EP_NOTES` in `js/version.js`.
 
+## 2026.11.21-z110
+Fix — sections no longer fold up on their own:
+• Picking an option in a dropdown (or ticking a box) redraws the form; the open sections (e.g. Inside, Along with the gumti) used to close each time. Now every section stays open or closed exactly as you left it.
+• This works across the whole app — Design Studio, Building Planner and every new screen — without any change to each screen.
+
 ## 2026.11.21-z109
 Design Studio — Portable shelter / gumti for mines:
 • Height is now the TOTAL height (bottom of the skid to the top of the roof), 2.8 m by default: walls 2.0 m + pyramid roof 0.8 m.
