@@ -541,7 +541,9 @@
     nF = res.F.length; F = res.F; W = res.W; D = res.D;
     if (T.mode === "corr" && W > bw + 0.01 && !res.L) { warn.push("The rooms need a building " + W + " m long, but only " + bw + " m is free across the plot — add floors, a larger plot, or fewer rooms."); W = Math.max(W, 9); }
     if (T.mode === "band" && !res.fit) warn.push("The rooms chosen need about " + Math.round(res.need) + " m² per floor but only " + Math.round(W * D) + " m² can be built (setbacks / coverage) — rooms come out smaller; add a floor or choose smaller sizes.");
-    var built = W * D * nF, far = built / plotA, cov = W * D / plotA * 100, height = nF * T.h / 1000;
+    /* a stilt parking floor is not counted in FAR (MBBL 2016) */
+    var stiltF = (T.id || cfg.type) === "apartment" && (cfg.items || []).some(function (x) { return x.key === "stilt" && !x.off; }) && nF > 1 ? 1 : 0;
+    var built = W * D * nF, far = W * D * (nF - stiltF) / plotA, cov = W * D / plotA * 100, height = nF * T.h / 1000;
     if (cov > R.cov + 0.5) warn.push("Ground coverage " + cov.toFixed(1) + " % is more than the " + R.cov + " % allowed.");
     if (far > R.far + 0.005) warn.push("FAR " + far.toFixed(2) + " is more than the " + R.far + " allowed — " + Math.round((far - R.far) * plotA) + " m² too much; take a floor off or fewer rooms.");
     if (R.h > 0 && height > R.h + 0.01) warn.push("Height " + height.toFixed(1) + " m is more than the " + R.h + " m allowed.");
@@ -559,7 +561,7 @@
     if (pick.length < Math.min(4, opts.length)) opts.forEach(function (p) { if (pick.length < 4 && pick.indexOf(p) < 0) pick.push(p); });
     pick.forEach(function (p, i) { p.id = "opt" + (i + 1); p.label = "Option " + "ABCD"[i]; p.nF = nF; p.T = T; p.off = [R.l, R.f]; if (T.id === "apartment") p.floors[0].forEach(function (r) { if (r.pass && !r.corr) { r.pass = 0; r.name = "Stilt parking"; r.key = "stilt"; r.z = 0; r.inst = { key: "stilt", sp: SP.stilt, name: "Stilt parking", a: PL.areaOf(r), z: 0, minW: 5 }; } });
       PL.expandUnits(p, cfg); p.chk = PL.checks(T, p, cfg); p.stats = PL.stats(T, p, cfg); });
-    if (pick[0]) { W = pick[0].W; D = pick[0].D; var fa = PL.footArea(pick[0]); built = fa * nF; far = built / plotA; cov = fa / plotA * 100; }
+    if (pick[0]) { W = pick[0].W; D = pick[0].D; var fa = PL.footArea(pick[0]); built = fa * nF; far = fa * (nF - stiltF) / plotA; cov = fa / plotA * 100; }
     info = { bw: bw, bd: bd, maxFoot: r2(maxFoot), plotA: r2(plotA), nF: nF, W: W, D: D, built: r2(built), far: r2(far), cov: r2(cov), height: r2(height), occ: Math.round(built / T.occ), dbl: res.dbl };
     return { opts: pick, info: info, warn: warn, T: T };
   };

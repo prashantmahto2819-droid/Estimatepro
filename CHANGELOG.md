@@ -3,6 +3,9 @@
 This file is for the people maintaining the app. It is not published with the site (see `.assetsignore`).
 The text users see is `EP_NOTES` in `js/version.js`.
 
+## 2026.11.21-z86
+- Planner: T.fit for apartments (flats the plot can take from FAR, coverage, height and width across), auto default + Use N button; stilt floor excluded from FAR; guard / electrical rooms only for 12 / 8+ flats.
+
 ## 2026.11.21-z85
 - Planner: flat templates PL.flatTpl (outer bed/living/master, inner kitchen/dining/toilets, master lobby + attached toilet) and PL.flatTplN (narrow units) compete with band plans by score; unit plans no longer penalised for the entrance via dining; phone overflow fix on type buttons.
 

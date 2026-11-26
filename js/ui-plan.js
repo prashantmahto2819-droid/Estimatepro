@@ -28,7 +28,9 @@
     factory: [{ id: "f1", n: "Small unit", hi: "400 m² hall", plot: [30, 40], v: { hall: 400, godown: 100, workers: 25 }, fl: 1 }, { id: "f2", n: "Godown", hi: "1000 m² store", plot: [40, 60], v: { hall: 200, godown: 1000, workers: 10 }, fl: 1 }],
     hotel: [{ id: "gh", n: "Guest house 10 rooms", hi: "1-star size", plot: [18, 30], v: { rooms: 10, star: 1, suites: 0, covers: 20, banq: 0 }, fl: 0 }] };
   function T() { var t = PL.TYPES[P.type] || PL.TYPES.house; t.id = P.type in PL.TYPES ? P.type : "house"; return t; }
-  function vals() { var t = T(), v = {}, cur = P.inp[t.id] || {}; t.inputs.forEach(function (i) { v[i.k] = cur[i.k] != null ? cur[i.k] : i.def; }); return v; }
+  function vals() { var t = T(), v = {}, cur = P.inp[t.id] || {}; t.inputs.forEach(function (i) { v[i.k] = cur[i.k] != null ? cur[i.k] : i.def; });
+    /* a count nobody has typed yet starts at what the plot can take */
+    if (t.fit) { var f = t.fit(v, P.plot, rulesNow()); if (f && cur[f.k] == null && f.n > 0 && f.n < v[f.k]) v[f.k] = f.n; } return v; }
   function rulesNow() { if (!P.rules || !P.rulesEdited) P.rules = PL.rulesFor(P.set, T().rules, P.plot.w * P.plot.d); return P.rules; }
   function regen() { var t = T(), it = t.program(vals(), P.floors > 0 ? P.floors : 2); P.items = it.map(function (x) { return Object.assign({}, x, { on: !x.off, size: "M" }); }); P.res = null; P.sel = {}; save(); }
   function items() { if (!P.items || P.itemsType !== P.type) { P.itemsType = P.type; regen(); } return P.items; }
@@ -66,7 +68,9 @@
     if (PRESETS[t.id]) h += '<section class="panel" style="padding:12px 14px"><h3 style="margin:0 0 8px">Ready patterns <span class="muted" style="font-weight:500">तैयार पैटर्न — एक टैप में प्लॉट और ज़रूरतें</span></h3><div class="row" style="gap:8px;flex-wrap:wrap">' + PRESETS[t.id].map(function (p) { return '<button type="button" class="btn sec small" data-plpre="' + p.id + '" style="height:auto;padding:6px 10px;display:flex;flex-direction:column;align-items:flex-start"><b>' + esc(p.n) + '</b><span class="muted small">' + esc(p.hi) + "</span></button>"; }).join("") + "</div></section>";
     h += '<section class="panel" style="padding:12px 14px"><h3 style="margin:0 0 8px">3. What is needed <span class="muted" style="font-weight:500">ज़रूरतें</span></h3><div class="row" style="gap:12px;flex-wrap:wrap;align-items:flex-end">' +
       t.inputs.map(function (i) { return i.bool ? '<label class="row" style="gap:6px;align-items:center"><input type="checkbox" data-plin="' + i.k + '"' + (v[i.k] ? " checked" : "") + "> " + esc(i.n) + ' <span class="muted small">' + esc(i.hi) + "</span></label>" :
-        '<label style="display:flex;flex-direction:column;gap:2px;min-width:120px"><span class="muted small">' + esc(i.n) + " / " + esc(i.hi) + '</span><input class="in small" style="width:110px" type="number" min="' + (i.min || 0) + '" max="' + (i.max || 9999) + '" data-plin="' + i.k + '" value="' + v[i.k] + '"></label>'; }).join("") + "</div></section>";
+        '<label style="display:flex;flex-direction:column;gap:2px;min-width:120px"><span class="muted small">' + esc(i.n) + " / " + esc(i.hi) + '</span><input class="in small" style="width:110px" type="number" min="' + (i.min || 0) + '" max="' + (i.max || 9999) + '" data-plin="' + i.k + '" value="' + v[i.k] + '"></label>'; }).join("") + "</div>" +
+      (function () { if (!t.fit) return ""; var f = t.fit(v, P.plot, rulesNow()); if (!f) return ""; var over = v[f.k] > f.n;
+        return '<p class="small" style="margin:8px 0 0;' + (over ? "color:var(--bad,#b42318)" : "") + '">' + esc(f.msg) + ' <span class="muted">' + esc(f.hi) + "</span>" + (v[f.k] !== f.n && f.n > 0 ? ' <button type="button" class="btn sec small" data-plfit="' + f.k + '" data-n="' + f.n + '">Use ' + f.n + "</button>" : "") + "</p>"; })() + "</section>";
     /* 4. rooms list */
     var on = L.filter(function (x) { return x.on !== false && x.n > 0; }), carpet = on.reduce(function (s, x) { return s + areaOf(x) * x.n * (x.fl === "all" || sp(x.key).fl === "all" ? Math.max(1, +P.floors || 1) : 1); }, 0);
     h += '<section class="panel" style="padding:12px 14px"><div class="row" style="gap:8px;align-items:center;flex-wrap:wrap"><h3 class="grow" style="margin:0">4. Rooms and spaces <span class="muted" style="font-weight:500">कमरों की सूची — चुनें, संख्या, साइज़</span></h3>' +
@@ -230,6 +234,7 @@
   document.addEventListener("click", function (e) {
     var b = e.target.closest && e.target.closest("button"); if (!b || !b.closest(".pl")) return; var ds = b.dataset;
     if (ds.pltype) { if (P.type !== ds.pltype) { P.type = ds.pltype; P.rulesEdited = false; P.rules = null; var t = T(); if (t.plot) P.plot = { w: t.plot[0], d: t.plot[1] }; P.floors = t.single ? 1 : ds.pltype === "house" ? 2 : 0; P.itemsType = null; regen(); } U.render(); return; }
+    if (ds.plfit) { var t2 = T(), cur2 = P.inp[t2.id] = P.inp[t2.id] || {}; cur2[ds.plfit] = +ds.n; save(); regen(); U.render(); return; }
     if (ds.plpre) { var pr = (PRESETS[P.type] || []).filter(function (x) { return x.id === ds.plpre; })[0]; if (!pr) return; P.plot = { w: pr.plot[0], d: pr.plot[1] }; P.inp[P.type] = Object.assign({}, pr.v); P.floors = pr.fl; if (pr.rules) { P.rules = Object.assign({}, pr.rules); P.rulesEdited = true; } else { P.rulesEdited = false; P.rules = null; } regen(); if (pr.size) P.items.forEach(function (x) { if (!x.occ) { x.size = pr.size; delete x.area; } }); if (pr.on) P.items.forEach(function (x) { if (pr.on.indexOf(x.key) >= 0) x.on = true; }); save(); make(); return; }
     if (ds.plsty) { var st = PL.STYLES.filter(function (x) { return x.id === ds.plsty; })[0]; if (st) { P.des[T().id] = Object.assign({ style: st.id }, st.v); save(); U.render(); U.toast(st.n + " — every item below is set; change any of them"); } return; }
     if (ds.plact === "regen") { regen(); U.render(); return; }
