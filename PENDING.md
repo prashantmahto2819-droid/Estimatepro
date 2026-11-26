@@ -1,6 +1,6 @@
 # Estimate Pro — pending work (kept with the code; not published)
 
-Last updated at version 2026.11.21-z106
+Last updated at version 2026.11.21-z107
 
 ## A. Waiting for the owner
 1. Server work: (-z21) module switches and a shared library of blocks and hatch patterns are built — the owner has to run `server/shared.sql` once in Supabase, then check that a switched-off module disappears for a normal user. Still open: shared 3D models / cut-outs / material pictures (large files — need Supabase Storage), WhatsApp update messages with real pictures attached (needs a sending gateway; links to the pictures are already added).
@@ -83,7 +83,7 @@ Last updated at version 2026.11.21-z106
 6. Not yet checked by the owner on a real phone.
 7. Owner's list of 26 Nov — to build: budget plan (-z91 done), construction programme + payment stages (-z91 done), client proposal (-z91 done), floor-by-floor (phased) plan (-z92 done), sun and wind check (-z92 done), auto 3D walkthrough video (-z93: path made on Build; Tour / Record by the user), colony / layout planner (-z95 done), road / drain / culvert planner (-z94 done), interior planner (-z95 done), renovation / extension planner (-z95 done). Colony on irregular land (-z103 done), interior for kitchen / toilet (-z104 done). Renovation from an existing drawing (-z105 done). All of item 7 done.
 9. Owner's plot list of 26 Nov (build step by step): odd-shaped plot from four sides (-z96 done), full-plot button (-z96 done); draw the plot by tapping corners / CAD polyline (-z99 done); plots with an inward corner (-z101 done), building following a slanted side (done z102), corner plot (-z97 done), outside stair (-z98: side, G+1; -z101: back wall, dog-leg for G+2 and higher; front -z106 done), full-width front verandah (-z97 done).
-8. Owner's list of 26 Nov — kept for later (owner said: pending): rental house (-z106 done: 1 RK / 1 BHK / 2 BHK units, owner's flat; still open: shop below), farmhouse / village house (-z106 done: cattle shed, grain store, aangan, tractor shed, tile roof; still open: biogas, well, solar pump), government scheme buildings (PMAY house, community hall, toilet block, godown) to their type designs.
+8. Owner's list of 26 Nov — kept for later (owner said: pending): rental house (-z106 done: 1 RK / 1 BHK / 2 BHK units, owner's flat; -z107 shops below), farmhouse / village house (-z106 done: cattle shed, grain store, aangan, tractor shed, tile roof; -z107 biogas, well, solar pump), government scheme buildings (PMAY house, community hall, toilet block, godown) to their type designs.
 
 ## D. Other
 1. Design Studio sheets: (-z20: scales 1:15 / 30 / 40 / 60 added so views are larger.) Still open: labels that overlap — needs the owner to point at a sheet where it happens.

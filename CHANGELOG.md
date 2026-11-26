@@ -3,6 +3,11 @@
 This file is for the people maintaining the app. It is not published with the site (see `.assetsignore`).
 The text users see is `EP_NOTES` in `js/version.js`.
 
+## 2026.11.21-z107
+Building Planner:
+• Rental house: shops on the ground floor facing the road (give the number) — the flats to let go above.
+• Farm / village house services (also for any building, under Design → Water & services): open dug well Ø 2 m with parapet and pulley (or a hand pump), kept as far from the septic tank as the yard allows; biogas plant 2 m³ (fixed dome) next to the cattle shed; 3 HP solar water pump with its PV array beside the well or bore well. All three in 2D, 3D and the services notes.
+
 ## 2026.11.21-z106
 Building Planner:
 • New type — Rental house (flats / rooms to let): choose how many units and the type (1 RK, 1 BHK or 2 BHK), your own 2 BHK on the ground floor if wanted, two-wheeler parking. The planner says how many units the plot can take; one stair, no lift up to 4 storeys; plain economical style.

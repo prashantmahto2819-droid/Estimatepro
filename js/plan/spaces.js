@@ -241,11 +241,12 @@
       { k: "units", n: "Units to let", hi: "किराए की यूनिट", def: 4, min: 1, max: 60 },
       { k: "ut", n: "Unit type: 0 = 1 RK, 1 = 1 BHK, 2 = 2 BHK", hi: "यूनिट: 0 = 1RK, 1 = 1BHK, 2 = 2BHK", def: 1, min: 0, max: 2 },
       { k: "owner", n: "Owner's own flat on the ground floor", hi: "मालिक का अपना फ़्लैट (नीचे)", def: 1, bool: 1 },
-      { k: "bikes", n: "Two-wheeler parking", hi: "बाइक पार्किंग", def: 1, bool: 1 }
+      { k: "bikes", n: "Two-wheeler parking", hi: "बाइक पार्किंग", def: 1, bool: 1 },
+      { k: "shops", n: "Shops on the ground floor (facing the road)", hi: "नीचे दुकानें", def: 0, min: 0, max: 12 }
     ],
     program: function (v) {
       var L = [], ut = Math.max(0, Math.min(2, v.ut | 0));
-      L.push(it("flobby", 1, { size: "S" })); if (v.bikes) L.push(it("bike_park"));
+      L.push(it("flobby", 1, { size: "S" })); if (v.bikes) L.push(it("bike_park")); if ((v.shops | 0) > 0) L.push(it("shop", v.shops | 0, { size: "S", fl: "G" }));
       if (v.owner) L.push(it("flat", 1, { area: 72, unit: { beds: 2, attached: 1 }, fl: "G", owner: 1 }));
       L.push(it("flat", Math.max(1, v.units | 0), { area: RENT_A[ut], unit: { beds: ut, attached: ut ? 1 : 0 }, fl: "any" }));
       L.push(it("stair", 1, { opt: 1 })); L.push(it("lift", 1, { auto: "lift" }));
@@ -258,7 +259,7 @@
       var floors = Math.max(1, Math.min(4, Math.floor((R.h || 15) / 3.0))), nm = ["1 RK", "1 BHK", "2 BHK"][ut];
       [6.0, 7.5, 9.0].forEach(function (db) { var fw = ua / db, rows = bd >= 2 * db + 1.2 ? 2 : bd >= db + 1.2 ? 1 : 0; if (!rows) return; var Wof = function (n) { return rows === 2 ? Math.max(Math.ceil(n / 2) * fw, 2.6 + Math.floor(n / 2) * fw) : 2.6 + n * fw; }, per = 0;
         while (Wof(per + 1) <= bw + 0.05 && Wof(per + 1) * (rows * db + 1.2) <= foot + 0.5) per++; if (!per) return;
-        var g0 = Math.max(0, per - (v.owner ? Math.ceil(72 / ua) : 0) - (v.bikes ? 1 : 0)), n = Math.min(g0 + per * (floors - 1), Math.floor(A * (R.far || 1.5) / (ua * 1.3)) - (v.owner ? Math.ceil(72 / ua) : 0)); if (n > best) { best = n; bestF = per; } });
+        var g0 = Math.max(0, per - (v.owner ? Math.ceil(72 / ua) : 0) - (v.bikes ? 1 : 0) - Math.ceil((v.shops | 0) * 14 / ua)), n = Math.min(g0 + per * (floors - 1), Math.floor(A * (R.far || 1.5) / (ua * 1.3)) - (v.owner ? Math.ceil(72 / ua) : 0)); if (n > best) { best = n; bestF = per; } });
       if (best <= 0) return { k: "units", n: 0, msg: "A " + nm + " unit and the stair do not fit in the " + bw.toFixed(1) + " m left across this plot" + (ut ? " — try a smaller unit" : "") + ".", hi: "यह यूनिट इस प्लॉट में नहीं आती" };
       return { k: "units", n: best, msg: "This plot can take about " + best + (best === 1 ? " unit" : " units") + " of " + nm + " to let — " + bestF + " a floor, up to " + floors + " storeys (no lift)" + (v.owner ? ", with your own flat on the ground floor" : "") + ".", hi: "इस प्लॉट पर लगभग " + best + " किराए की यूनिट बन सकती हैं" };
     } };
