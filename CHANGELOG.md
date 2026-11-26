@@ -3,6 +3,14 @@
 This file is for the people maintaining the app. It is not published with the site (see `.assetsignore`).
 The text users see is `EP_NOTES` in `js/version.js`.
 
+## 2026.11.21-z106
+Building Planner:
+• New type — Rental house (flats / rooms to let): choose how many units and the type (1 RK, 1 BHK or 2 BHK), your own 2 BHK on the ground floor if wanted, two-wheeler parking. The planner says how many units the plot can take; one stair, no lift up to 4 storeys; plain economical style.
+• New type — Farm house / village house: front verandah, baithak, kitchen with store and grain store, open courtyard (aangan), bathing area, cattle shed sized by the number of animals, tractor / implements shed; traditional style with a Mangalore-tile roof.
+• Outside stair along the front wall too (at the end away from the gate / car park).
+• Flats in an apartment now get the BHK you asked for (before, every flat was laid out as 2 BHK).
+• Fixed: a house with a sloping roof and a courtyard could stop while building in CAD.
+
 ## 2026.11.21-z105
 Renovation planner — from your own drawing:
 • New step "Start from": pick your CAD drawing of the house. The planner reads its floors, the top floor's size, the plot (compound wall), the toilets and the structure (RCC frame if it has columns) — no typing.

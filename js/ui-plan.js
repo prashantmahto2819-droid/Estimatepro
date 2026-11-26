@@ -35,7 +35,7 @@
     var ok = function (n) { try { var v2 = Object.assign({}, v); v2[f.k] = n; var its = t.program(v2, 2).filter(function (x) { return !x.off; }); var g0 = geo(), r = PL.generate({ type: t.id, items: its, plot: g0.plot, rules: g0.rules, plotArea: g0.plotArea, floors: 0, facing: P.facing || "E", vastu: false, rate: 0 });
       return r && !r.err && !(r.warn || []).some(function (w) { return /^(FAR|Height|Ground coverage)/.test(w); }); } catch (e) { return true; } };
     var n = f.n, up = n; for (var k = 0; k < 6 && n > 1 && !ok(n); k++) n--; if (n === up) { for (var k2 = 0; k2 < 3 && ok(up + 1); k2++) up++; n = up; }
-    var g = Object.assign({}, f); if (n !== f.n) { g.n = n; g.msg = f.msg.replace(/about \d+ flats/, "about " + n + " flats"); g.hi = f.hi.replace(/\d+/, n); } return (fitCache[key] = g); }
+    var g = Object.assign({}, f); if (n !== f.n) { g.n = n; g.msg = f.msg.replace(/about \d+ (flats|units?)/, function (m, w) { return "about " + n + " " + (w === "flats" ? "flats" : n === 1 ? "unit" : "units"); }).replace(/ — \d+ a floor,/, " —"); g.hi = f.hi.replace(/\d+/, n); } return (fitCache[key] = g); }
   function vals() { var t = T(), v = {}, cur = P.inp[t.id] || {}; t.inputs.forEach(function (i) { v[i.k] = cur[i.k] != null ? cur[i.k] : i.def; });
     /* a count nobody has typed yet starts at what the plot can take */
     if (t.fit) { var f = fitNow(t, v); if (f && cur[f.k] == null && f.n > 0 && f.n < v[f.k]) v[f.k] = f.n; } return v; }
@@ -184,10 +184,10 @@
   }
   /* an outside stair: only for a house of G+1 with a side setback of 1.3 m or more; the inside stair then leaves the plan */
   /* a straight flight needs a 1.3 m setback (G+1 only); a dog-leg 2.5 m (any number of floors) */
-  function outStair() { var t = T(), dz = P.des[t.id] || {}, R = geo().rules, nf = +P.floors; if (t.id !== "house" || !/^outside/.test(dz.stairPos || "") || !(nf >= 2)) return null;
+  function outStair() { var t = T(), dz = P.des[t.id] || {}, R = geo().rules, nf = +P.floors; if (!t.home || !/^outside/.test(dz.stairPos || "") || !(nf >= 2)) return null;
     var pick = function (side, sb) { if (sb >= 2.5) return { side: side, kind: nf === 2 && sb < 2.5 ? "straight" : (nf === 2 ? "straight" : "dogleg") }; if (sb >= 1.3 && nf === 2) return { side: side, kind: "straight" }; return null; };
     if (dz.stairPos === "outside_back") return pick("back", R.r); if (dz.stairPos === "outside_front") return pick("front", R.f - 0.5); return R.rt >= R.l ? (pick("right", R.rt) || pick("left", R.l)) : (pick("left", R.l) || pick("right", R.rt)); }
-  function cfgNow() { var t = T(), os = outStair(); return { type: t.id, outStair: os, items: items().filter(function (x) { return !(os && x.key === "stair"); }).map(function (x) { var y = Object.assign({}, x); if (y.fl === "") delete y.fl; return y; }), plot: geo().plot, rules: geo().rules, plotPoly: geo().plotPoly || null, plotArea: geo().plotArea || null, corner: P.corner || "", setbackPoly: geo().vp ? geo().vp.inner : null, floors: +P.floors || 0, facing: P.facing, vastu: !!P.vastu, rate: +(P.rate[t.id] || t.rate), frame: P.frame, furn: P.furn, sbc: P.sbc || 150, cars: t.id === "house" ? (+vals().cars || 0) : null, phase: +P.phase || 0, persons: t.id === "house" ? (+vals().persons || 5) : Math.max(5, (P.res && P.res.info && P.res.info.occ) || 10), sanction: P.sanc || {}, des: Object.assign({}, des()), name: t.n + " " + P.plot.w + "×" + P.plot.d + " m" }; }
+  function cfgNow() { var t = T(), os = outStair(); return { type: t.id, outStair: os, items: items().filter(function (x) { return !(os && x.key === "stair"); }).map(function (x) { var y = Object.assign({}, x); if (y.fl === "") delete y.fl; return y; }), plot: geo().plot, rules: geo().rules, plotPoly: geo().plotPoly || null, plotArea: geo().plotArea || null, corner: P.corner || "", setbackPoly: geo().vp ? geo().vp.inner : null, floors: +P.floors || 0, facing: P.facing, vastu: !!P.vastu, rate: +(P.rate[t.id] || t.rate), frame: P.frame, furn: P.furn, sbc: P.sbc || 150, cars: t.home ? (+vals().cars || 0) : null, phase: +P.phase || 0, persons: t.home && vals().persons ? (+vals().persons || 5) : Math.max(5, (P.res && P.res.info && P.res.info.occ) || 10), sanction: P.sanc || {}, des: Object.assign({}, des()), name: t.n + " " + P.plot.w + "×" + P.plot.d + " m" }; }
   function make() { P.busy = true; U.render(); setTimeout(function () { try { P.res = PL.generate(cfgNow()); P.sel = {}; } catch (er) { console.error(er); P.res = { err: "Could not make the layouts: " + (er && er.message) }; } P.busy = false; U.render(); }, 30); }
   async function build(i) {
     var o = P.res && P.res.opts[i]; if (!o) return; var cfg = cfgNow(), t = T(), d;
@@ -197,7 +197,7 @@
     await EP.cad.newDrawing(d.name, "mm", d); window.scrollTo(0, 0);
     var C = S.cad, ed = C && C.ed; if (!ed) return; var done = [];
     try { if (ed.zoomExtents) ed.zoomExtents(); } catch (e) {}
-    if (P.mep) { try { U.toast("Placing electrical and plumbing…"); var pers = t.id === "house" ? (vals().persons || 5) : Math.max(5, P.res.info.occ || 10); await PL.autoRun(ed, "MEPAUTO", [t.grp || "C", pers, "All"]); done.push("electrical + plumbing"); } catch (er) { console.warn("MEP", er); } }
+    if (P.mep) { try { U.toast("Placing electrical and plumbing…"); var pers = t.home && vals().persons ? (vals().persons || 5) : Math.max(5, P.res.info.occ || 10); await PL.autoRun(ed, "MEPAUTO", [t.grp || "C", pers, "All"]); done.push("electrical + plumbing"); } catch (er) { console.warn("MEP", er); } }
     if (P.views) {
       var Ls = ed.doc.d.layers, siteL = Ls["A-SITE"], siteOn = siteL ? siteL.on : true; if (siteL) siteL.on = false;   /* the compound wall would hide the building in the elevations */
       try { U.toast("Drawing elevations, section, dimensions, schedules and the sheet…"); await PL.autoRun(ed, "ELEVATION", ["All"]); done.push("4 elevations"); } catch (er) { console.warn("elevation", er); }
@@ -333,7 +333,7 @@
   document.addEventListener("click", function (e) {
     var b = e.target.closest && e.target.closest("button"); if (!b || !b.closest(".pl")) return; var ds = b.dataset;
     if (ds.plmode) { P.mode = ds.plmode; save(); U.render(); window.scrollTo(0, 0); return; }
-    if (ds.pltype) { if (P.type !== ds.pltype) { P.type = ds.pltype; P.rulesEdited = false; P.rules = null; var t = T(); if (t.plot) P.plot = { w: t.plot[0], d: t.plot[1] }; P.floors = t.single ? 1 : ds.pltype === "house" ? 2 : 0; P.itemsType = null; regen(); } U.render(); return; }
+    if (ds.pltype) { if (P.type !== ds.pltype) { P.type = ds.pltype; P.rulesEdited = false; P.rules = null; var t = T(); if (t.plot) P.plot = { w: t.plot[0], d: t.plot[1] }; P.floors = t.single ? 1 : ds.pltype === "house" ? 2 : ds.pltype === "farm" ? 1 : 0; P.itemsType = null; regen(); } U.render(); return; }
     if (ds.plbudgo != null) { var inp = document.querySelector(".pl [data-plbudin]"), L0 = +(inp && inp.value) || 0; if (!(L0 > 0)) { U.toast("Type the budget in lakh first"); return; } P.budL = L0; var t3 = T(); U.toast("Trying the usual sizes…");
       setTimeout(function () { var dz = P.des[t3.id] || PL.desDefault(t3.id); P.bud = Object.assign({ type: t3.id }, PL.budgetPlan({ type: t3.id, plot: geo().plot, rules: geo().rules, plotArea: geo().plotArea, rate: P.rate[t3.id] || t3.rate, factor: PL.styleFactor(dz), budget: L0 * 1e5, facing: P.facing })); save(); U.render(); }, 30); return; }
     if (ds.plbud != null) { var rb = P.bud && P.bud.rows[+ds.plbud]; if (!rb) return; var t4 = T(); P.inp[t4.id] = Object.assign({}, rb.v); P.floors = rb.floors; regen(); if (rb.compact) P.items.forEach(function (x) { if (/^(dining|store|pooja|utility)$/.test(x.key)) x.on = false; }); save(); U.render(); U.toast("Set: " + rb.label + " — now press Make layouts"); return; }

@@ -11,7 +11,7 @@
   var LAYC = { "A-WALL": 7, "A-DOOR": 4, "A-WIN": 140, "S-COL": 1, "S-BEAM": 5, "S-SLAB": 8, "S-FOOT": 9, "A-ROOF": 30, "A-STAIR": 6, "A-ROOM": 3, "A-RAIL": 8, "A-FURN": 42, "P-PLUMB": 150, "C-PROP": 1, "C-PROP-TXT": 7, "C-SETBACK": 3, "A-SITE": 33, "A-CEIL": 9, "L-LAND": 82, "A-FINISH": 34 };
 
   PL.toDoc = function (plan, cfg) {
-    var CAD = EP.cad, B = EP.bim, G = EP.geom, T = plan.T, nF = plan.floors.length, H = T.h, house = T.id === "house", frame = cfg.frame !== "lb";
+    var CAD = EP.cad, B = EP.bim, G = EP.geom, T = plan.T, nF = plan.floors.length, H = T.h, house = !!T.home, frame = cfg.frame !== "lb";
     var d = CAD.newDoc(cfg.name || (T.n + " — " + plan.label), "mm"), bs = B.ensure(d), ents = d.ents;
     var des = Object.assign({}, PL.desDefault ? PL.desDefault(T.id) : {}, cfg.des || {}), TH = des.mat === "block" ? [200, 200, 100] : des.mat === "stone" ? [300, 230, 115] : [230, 230, 115], wMat = des.mat === "block" ? "block" : "brick", sloped = /^(gable|hip|tile_hip|tile_gable)$/.test(des.roof);
     if (cfg.furn === false) des.furn = "none";
@@ -310,8 +310,8 @@
         var crt = plan.floors[f2].filter(function (r) { return sp(r) && sp(r).open === "court"; })[0];
         if (!plan.outline && crt) { var c0 = [crt.x, crt.y, crt.x + crt.w, crt.y + crt.d], rs = [];
           if (c0[1] > 0.5) rs.push([0, 0, W, c0[1]]); if (D - c0[3] > 0.5) rs.push([0, c0[3], W, D]);
-          var fy = c0[1] > 0.5 ? c0[1] / 2 : c0[1], by = D - c0[3] > 0.5 ? c0[3] + (D - c0[3]) / 2 : c0[3];
-          if (c0[0] > 0.5) rs.push([0, fy, c0[0], by, 1]); if (W - c0[2] > 0.5) rs.push([c0[2], fy, W, by, 1]);
+          var cfy = c0[1] > 0.5 ? c0[1] / 2 : c0[1], by = D - c0[3] > 0.5 ? c0[3] + (D - c0[3]) / 2 : c0[3];
+          if (c0[0] > 0.5) rs.push([0, cfy, c0[0], by, 1]); if (W - c0[2] > 0.5) rs.push([c0[2], cfy, W, by, 1]);
           rs.forEach(function (rc) { var e = 0.115, q = [rc[0] - e, rc[1] - e, rc[2] + e, rc[3] + e]; add(Object.assign({ pts: [P(q[0], q[1]), P(q[2], q[1]), P(q[2], q[3]), P(q[0], q[3])], dir: q[2] - q[0] >= q[3] - q[1] ? 0 : 90 }, rbase, { kind: rc[4] ? "hip" : rbase.kind })); }); }
         else if (!plan.outline) add(Object.assign({ pts: outer.map(function (q) { return q.slice(); }), dir: W >= D ? 0 : 90 }, rbase));
         else roofWings(plan.outline).forEach(function (rc) { var e = 0.115, q = [rc[0] - e, rc[1] - e, rc[2] + e, rc[3] + e]; add(Object.assign({ pts: [P(q[0], q[1]), P(q[2], q[1]), P(q[2], q[3]), P(q[0], q[3])], dir: q[2] - q[0] >= q[3] - q[1] ? 0 : 90 }, rbase, { kind: gab && rc[4] ? "hip" : rbase.kind })); });

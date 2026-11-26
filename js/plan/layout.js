@@ -19,7 +19,7 @@
 
   /* ---------------- stair and lift sizes ---------------- */
   PL.stairDims = function (T, corr) {
-    var ws = T.stairW, h = T.h / 1000, house = T.id === "house", Rmax = house ? 0.175 : 0.15, n = Math.ceil(h / Rmax - 1e-9); if (n % 2) n++;
+    var ws = T.stairW, h = T.h / 1000, house = !!T.home, Rmax = house ? 0.175 : 0.15, n = Math.ceil(h / Rmax - 1e-9); if (n % 2) n++;
     var Tr = house ? 0.25 : 0.3, fl = n / 2, going = (fl - 1) * Tr, len = going + ws + (corr ? 0 : ws) + 0.25, wid = 2 * ws + (house ? 0.35 : 0.45);
     return { w: r2(wid), d: r2(len), n: n, R: h / n, T: Tr, ws: ws };
   };
@@ -38,7 +38,7 @@
         if (sp.att && itm.noAtt !== true) { var csp = SP[sp.att]; ch = { key: sp.att, sp: csp, a: itm.child > 0 ? +itm.child : spA(csp, size) }; if (itm.area > 0 && itm.child > 0) a = Math.max(4, a - itm.child); }
         var nm = itm.name || sp.n; names[nm] = (names[nm] || 0) + 1;
         out.push({ uid: uid(), key: itm.key, sp: sp, base: nm, name: nm, a: r2(a), child: ch, fl: itm.fl || sp.fl || "any", z: itm.z != null ? itm.z : sp.z, minW: sp.minW || 1.2, main: itm.main != null ? !!itm.main : !!sp.main,
-          fix: bk ? bk.fix : itm.fix, seats: itm.seats, beds: itm.beds, stair: sd, open_to: itm.open_to, wid: sp.lift && itm.auto === "bedlift" ? (sp.L[0]) : null });
+          fix: bk ? bk.fix : itm.fix, seats: itm.seats, beds: itm.beds, stair: sd, open_to: itm.open_to, unit: itm.unit, owner: itm.owner, wid: sp.lift && itm.auto === "bedlift" ? (sp.L[0]) : null });
       }
     });
     Object.keys(names).forEach(function (nm) { if (names[nm] < 2) return; var k = 0; out.forEach(function (o) { if (o.base === nm) o.name = nm + " " + (++k); }); });
@@ -410,7 +410,9 @@
         var sp = r.inst && r.inst.sp; if (!sp || !sp.unit) { out.push(r); return; } k++;
         var u = r.inst.unit || { beds: 2, attached: 1 }, key = u.beds + "|" + r.w + "|" + r.d, best = cache[key];
         if (!best) {
-          var items = H.program({ beds: u.beds, attached: u.attached, persons: u.beds + 2, cars: 0, kitchenOpen: 0 }).filter(function (x) { return !x.off && !/^(car_park|stair|lounge|balcony|pooja|bike_park)$/.test(x.key) && !(u.beds < 2 && x.key === "store"); }).map(function (x) { return Object.assign({}, x, { size: u.beds <= 2 ? "S" : "M", fl: "G" }); });
+          var items = H.program({ beds: Math.max(1, u.beds), attached: u.attached, persons: u.beds + 2, cars: 0, kitchenOpen: 0 }).filter(function (x) { return !x.off && !/^(car_park|stair|lounge|balcony|pooja|bike_park)$/.test(x.key) && !(u.beds < 2 && x.key === "store"); }).map(function (x) { return Object.assign({}, x, { size: u.beds <= 2 ? "S" : "M", fl: "G" }); });
+          /* 1 RK: one room, a kitchen and a toilet */
+          if (!u.beds) items = [{ key: "bed", n: 1, size: "S", fl: "G" }, { key: "kitchen", n: 1, size: "S", fl: "G" }, { key: "toilet", n: 1, size: "S", fl: "G" }];
           var ins = PL.expand(H, items, 1); ins.forEach(function (x) { x.fl = "G"; });
           var cand = PL.bandPlans(H, [ins], r.w, r.d, { unitExt: "b" }), tp = PL.flatTpl(ins, r.w, r.d), tn = PL.flatTplN(ins, r.w, r.d); if (tp) cand.push(tp); if (tn) cand.push(tn); cand.forEach(function (c) { c.sc = PL.score(H, c, { unitExt: "b" }); }); cand.sort(function (a, b) { return b.sc.score - a.sc.score; }); best = cache[key] = cand[0] || null;
         }
@@ -518,8 +520,8 @@
   PL.generate = function (cfg) {
     /* apartments: also try shallower flats (8.25 / 7.5 m) so that two rows fit on a shallow plot, and deeper ones (10.5 m)
        so that more fit along a narrow one; keep the one with the fewest floors, then the fewest warnings, then the best score */
-    if (cfg.type === "apartment" && cfg._band == null) {
-      var best = null; [9.0, 8.25, 7.5, 10.5].forEach(function (b) { var r = PL.generate(Object.assign({}, cfg, { _band: b })); if (!r || r.err || !r.opts || !r.opts.length) { if (!best) best = r; return; }
+    if (PL.TYPES[cfg.type] && PL.TYPES[cfg.type].bands && cfg._band == null) {
+      var best = null; PL.TYPES[cfg.type].bands.forEach(function (b) { var r = PL.generate(Object.assign({}, cfg, { _band: b })); if (!r || r.err || !r.opts || !r.opts.length) { if (!best) best = r; return; }
         var k = [r.warn.length, r.info.nF, -(r.opts[0].sc.score || 0)]; if (!best || best.err || !best.k || k[0] < best.k[0] || (k[0] === best.k[0] && (k[1] < best.k[1] || (k[1] === best.k[1] && k[2] < best.k[2] - 5)))) { r.k = k; best = r; } });
       return best;
     }
@@ -549,7 +551,7 @@
     if (T.mode === "corr" && W > bw + 0.01 && !res.L) { warn.push("The rooms need a building " + W + " m long, but only " + bw + " m is free across the plot — add floors, a larger plot, or fewer rooms."); W = Math.max(W, 9); }
     if (T.mode === "band" && !res.fit) warn.push("The rooms chosen need about " + Math.round(res.need) + " m² per floor but only " + Math.round(W * D) + " m² can be built (setbacks / coverage) — rooms come out smaller; add a floor or choose smaller sizes.");
     /* a stilt parking floor is not counted in FAR (MBBL 2016) */
-    var stiltF = (T.id || cfg.type) === "apartment" && (cfg.items || []).some(function (x) { return x.key === "stilt" && !x.off; }) && nF > 1 ? 1 : 0;
+    var stiltF = T.flats && (cfg.items || []).some(function (x) { return x.key === "stilt" && !x.off; }) && nF > 1 ? 1 : 0;
     var built = W * D * nF, far = W * D * (nF - stiltF) / plotA, cov = W * D / plotA * 100, height = nF * T.h / 1000;
     if (cov > R.cov + 0.5) warn.push("Ground coverage " + cov.toFixed(1) + " % is more than the " + R.cov + " % allowed.");
     if (far > R.far + 0.005) warn.push("FAR " + far.toFixed(2) + " is more than the " + R.far + " allowed — " + Math.round((far - R.far) * plotA) + " m² too much; take a floor off or fewer rooms.");
@@ -566,7 +568,7 @@
     var pick = [], seen = {};
     opts.forEach(function (p) { if (pick.length >= 4) return; var key = T.mode === "band" ? p.sig.replace(/[LR]$/, "").slice(0, 4) + p.floors[0].map(function (r) { return r.key; }).slice(0, 6).join() : p.sig; if (seen[key]) return; seen[key] = 1; pick.push(p); });
     if (pick.length < Math.min(4, opts.length)) opts.forEach(function (p) { if (pick.length < 4 && pick.indexOf(p) < 0) pick.push(p); });
-    pick.forEach(function (p, i) { p.id = "opt" + (i + 1); p.label = "Option " + "ABCD"[i]; p.nF = nF; p.T = T; p.off = [R.l, R.f]; if (T.id === "apartment") p.floors[0].forEach(function (r) { if (r.pass && !r.corr) { r.pass = 0; r.name = "Stilt parking"; r.key = "stilt"; r.z = 0; r.inst = { key: "stilt", sp: SP.stilt, name: "Stilt parking", a: PL.areaOf(r), z: 0, minW: 5 }; } });
+    pick.forEach(function (p, i) { p.id = "opt" + (i + 1); p.label = "Option " + "ABCD"[i]; p.nF = nF; p.T = T; p.off = [R.l, R.f]; if (T.flats) p.floors[0].forEach(function (r) { if (r.pass && !r.corr) { r.pass = 0; r.name = "Stilt parking"; r.key = "stilt"; r.z = 0; r.inst = { key: "stilt", sp: SP.stilt, name: "Stilt parking", a: PL.areaOf(r), z: 0, minW: 5 }; } });
       PL.expandUnits(p, cfg); p.chk = PL.checks(T, p, cfg); p.stats = PL.stats(T, p, cfg); });
     if (pick[0]) { W = pick[0].W; D = pick[0].D; var fa = PL.footArea(pick[0]); built = fa * nF; far = fa * (nF - stiltF) / plotA; cov = fa / plotA * 100; }
     info = { bw: bw, bd: bd, maxFoot: r2(maxFoot), plotA: r2(plotA), nF: nF, W: W, D: D, built: r2(built), far: r2(far), cov: r2(cov), height: r2(height), occ: Math.round(built / T.occ), dbl: res.dbl };

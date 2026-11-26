@@ -54,6 +54,11 @@
     passage: s({ n: "Passage", hi: "पैसेज", z: 2, S: [1.0, 3.0], M: [1.1, 4.0], L: [1.2, 5.0], minW: 1.0, circ: 1, win: "none", asp: 99, auto: 1 }),
     stair: s({ n: "Staircase", hi: "सीढ़ी", z: 3, S: [2.4, 4.2], M: [2.4, 4.5], L: [2.7, 4.8], minW: 2.0, win: "store", fl: "all", stair: 1, fin: "granite", asp: 2.6 }),
     lift: s({ n: "Lift", hi: "लिफ़्ट", z: 3, S: [1.8, 1.8], M: [2.0, 2.2], L: [2.4, 2.8], minW: 1.8, win: "none", fl: "all", lift: 1, fin: "granite", asp: 1.6 }),
+    /* ---------- farm house / village house ---------- */
+    cattle_shed: s({ n: "Cattle shed (gaushala)", hi: "गौशाला / पशु शेड", z: 3, S: [3.0, 4.5], M: [3.6, 6.0], L: [4.5, 7.5], minW: 3.0, win: "store", fl: "G", fin: "ips", furn: "none", door: "D4", asp: 2.8 }),
+    grain_store: s({ n: "Grain store", hi: "अनाज भंडार", z: 3, S: [2.4, 3.0], M: [3.0, 3.6], L: [3.6, 4.2], minW: 2.4, win: "store", fl: "G", fin: "ips", furn: "store", door: "D2", asp: 2.2 }),
+    tractor_shed: s({ n: "Tractor / implements shed", hi: "ट्रैक्टर / औज़ार शेड", z: 0, S: [3.6, 6.0], M: [4.2, 6.6], L: [4.5, 7.5], minW: 3.3, open: "park", fl: "G", fin: "ips", win: "none", asp: 2.6 }),
+    bath_open: s({ n: "Bathing area", hi: "नहाने की जगह", z: 3, S: [1.2, 1.8], M: [1.5, 2.1], L: [1.8, 2.4], minW: 1.2, wet: 1, win: "wet", fl: "G", fin: "ceramic", furn: "none", door: "D3", asp: 2 }),
     /* ---------- office ---------- */
     reception: s({ n: "Reception & waiting", hi: "रिसेप्शन / प्रतीक्षा", z: 1, S: [3.6, 4.2], M: [4.5, 5.4], L: [6.0, 6.0], minW: 3.0, win: "hab", circ: 1, fl: "G", furn: "reception", main: 1, vastu: ["N", "E", "NE"], asp: 2.6 }),
     cabin_head: s({ n: "Head / MD cabin", hi: "प्रमुख का केबिन", z: 4, S: [3.6, 4.2], M: [4.2, 4.8], L: [4.8, 5.4], minW: 3.0, win: "hab", att: "toilet_att", furn: "cabin_big", vastu: ["SW", "S", "W"] }),
@@ -227,6 +232,58 @@
       L.push(it("court", 1, { off: 1 })); L.push(it("study", 1, { off: 1 })); L.push(it("guest", 1, { off: 1 })); L.push(it("sitout", 1, { off: 1 })); L.push(it("servant", 1, { off: 1 })); L.push(it("wc", 1, { off: 1 })); L.push(it("bike_park", 1, { off: 1 }));
       return L;
     } };
+  T.house.home = 1;
+  /* rental house: small flats to let along an open passage with one stair; 1 RK (room + kitchen + toilet), 1 BHK or 2 BHK; the owner's
+     bigger flat on the ground floor if wanted; two-wheeler parking. Typical sizes: 1 RK about 28 m², 1 BHK 45–50 m², 2 BHK 65–75 m² carpet */
+  var RENT_A = [28, 48, 72];
+  T.rental = { plot: [15, 24], n: "Rental house (flats / rooms to let)", hi: "किराए वाला मकान", icon: "🏘", mode: "corr", h: 3000, occ: 12.5, stairW: 1.0, band: 7.5, bands: [6.0, 7.5, 9.0], cw: 1.2, grp: "A", rate: 20000, rules: "res", home: 1, flats: 1,
+    inputs: [
+      { k: "units", n: "Units to let", hi: "किराए की यूनिट", def: 4, min: 1, max: 60 },
+      { k: "ut", n: "Unit type: 0 = 1 RK, 1 = 1 BHK, 2 = 2 BHK", hi: "यूनिट: 0 = 1RK, 1 = 1BHK, 2 = 2BHK", def: 1, min: 0, max: 2 },
+      { k: "owner", n: "Owner's own flat on the ground floor", hi: "मालिक का अपना फ़्लैट (नीचे)", def: 1, bool: 1 },
+      { k: "bikes", n: "Two-wheeler parking", hi: "बाइक पार्किंग", def: 1, bool: 1 }
+    ],
+    program: function (v) {
+      var L = [], ut = Math.max(0, Math.min(2, v.ut | 0));
+      L.push(it("flobby", 1, { size: "S" })); if (v.bikes) L.push(it("bike_park"));
+      if (v.owner) L.push(it("flat", 1, { area: 72, unit: { beds: 2, attached: 1 }, fl: "G", owner: 1 }));
+      L.push(it("flat", Math.max(1, v.units | 0), { area: RENT_A[ut], unit: { beds: ut, attached: ut ? 1 : 0 }, fl: "any" }));
+      L.push(it("stair", 1, { opt: 1 })); L.push(it("lift", 1, { auto: "lift" }));
+      return L;
+    },
+    /* how many units the plot takes: rows of units beside a 1.2 m passage inside the setbacks, the stair (about 2.6 m) in one row,
+       up to 4 storeys without a lift, inside the FAR; the owner's flat and the entrance / bike parking use the ground floor first */
+    fit: function (v, plot, R) {
+      var ut = Math.max(0, Math.min(2, v.ut | 0)), ua = RENT_A[ut], A = plot.w * plot.d, bw = Math.max(0, plot.w - (R.l || 0) - (R.rt || 0)), bd = Math.max(0, plot.d - (R.f || 0) - (R.r || 0)), foot = Math.min(bw * bd, A * (R.cov || 100) / 100), best = 0, bestF = 1;
+      var floors = Math.max(1, Math.min(4, Math.floor((R.h || 15) / 3.0))), nm = ["1 RK", "1 BHK", "2 BHK"][ut];
+      [6.0, 7.5, 9.0].forEach(function (db) { var fw = ua / db, rows = bd >= 2 * db + 1.2 ? 2 : bd >= db + 1.2 ? 1 : 0; if (!rows) return; var Wof = function (n) { return rows === 2 ? Math.max(Math.ceil(n / 2) * fw, 2.6 + Math.floor(n / 2) * fw) : 2.6 + n * fw; }, per = 0;
+        while (Wof(per + 1) <= bw + 0.05 && Wof(per + 1) * (rows * db + 1.2) <= foot + 0.5) per++; if (!per) return;
+        var g0 = Math.max(0, per - (v.owner ? Math.ceil(72 / ua) : 0) - (v.bikes ? 1 : 0)), n = Math.min(g0 + per * (floors - 1), Math.floor(A * (R.far || 1.5) / (ua * 1.3)) - (v.owner ? Math.ceil(72 / ua) : 0)); if (n > best) { best = n; bestF = per; } });
+      if (best <= 0) return { k: "units", n: 0, msg: "A " + nm + " unit and the stair do not fit in the " + bw.toFixed(1) + " m left across this plot" + (ut ? " — try a smaller unit" : "") + ".", hi: "यह यूनिट इस प्लॉट में नहीं आती" };
+      return { k: "units", n: best, msg: "This plot can take about " + best + (best === 1 ? " unit" : " units") + " of " + nm + " to let — " + bestF + " a floor, up to " + floors + " storeys (no lift)" + (v.owner ? ", with your own flat on the ground floor" : "") + ".", hi: "इस प्लॉट पर लगभग " + best + " किराए की यूनिट बन सकती हैं" };
+    } };
+  /* farm house / village house: one or two floors round an open courtyard (aangan), front verandah, baithak, kitchen with store and
+     grain store, cattle shed and tractor shed on the ground, bathing area */
+  T.farm = { plot: [24, 30], n: "Farm house / village house", hi: "फार्म हाउस / गाँव का घर", icon: "🌾", mode: "band", h: 3300, occ: 12.5, stairW: 1.0, grp: "A", rate: 18000, rules: "res", home: 1,
+    inputs: [
+      { k: "beds", n: "Bed rooms", hi: "बेडरूम", def: 3, min: 1, max: 8 },
+      { k: "attached", n: "Bed rooms with attached toilet", hi: "अटैच्ड टॉयलेट वाले बेडरूम", def: 1, min: 0, max: 8 },
+      { k: "persons", n: "Family members", hi: "परिवार के सदस्य", def: 6, min: 1, max: 25 },
+      { k: "cattle", n: "Cattle (cows / buffaloes, 0 = none)", hi: "पशु (गाय / भैंस)", def: 2, min: 0, max: 30 },
+      { k: "tractor", n: "Tractor / implements shed", hi: "ट्रैक्टर शेड", def: 1, bool: 1 },
+      { k: "aangan", n: "Open courtyard (aangan)", hi: "आंगन", def: 1, bool: 1 }
+    ],
+    program: function (v) {
+      var L = [], beds = Math.max(1, v.beds | 0), att = Math.min(beds, Math.max(0, v.attached | 0));
+      L.push(it("verandah", 1, { size: "S" })); if (v.tractor) L.push(it("tractor_shed"));
+      L.push(it("living", 1, { size: "L" })); L.push(it("kitchen", 1, { size: "M" })); L.push(it("store")); L.push(it("grain_store")); L.push(it("pooja"));
+      if (v.aangan) L.push(it("court", 1, { size: "M" }));
+      L.push(it(att >= 1 ? "master" : "bed")); if (beds >= 2) { var a2 = Math.max(0, att - 1); if (a2) L.push(it("bed_att", Math.min(beds - 1, a2))); if (beds - 1 - a2 > 0) L.push(it("bed", beds - 1 - a2)); }
+      L.push(it("toilet")); L.push(it("bath_open")); L.push(it("utility"));
+      if ((v.cattle | 0) > 0) L.push(it("cattle_shed", 1, { area: Math.max(12, (v.cattle | 0) * 3.5) }));
+      L.push(it("stair", 1, { opt: 1, off: 1 })); L.push(it("dining", 1, { off: 1 })); L.push(it("guest", 1, { off: 1 })); L.push(it("car_park", 1, { off: 1 }));
+      return L;
+    } };
   T.office = { plot: [25, 30], n: "Office building", hi: "ऑफ़िस बिल्डिंग", icon: "🏢", mode: "corr", h: 3600, occ: 10, stairW: 1.5, band: 6.0, cw: 1.8, grp: "C", rate: 26000, rules: "com", fixk: "office",
     inputs: [
       { k: "staff", n: "Staff (total)", hi: "कर्मचारी", def: 40, min: 2, max: 2000 },
@@ -366,7 +423,7 @@
       blocks(L, { k: "assembly", m: Math.ceil(s * 0.55), f: Math.ceil(s * 0.45) }, false); L.push(it("toilet_pwd", 1, { fl: "G" }));
       return L;
     } };
-  T.apartment = { plot: [30, 40], n: "Apartment / flats", hi: "अपार्टमेंट / फ़्लैट", icon: "🏬", mode: "corr", h: 3000, occ: 12.5, stairW: 1.25, band: 9.0, cw: 1.8, grp: "A", rate: 24000, rules: "res",
+  T.apartment = { plot: [30, 40], n: "Apartment / flats", hi: "अपार्टमेंट / फ़्लैट", icon: "🏬", mode: "corr", flats: 1, bands: [9.0, 8.25, 7.5, 10.5], h: 3000, occ: 12.5, stairW: 1.25, band: 9.0, cw: 1.8, grp: "A", rate: 24000, rules: "res",
     inputs: [
       { k: "flats", n: "Total flats", hi: "कुल फ़्लैट", def: 16, min: 2, max: 400 },
       { k: "bhk", n: "Flat type (bed rooms 1–4)", hi: "फ़्लैट का प्रकार (BHK)", def: 2, min: 1, max: 4 },
@@ -424,7 +481,7 @@
     inputs: [{ k: "labour", n: "Labour room", hi: "प्रसव कक्ष", def: 1, bool: 1 }, { k: "qtr", n: "Staff quarter", hi: "स्टाफ क्वार्टर", def: 1, bool: 1 }],
     program: function (v) { var L = []; L.push(it("verandah")); L.push(it("opd_wait", 1, { area: 20, name: "Waiting", main: 1 })); L.push(it("exam_r", 2)); if (v.labour) L.push(it("labour", 1, { area: 20 })); L.push(it("pharmacy", 1, { area: 9, name: "Medicine store" })); L.push(it("hlab", 1, { area: 9, name: "Lab / sample collection" }));
       L.push(it("toilet", 2)); if (v.qtr) L.push(it("staffq")); return L; } };
-  PL.ORDER = ["house", "apartment", "office", "shops", "school", "college", "hospital", "hwc", "hotel", "hostel", "canteen", "hall", "factory", "anganwadi", "panchayat"];
+  PL.ORDER = ["house", "apartment", "rental", "farm", "office", "shops", "school", "college", "hospital", "hwc", "hotel", "hostel", "canteen", "hall", "factory", "anganwadi", "panchayat"];
 
   /* ---------- rules (indicative defaults — always check with the local authority) ---------- */
   PL.RULESETS = {
