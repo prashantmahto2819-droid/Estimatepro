@@ -45,12 +45,23 @@
     for (var a = y0; a <= y1; a += st) { var sa = span(P, a + 1e-6); if (!sa) continue; for (var b = a + 3; b <= y1 + 1e-6; b += st) { var sb = span(P, b - 1e-6); if (!sb) continue; var x0 = Math.max(sa[0], sb[0]), x1 = Math.min(sa[1], sb[1]); if (x1 - x0 < 3) continue; var A = (x1 - x0) * (b - a); if (!best || A > best.A + 1e-6) best = { A: A, r: [x0, a, x1, b] }; } }
     return best ? best.r.map(function (v) { return Math.round(v * 100) / 100; }) : null;
   };
+  /* any simple plot, also one with an inward corner (L / T shaped): a 0.25 m grid of the points that are inside the plot and at
+     least the setback of every side away from it, then the biggest rectangle of such points (histogram method) */
+  var segD = function (p, a, b) { var dx = b[0] - a[0], dy = b[1] - a[1], L2 = dx * dx + dy * dy, t = L2 ? Math.max(0, Math.min(1, ((p[0] - a[0]) * dx + (p[1] - a[1]) * dy) / L2)) : 0; return Math.hypot(p[0] - a[0] - t * dx, p[1] - a[1] - t * dy); };
+  PL.maxRectGrid = function (P, sb) {
+    var st = 0.25, xs = P.map(function (q) { return q[0]; }), ys = P.map(function (q) { return q[1]; }), x0 = Math.min.apply(null, xs), y0 = Math.min.apply(null, ys), nx = Math.ceil((Math.max.apply(null, xs) - x0) / st), ny = Math.ceil((Math.max.apply(null, ys) - y0) / st);
+    var ok = function (x, y) { if (!PL.inPoly([x, y], P)) return false; for (var i = 0; i < P.length; i++) if (segD([x, y], P[i], P[(i + 1) % P.length]) < sb[i] - 1e-6) return false; return true; };
+    var h = new Array(nx + 1).fill(0), best = null;
+    for (var j = 0; j <= ny; j++) { var y = y0 + j * st; for (var i = 0; i <= nx; i++) h[i] = ok(x0 + i * st, y) ? h[i] + 1 : 0;
+      var stk = []; for (var k = 0; k <= nx + 1; k++) { var hk = k <= nx ? h[k] : 0; while (stk.length && h[stk[stk.length - 1]] >= hk) { var top = stk.pop(), height = h[top], left = stk.length ? stk[stk.length - 1] + 1 : 0, w = k - left; if (height > 1 && w > 1) { var W = (w - 1) * st, D = (height - 1) * st; if (W >= 3 && D >= 3 && (!best || W * D > best.A)) best = { A: W * D, r: [x0 + left * st, y - D, x0 + left * st + W, y] }; } } if (k <= nx) stk.push(k); } }
+    return best ? best.r.map(function (v) { return Math.round(v * 100) / 100; }) : null;
+  };
   /* what the layout engine sees: a rectangular "virtual plot" (the polygon's bounding box) whose setbacks put the buildable area
      exactly on the biggest rectangle; area, coverage and FAR still use the real plot area */
   PL.virtualPlot = function (P, R) {
-    var inner = PL.insetPoly(P, PL.edgeSetbacks(P, R)), rect = PL.maxRect(inner); if (!rect) return null;
+    var sb = PL.edgeSetbacks(P, R), convex = PL.isConvex(P), inner = convex ? PL.insetPoly(P, sb) : P, rect = convex ? PL.maxRect(inner) : PL.maxRectGrid(P, sb); if (!rect) return null;
     var W = Math.max.apply(null, P.map(function (q) { return q[0]; })), D = Math.max.apply(null, P.map(function (q) { return q[1]; }));
-    return { plot: { w: Math.round(W * 100) / 100, d: Math.round(D * 100) / 100 }, rules: Object.assign({}, R, { l: rect[0], f: rect[1], rt: Math.round((W - rect[2]) * 100) / 100, r: Math.round((D - rect[3]) * 100) / 100, irregular: 1 }), rect: rect, inner: inner, area: PL.polyArea(P) };
+    return { plot: { w: Math.round(W * 100) / 100, d: Math.round(D * 100) / 100 }, convex: convex, rules: Object.assign({}, R, { l: rect[0], f: rect[1], rt: Math.round((W - rect[2]) * 100) / 100, r: Math.round((D - rect[3]) * 100) / 100, irregular: 1 }), rect: rect, inner: inner, area: PL.polyArea(P) };
   };
   PL.plotSVG = function (P, v, sc) {
     var W = Math.max.apply(null, P.map(function (q) { return q[0]; })), D = Math.max.apply(null, P.map(function (q) { return q[1]; })); sc = sc || Math.min(260 / W, 260 / D);
