@@ -3,6 +3,9 @@
 This file is for the people maintaining the app. It is not published with the site (see `.assetsignore`).
 The text users see is `EP_NOTES` in `js/version.js`.
 
+## 2026.11.21-z88
+- Planner: sloped roofs on L / U outlines — roofWings() cuts the outline into rectangles, wings extended to the main ridge (valleys), wing roofs hipped.
+
 ## 2026.11.21-z87
 - Planner: apartments try flat depths 9 / 8.25 / 7.5 / 10.5 m (PL.generate _band) and keep the fewest warnings → floors → score; fit() counts core 3 m without lift (≤ 3 storeys) / 5.2 m with; UI checks the estimate with the real generator (fitNow, cached). Flat template rounding fix.
 

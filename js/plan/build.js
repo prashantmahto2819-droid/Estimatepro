@@ -13,7 +13,7 @@
   PL.toDoc = function (plan, cfg) {
     var CAD = EP.cad, B = EP.bim, G = EP.geom, T = plan.T, nF = plan.floors.length, H = T.h, house = T.id === "house", frame = cfg.frame !== "lb";
     var d = CAD.newDoc(cfg.name || (T.n + " — " + plan.label), "mm"), bs = B.ensure(d), ents = d.ents;
-    var des = Object.assign({}, PL.desDefault ? PL.desDefault(T.id) : {}, cfg.des || {}), TH = des.mat === "block" ? [200, 200, 100] : des.mat === "stone" ? [300, 230, 115] : [230, 230, 115], wMat = des.mat === "block" ? "block" : "brick", sloped = /^(gable|hip|tile_hip|tile_gable)$/.test(des.roof) && !plan.outline;
+    var des = Object.assign({}, PL.desDefault ? PL.desDefault(T.id) : {}, cfg.des || {}), TH = des.mat === "block" ? [200, 200, 100] : des.mat === "stone" ? [300, 230, 115] : [230, 230, 115], wMat = des.mat === "block" ? "block" : "brick", sloped = /^(gable|hip|tile_hip|tile_gable)$/.test(des.roof);
     if (cfg.furn === false) des.furn = "none";
     Object.keys(LAYC).forEach(function (k) { if (!d.layers[k]) d.layers[k] = { color: LAYC[k], lw: k === "A-WALL" ? 0.5 : 0.25, lt: k === "C-SETBACK" ? "DASHED" : "CONTINUOUS", on: true, lock: false, frz: false }; });
     var nm = ["Ground floor", "First floor", "Second floor", "Third floor", "Fourth floor", "Fifth floor", "Sixth floor", "Seventh floor", "Eighth floor"];
@@ -265,13 +265,33 @@
       if (f === "sick") { wallPut("hospital_bed", opp, 0.5); return; }
     }
 
+    /* an L / U building gets one sloped roof per wing: the outline is cut into rectangles (along x or along y, whichever keeps the
+       biggest piece whole), the main block keeps its own roof and every wing runs on into it up to the main ridge, so the roofs meet
+       in valleys instead of leaving a flat gap. [x0, y0, x1, y1, isWing] in metres. */
+    function roofWings(ol) {
+      var cut = function (alongX) { var cs = ol.map(function (q) { return alongX ? q[0] : q[1]; }).filter(function (v, i, a) { return a.indexOf(v) === i; }).sort(function (a, b) { return a - b; }), out = [];
+        for (var i = 0; i + 1 < cs.length; i++) { var m = (cs[i] + cs[i + 1]) / 2, hits = [];
+          ol.forEach(function (q, j) { var r2 = ol[(j + 1) % ol.length], a0 = alongX ? q[0] : q[1], a1 = alongX ? r2[0] : r2[1], b0 = alongX ? q[1] : q[0]; if ((a0 - m) * (a1 - m) < 0) hits.push(b0); });
+          hits.sort(function (a, b) { return a - b; }); for (var k = 0; k + 1 < hits.length; k += 2) { var lo = hits[k], hi = hits[k + 1], last = out.filter(function (o) { return Math.abs(o.hi - hi) < 1e-6 && Math.abs(o.lo - lo) < 1e-6 && Math.abs(o.b - cs[i]) < 1e-6; })[0];
+            if (last) last.b = cs[i + 1]; else out.push({ a: cs[i], b: cs[i + 1], lo: lo, hi: hi }); } }
+        return out.map(function (o) { return alongX ? [o.a, o.lo, o.b, o.hi] : [o.lo, o.a, o.hi, o.b]; }); };
+      var area = function (r) { return (r[2] - r[0]) * (r[3] - r[1]); }, A = cut(true), Bc = cut(false), big = function (L) { return Math.max.apply(null, L.map(area)); };
+      var L = big(A) >= big(Bc) ? A : Bc; if (L.length < 2) return L;
+      var main = L.slice().sort(function (a, b) { return area(b) - area(a); })[0];
+      return L.map(function (r) { if (r === main) return r.slice(); var o = r.slice(); o[4] = 1;
+        if (Math.abs(r[1] - main[3]) < 1e-6) o[1] = main[3] - (main[3] - main[1]) / 2; else if (Math.abs(r[3] - main[1]) < 1e-6) o[3] = main[1] + (main[3] - main[1]) / 2;
+        else if (Math.abs(r[0] - main[2]) < 1e-6) o[0] = main[2] - (main[2] - main[0]) / 2; else if (Math.abs(r[2] - main[0]) < 1e-6) o[2] = main[0] + (main[2] - main[0]) / 2;
+        return o; });
+    }
     /* ---------- slabs (stair wells cut), stair cabin and parapet on the terrace ---------- */
     var olM = plan.outline ? plan.outline.map(function (q) { return P(q[0], q[1]); }) : [P(0, 0), P(W, 0), P(W, D), P(0, D)];
     var outer = B.insetPoly ? B.insetPoly(olM, olM.map(function () { return -115; })) : [P(-0.115, -0.115), P(W + 0.115, -0.115), P(W + 0.115, D + 0.115), P(-0.115, D + 0.115)];
     for (var f2 = 0; f2 < nF; f2++) {
       var holes = stairs.filter(function (s) { return s.fi === f2 && !(f2 === nF - 1 && (sloped || T.roof === "gi" || des.roof === "gi")); }).map(function (s) { var h = s.hole; return [P(h[0], h[1]), P(h[2], h[1]), P(h[2], h[3]), P(h[0], h[3])]; });
       plan.floors[f2].forEach(function (r) { if (sp(r) && sp(r).open === "court") { var t = 0.115; holes.push([P(r.x + t, r.y + t), P(r.x + r.w - t, r.y + t), P(r.x + r.w - t, r.y + r.d - t), P(r.x + t, r.y + r.d - t)]); } });
-      if (sloped && f2 === nF - 1 && T.roof !== "gi") { var tile = /^tile/.test(des.roof), gab = /gable/.test(des.roof); add({ t: "roof", pts: outer.map(function (q) { return q.slice(); }), kind: gab ? "gable" : "hip", slope: des.roof === "tile_gable" ? 32 : tile ? 25 : 22, th: tile ? 100 : 125, lvl: "L" + f2, off: H, mat: tile ? "tile" : "rcc", over: 600, dir: W >= D ? 0 : 90, layer: "A-ROOF" });
+      if (sloped && f2 === nF - 1 && T.roof !== "gi") { var tile = /^tile/.test(des.roof), gab = /gable/.test(des.roof), rbase = { t: "roof", kind: gab ? "gable" : "hip", slope: des.roof === "tile_gable" ? 32 : tile ? 25 : 22, th: tile ? 100 : 125, lvl: "L" + f2, off: H, mat: tile ? "tile" : "rcc", over: 600, layer: "A-ROOF" };
+        if (!plan.outline) add(Object.assign({ pts: outer.map(function (q) { return q.slice(); }), dir: W >= D ? 0 : 90 }, rbase));
+        else roofWings(plan.outline).forEach(function (rc) { var e = 0.115, q = [rc[0] - e, rc[1] - e, rc[2] + e, rc[3] + e]; add(Object.assign({ pts: [P(q[0], q[1]), P(q[2], q[1]), P(q[2], q[3]), P(q[0], q[3])], dir: q[2] - q[0] >= q[3] - q[1] ? 0 : 90 }, rbase, { kind: gab && rc[4] ? "hip" : rbase.kind })); });
         if (!tile) continue; var hs = holes; if (hs.length) add({ t: "slab", pts: outer.map(function (q) { return q.slice(); }), holes: hs, th: house ? 125 : 150, lvl: "L" + f2, off: H, kind: "ceiling", layer: "S-SLAB" }); else add({ t: "slab", pts: outer.map(function (q) { return q.slice(); }), th: house ? 125 : 150, lvl: "L" + f2, off: H, kind: "ceiling", layer: "S-SLAB" }); continue; }
       if (des.roof === "gi" && f2 === nF - 1 && T.roof !== "gi") T = Object.assign({}, T, { roof: "gi" });
       if (T.roof === "gi" && f2 === nF - 1) { add({ t: "roof", pts: outer.map(function (q) { return q.slice(); }), kind: "gable", slope: 12, th: 50, lvl: "L" + f2, off: H, mat: "gi", over: 600, dir: W >= D ? 0 : 90, layer: "A-ROOF" }); continue; }
