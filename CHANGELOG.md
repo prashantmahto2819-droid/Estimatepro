@@ -3,6 +3,11 @@
 This file is for the people maintaining the app. It is not published with the site (see `.assetsignore`).
 The text users see is `EP_NOTES` in `js/version.js`.
 
+## 2026.11.21-z102
+Building Planner:
+• Building square to a slanted side: on an odd plot choose "Building square to" the left or right side — the building lines up with that side and the road side becomes the slanted one.
+• On a slanted road side the gates, gate pillars, nameplate, driveway, walkway and lawn follow the slanted line; the paving is cut to the plot outline.
+
 ## 2026.11.21-z101
 Building Planner:
 • Plots with an inward corner (L / T shape): draw the outline and the building goes in the biggest rectangle of the open part, keeping every side's setback.

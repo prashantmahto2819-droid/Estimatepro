@@ -26,6 +26,11 @@
     P = P.map(function (q) { var x = q[0] - o[0], y = q[1] - o[1]; return [x * c - y * sn, x * sn + y * c]; });
     var mnx = Math.min.apply(null, P.map(function (q) { return q[0]; })); return P.map(function (q) { return [Math.round((q[0] - mnx) * 1000) / 1000, Math.round(q[1] * 1000) / 1000]; });
   };
+  /* turn the plot so that one side wall (side: "left" = the last side, "right" = side 2) runs straight up the drawing: the building,
+     always square to the drawing, then follows that side and the road side becomes the slanted one */
+  PL.alignPoly = function (P, side) { if (!P || !side || side === "front") return P; var n = P.length, k = side === "right" ? 1 : n - 1, a = P[k], b = P[(k + 1) % n], ang = Math.atan2(b[1] - a[1], b[0] - a[0]), th = (Math.sin(ang) >= 0 ? Math.PI / 2 : -Math.PI / 2) - ang, c = Math.cos(th), sn = Math.sin(th);
+    var Q = P.map(function (q) { return [q[0] * c - q[1] * sn, q[0] * sn + q[1] * c]; }), mx = Math.min.apply(null, Q.map(function (q) { return q[0]; })), my = Math.min.apply(null, Q.map(function (q) { return q[1]; }));
+    return Q.map(function (q) { return [Math.round((q[0] - mx) * 1000) / 1000, Math.round((q[1] - my) * 1000) / 1000]; }); };
   PL.isConvex = function (P) { var sg = 0, n = P.length; for (var i = 0; i < n; i++) { var a = P[i], b = P[(i + 1) % n], c = P[(i + 2) % n], cr = (b[0] - a[0]) * (c[1] - b[1]) - (b[1] - a[1]) * (c[0] - b[0]); if (Math.abs(cr) < 1e-9) continue; if (!sg) sg = Math.sign(cr); else if (Math.sign(cr) !== sg) return false; } return true; };
   /* setback of each side: the road side gets the front setback, sides facing back the rear one, the others left / right */
   PL.edgeSetbacks = function (P, R) { return P.map(function (q, i) { if (!i) return R.f; var r = P[(i + 1) % P.length], dx = r[0] - q[0], dy = r[1] - q[1], L = Math.hypot(dx, dy) || 1, nx = dy / L, ny = -dx / L; return ny > Math.abs(nx) ? R.r : ny < -Math.abs(nx) ? R.f : nx > 0 ? R.rt : R.l; }); };
