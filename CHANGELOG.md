@@ -3,6 +3,9 @@
 This file is for the people maintaining the app. It is not published with the site (see `.assetsignore`).
 The text users see is `EP_NOTES` in `js/version.js`.
 
+## 2026.11.21-z99
+- Planner: plot from corner points (tap pad / typed) or from a closed CAD polyline; PL.normPoly, PL.isConvex, PL.edgeSetbacks (setback per side by its facing); road side chooser.
+
 ## 2026.11.21-z98
 - Planner: outside straight stair (des.stairPos, cfg.outStair) in the side setback for G+1 houses, with landing, railing and first-floor door; inside stair removed from the program.
 

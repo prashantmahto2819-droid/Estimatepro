@@ -1,5 +1,5 @@
 /* App version + "what's new" — the super admin is offered to send this on WhatsApp after each upload. Change both with every release. */
-window.EP_VER = "2026.11.21-z98";
-window.EP_NOTES = "• Building Planner — outside stair: in Design and items → “Where the stair goes” choose “Outside along the side wall”. For a G+1 house with a side setback of 1.3 m or more, the stair leaves the inside of the house (more room inside) and goes up outside along the side wall — 1.0 m wide, with a landing and its own door into the first floor, good for letting the upper floor";
+window.EP_VER = "2026.11.21-z99";
+window.EP_NOTES = "• Building Planner — draw the plot yourself: with “Odd shape” choose “Tap the corners” and tap the plot's corners on the grid (0.5 m steps), or type the corner points; any number of sides (5, 6 …) as long as there is no inward corner\n• Or “From the open CAD drawing”: draw the plot line in CAD Studio (closed polyline, e.g. from a survey or a DXF) and take it into the planner with one button\n• Choose which side is on the road; the setbacks are taken from each side by the way it faces";
 /* pictures of this update: [file in /updates, caption]. Shown to the owner with the WhatsApp "what's new" message. */
 window.EP_PICS = [];

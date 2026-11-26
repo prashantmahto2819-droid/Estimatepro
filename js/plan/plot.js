@@ -17,6 +17,18 @@
     /* shift so that nothing is left of x = 0 */ var mnx = Math.min.apply(null, P.map(function (q) { return q[0]; })); if (mnx < 0) P = P.map(function (q) { return [q[0] - mnx, q[1]]; });
     return P;
   };
+  /* any convex plot from its corner points (from a tap sketch or a CAD polyline): turned so that the chosen road side lies along
+     +x at y = 0 with the plot behind it, starting at its left corner */
+  PL.normPoly = function (pts, fi) {
+    var P = pts.map(function (q) { return [+q[0], +q[1]]; }), n = P.length; if (n < 3) return null; fi = Math.max(0, Math.min(n - 1, fi | 0));
+    var sa = 0; P.forEach(function (q, i) { var r = P[(i + 1) % n]; sa += q[0] * r[1] - r[0] * q[1]; }); if (sa < 0) { P = P.slice().reverse(); fi = (n - 2 - fi + n) % n; }
+    P = P.slice(fi).concat(P.slice(0, fi)); var a = Math.atan2(P[1][1] - P[0][1], P[1][0] - P[0][0]), c = Math.cos(-a), sn = Math.sin(-a), o = P[0];
+    P = P.map(function (q) { var x = q[0] - o[0], y = q[1] - o[1]; return [x * c - y * sn, x * sn + y * c]; });
+    var mnx = Math.min.apply(null, P.map(function (q) { return q[0]; })); return P.map(function (q) { return [Math.round((q[0] - mnx) * 1000) / 1000, Math.round(q[1] * 1000) / 1000]; });
+  };
+  PL.isConvex = function (P) { var sg = 0, n = P.length; for (var i = 0; i < n; i++) { var a = P[i], b = P[(i + 1) % n], c = P[(i + 2) % n], cr = (b[0] - a[0]) * (c[1] - b[1]) - (b[1] - a[1]) * (c[0] - b[0]); if (Math.abs(cr) < 1e-9) continue; if (!sg) sg = Math.sign(cr); else if (Math.sign(cr) !== sg) return false; } return true; };
+  /* setback of each side: the road side gets the front setback, sides facing back the rear one, the others left / right */
+  PL.edgeSetbacks = function (P, R) { return P.map(function (q, i) { if (!i) return R.f; var r = P[(i + 1) % P.length], dx = r[0] - q[0], dy = r[1] - q[1], L = Math.hypot(dx, dy) || 1, nx = dy / L, ny = -dx / L; return ny > Math.abs(nx) ? R.r : ny < -Math.abs(nx) ? R.f : nx > 0 ? R.rt : R.l; }); };
   PL.polyArea = function (P) { var s = 0; P.forEach(function (q, i) { var r = P[(i + 1) % P.length]; s += q[0] * r[1] - r[0] * q[1]; }); return Math.abs(s) / 2; };
   PL.inPoly = function (p, P) { var c = false; for (var i = 0, j = P.length - 1; i < P.length; j = i++) { if ((P[i][1] > p[1]) !== (P[j][1] > p[1]) && p[0] < (P[j][0] - P[i][0]) * (p[1] - P[i][1]) / (P[j][1] - P[i][1]) + P[i][0]) c = !c; } return c; };
   /* each edge moved inwards by its own distance (convex plots), corners re-intersected */
@@ -36,7 +48,7 @@
   /* what the layout engine sees: a rectangular "virtual plot" (the polygon's bounding box) whose setbacks put the buildable area
      exactly on the biggest rectangle; area, coverage and FAR still use the real plot area */
   PL.virtualPlot = function (P, R) {
-    var inner = PL.insetPoly(P, [R.f, R.rt, R.r, R.l]), rect = PL.maxRect(inner); if (!rect) return null;
+    var inner = PL.insetPoly(P, PL.edgeSetbacks(P, R)), rect = PL.maxRect(inner); if (!rect) return null;
     var W = Math.max.apply(null, P.map(function (q) { return q[0]; })), D = Math.max.apply(null, P.map(function (q) { return q[1]; }));
     return { plot: { w: Math.round(W * 100) / 100, d: Math.round(D * 100) / 100 }, rules: Object.assign({}, R, { l: rect[0], f: rect[1], rt: Math.round((W - rect[2]) * 100) / 100, r: Math.round((D - rect[3]) * 100) / 100, irregular: 1 }), rect: rect, inner: inner, area: PL.polyArea(P) };
   };
@@ -45,7 +57,7 @@
     var X = function (x) { return (x * sc + 20).toFixed(1); }, Y = function (y) { return ((D - y) * sc + 14).toFixed(1); }, pts = function (Q) { return Q.map(function (q) { return X(q[0]) + "," + Y(q[1]); }).join(" "); }, o = [];
     o.push("<polygon points='" + pts(P) + "' fill='#f1f8e9' stroke='#33691e' stroke-width='2'/>");
     if (v) { o.push("<polygon points='" + pts(v.inner) + "' fill='none' stroke='#9e9e9e' stroke-dasharray='4 3'/>"); var r = v.rect; o.push("<rect x='" + X(r[0]) + "' y='" + Y(r[3]) + "' width='" + ((r[2] - r[0]) * sc).toFixed(1) + "' height='" + ((r[3] - r[1]) * sc).toFixed(1) + "' fill='#90caf9' fill-opacity='.6' stroke='#1565c0'/><text x='" + X((r[0] + r[2]) / 2) + "' y='" + Y((r[1] + r[3]) / 2) + "' font-size='10' text-anchor='middle'>" + (r[2] - r[0]).toFixed(2) + " × " + (r[3] - r[1]).toFixed(2) + " m</text>"); }
-    var lab = ["front", "right", "rear", "left"]; P.forEach(function (q, i) { var r2 = P[(i + 1) % P.length], L = Math.hypot(r2[0] - q[0], r2[1] - q[1]); o.push("<text x='" + X((q[0] + r2[0]) / 2) + "' y='" + Y((q[1] + r2[1]) / 2) + "' font-size='9' fill='#33691e' text-anchor='middle' dy='" + (i === 0 ? 11 : i === 2 ? -4 : 3) + "'>" + lab[i] + " " + L.toFixed(2) + "</text>"); });
+    var lab = P.length === 4 ? ["front", "right", "rear", "left"] : P.map(function (_, i) { return i ? "side " + (i + 1) : "front"; }); P.forEach(function (q, i) { var r2 = P[(i + 1) % P.length], L = Math.hypot(r2[0] - q[0], r2[1] - q[1]); o.push("<text x='" + X((q[0] + r2[0]) / 2) + "' y='" + Y((q[1] + r2[1]) / 2) + "' font-size='9' fill='#33691e' text-anchor='middle' dy='" + (i === 0 ? 11 : i === 2 ? -4 : 3) + "'>" + lab[i] + " " + L.toFixed(2) + "</text>"); });
     o.push("<text x='" + X(W / 2) + "' y='" + (D * sc + 40).toFixed(1) + "' font-size='10' text-anchor='middle'>▲ road</text>");
     return "<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 " + (W * sc + 40).toFixed(0) + " " + (D * sc + 48).toFixed(0) + "' style='width:100%;max-width:320px;height:auto'>" + o.join("") + "</svg>";
   };
