@@ -459,20 +459,49 @@
     }
     /* yard finishes: 750 mm PCC plinth protection round the building, paver-block driveway from the gate, a 1.2 m path from the wicket gate, lawn in the rest of the front yard */
     if (cfg.site !== false && des.paving && des.paving !== "none") {
-      var land = function (kind, x0, y0, x1, y1, nm) { if (x1 - x0 > 200 && y1 - y0 > 200) add({ t: "land", kind: kind, pts: [[r1(x0), r1(y0)], [r1(x1), r1(y0)], [r1(x1), r1(y1)], [r1(x0), r1(y1)]], lvl: "L0", layer: "L-LAND", name: nm }); };
+      var land = function (kind, x0, y0, x1, y1, nm) { if (x1 - x0 > 200 && y1 - y0 > 200) add({ t: "land", kind: kind, z: bs.ngl || -450, pts: [[r1(x0), r1(y0)], [r1(x1), r1(y0)], [r1(x1), r1(y1)], [r1(x0), r1(y1)]], lvl: "L0", layer: "L-LAND", name: nm }); };
       var apr = des.apron === "no" ? 0 : 750, area0 = 0;
       if (apr) { var ol2 = olM, ar2 = 0; ol2.forEach(function (q, j) { var r2 = ol2[(j + 1) % ol2.length]; ar2 += q[0] * r2[1] - r2[0] * q[1]; }); var sg2 = ar2 > 0 ? 1 : -1;
         ol2.forEach(function (q, j) { var r2 = ol2[(j + 1) % ol2.length], dx = r2[0] - q[0], dy = r2[1] - q[1], L3 = Math.hypot(dx, dy); if (L3 < 300) return; var nx = sg2 * dy / L3 * apr, ny = -sg2 * dx / L3 * apr;
           var pts2 = [q, r2, [r2[0] + nx, r2[1] + ny], [q[0] + nx, q[1] + ny]].map(function (z) { return [r1(Math.min(pw - 115, Math.max(115, z[0]))), r1(Math.min(pd - 115, Math.max(115, z[1])))]; });
-          add({ t: "land", kind: "pcc", pts: pts2, lvl: "L0", layer: "L-LAND", name: "Plinth protection" }); area0 += L3 * apr / 1e6; }); }
+          add({ t: "land", kind: "pcc", z: bs.ngl || -450, pts: pts2, lvl: "L0", layer: "L-LAND", name: "Plinth protection" }); area0 += L3 * apr / 1e6; }); }
       var porchY = oy; ents.forEach(function (e) { if (e.t === "slab" && e.lvl === "L0" && e.pts && e.pts.some(function (q) { return q[1] < oy - 100; })) porchY = Math.min(porchY, Math.min.apply(null, e.pts.map(function (q) { return q[1]; }))); });
       var yEnd = oy - apr, gw = 0; ents.forEach(function (e) { if (e.gate && e.w && Math.abs(e.at - gx) < 50) gw = Math.max(gw, e.w); }); gw = gw || 3000;
       var dr = [Math.max(115, gx - gw / 2), Math.min(pw - 115, gx + gw / 2)], walk = typeof wx === "number" ? [wx - 600, wx + 600] : null, segs = [dr].concat(walk ? [walk] : []).sort(function (a, b) { return a[0] - b[0]; });
+      /* car ramp from the ground up to the porch / parking floor (plinth level): 1:10 where the yard allows, never steeper than 1:6 */
+      var rise2 = -(bs.ngl || -450), rTop = null, rampNote = "";
+      if (porchY < oy - 100) rTop = porchY; else if (plan.floors[0].some(function (r) { return sp(r) && sp(r).open === "park" && Math.abs(r.y) < 1e-3 && ox + r.x * 1000 < dr[1] - 500 && ox + (r.x + r.w) * 1000 > dr[0] + 500; })) rTop = oy;
+      var drEnd = Math.min(yEnd, porchY < oy ? porchY : yEnd);
+      if (rTop != null && des.driveRamp !== "no" && rise2 > 0) { var avail = rTop - 115 - 600, rl = Math.min(rise2 * 10, avail); if (rl >= rise2 * 6) { var rw2 = Math.min(dr[1] - dr[0], 3500), rx = (dr[0] + dr[1]) / 2;
+        add({ t: "ramp", a: [r1(rx), r1(rTop - rl)], b: [r1(rx), r1(rTop)], w: Math.round(rw2), rise: rise2, th: 150, z: -rise2, lvl: "L0", layer: "A-STAIR", name: "Car ramp" }); drEnd = rTop - rl;
+        rampNote = ", car ramp " + (rl / 1000).toFixed(1) + " m long (1:" + (rl / rise2).toFixed(0) + ") up to the " + (porchY < oy - 100 ? "porch" : "parking floor"); } else rampNote = "; the front yard is too short for a car ramp up to the plinth (needs about " + (rise2 * 6 / 1000 + 0.6).toFixed(1) + " m in front of the " + (porchY < oy - 100 ? "porch" : "parking") + ") — lower the plinth there or slope the porch floor"; }
       if (yEnd > 600) {
-        land("paver", dr[0], 115, dr[1], Math.min(yEnd, porchY < oy ? porchY : yEnd), "Driveway"); if (walk) land("paver", walk[0], 115, walk[1], yEnd, "Walkway");
+        land("paver", dr[0], 115, dr[1], drEnd, "Driveway"); if (walk) land("paver", walk[0], 115, walk[1], yEnd, "Walkway");
         if (des.paving === "drive") { var xs2 = [115]; segs.forEach(function (sgm) { xs2.push(sgm[0], sgm[1]); }); xs2.push(pw - 115); for (var k7 = 0; k7 < xs2.length; k7 += 2) land("lawn", xs2[k7], 115, xs2[k7 + 1], yEnd, "Lawn"); }
       }
-      svcNote.push("Yard: paver driveway " + ((dr[1] - dr[0]) / 1000).toFixed(1) + " m wide from the gate" + (walk ? ", 1.2 m paver path from the wicket gate" : "") + (des.paving === "drive" ? ", lawn in the front yard" : "") + (apr ? ", 750 mm PCC plinth protection round the building" : ""));
+      svcNote.push("Yard: paver driveway " + ((dr[1] - dr[0]) / 1000).toFixed(1) + " m wide from the gate" + (walk ? ", 1.2 m paver path from the wicket gate" : "") + (des.paving === "drive" ? ", lawn in the front yard" : "") + (apr ? ", 750 mm PCC plinth protection round the building" : "") + rampNote);
+    }
+    /* outdoor lights and the nameplate */
+    if (des.lights && des.lights !== "none" && B.ASSET_LIB && B.ASSET_LIB.bulkhead_light) {
+      var nL = 0, lt = function (k, p, rot, o) { add(Object.assign({ t: "asset", kind: k, p: [r1(p[0]), r1(p[1])], rot: rot, lvl: "L0", layer: "E-POINT" }, o || {})); nL++; };
+      var rotOut = function (w) { return Math.abs(w[0]) > Math.abs(w[1]) ? (w[0] < 0 ? 90 : 270) : (w[1] < 0 ? 180 : 0); }, ol3 = olM, ar3 = 0; ol3.forEach(function (q, j) { var r2 = ol3[(j + 1) % ol3.length]; ar3 += q[0] * r2[1] - r2[0] * q[1]; }); var sg3 = ar3 > 0 ? 1 : -1, off = TH[0] / 2 + 70;
+      var mdP = null; if (md && md.p.hz) { var yW = Math.abs(md.p.c) < 1e-3 ? 0 : md.p.c, sgn = Math.abs(md.p.c) < 1e-3 ? -1 : 1; mdP = { x: ox + md.c * 1000, y: oy + yW * 1000, s: sgn };
+        [-1, 1].forEach(function (k) { lt("bulkhead_light", [mdP.x + k * (md.w * 500 + 350), mdP.y + sgn * off], sgn < 0 ? 0 : 180, { name: "Door light" }); }); }
+      ol3.forEach(function (q, j) { var r2 = ol3[(j + 1) % ol3.length], dx = r2[0] - q[0], dy = r2[1] - q[1], L3 = Math.hypot(dx, dy); if (L3 < 3000) return; var n = [sg3 * dy / L3, -sg3 * dx / L3], mid = [(q[0] + r2[0]) / 2, (q[1] + r2[1]) / 2];
+        if (mdP && Math.abs(n[1] * mdP.s - 1) < 1e-6 && Math.abs(mid[1] - mdP.y) < 50) return;
+        lt("bulkhead_light", [mid[0] + n[0] * off, mid[1] + n[1] * off], rotOut([-n[0], -n[1]]) , { name: "Wall light" }); });
+      if (cfg.site !== false && +des.cwH !== 0) { var gw2 = 0; ents.forEach(function (e) { if (e.gate && e.w && Math.abs(e.at - gx) < 50) gw2 = Math.max(gw2, e.w); }); gw2 = gw2 || 3000;
+        [-1, 1].forEach(function (k) { var x = gx + k * (gw2 / 2 + 450); if (x > 400 && x < pw - 400) lt("bulkhead_light", [x, 230 + 70], 180, { z: (+des.cwH || 1800) - 300, name: "Gate light" }); }); }
+      if (des.lights === "full" && B.ASSET_LIB.garden_spike_light) { ents.filter(function (e) { return e.t === "land" && (e.name === "Walkway" || e.name === "Lawn"); }).forEach(function (e) { var xs = e.pts.map(function (q) { return q[0]; }), ys = e.pts.map(function (q) { return q[1]; }), x0 = Math.min.apply(null, xs), x1 = Math.max.apply(null, xs), y0 = Math.min.apply(null, ys), y1 = Math.max.apply(null, ys);
+        if (e.name === "Walkway") { for (var yy = y0 + 800; yy < y1 - 300; yy += 2000) lt("garden_spike_light", [x0 - 150, yy], 0, { z: bs.ngl || -450, name: "Path light" }); }
+        else if (x1 - x0 > 1500 && y1 - y0 > 1200) lt("garden_spike_light", [(x0 + x1) / 2, (y0 + y1) / 2], 0, { z: bs.ngl || -450, name: "Garden uplight" }); }); }
+      svcNote.push("Outdoor lights: " + nL + " (door, wall" + (+des.cwH !== 0 ? ", gate" : "") + (des.lights === "full" ? ", path and garden" : "") + ")");
+    }
+    if (des.plate && des.plate !== "none" && B.ASSET_LIB && B.ASSET_LIB.name_plate) { var ptxt = (cfg.sanction && (cfg.sanction.plate || cfg.sanction.owner)) || "NAME / HOUSE No.";
+      if (des.plate === "gate" && cfg.site !== false && +des.cwH !== 0) { var gw3 = 0; ents.forEach(function (e) { if (e.gate && e.w && Math.abs(e.at - gx) < 50) gw3 = Math.max(gw3, e.w); }); gw3 = gw3 || 3000; var px = gx - gw3 / 2 - 900; if (px < 500) px = gx + gw3 / 2 + 900;
+        add({ t: "asset", kind: "name_plate", p: [r1(px), -20], rot: 0, z: (+des.cwH || 1800) - 700, lvl: "L0", layer: "A-SITE", name: ptxt }); add({ t: "text", p: [r1(px - 300), -700], s: ptxt, h: 200, lvl: "L0", layer: "A-ANNO" }); }
+      else if (mdP) { add({ t: "asset", kind: "name_plate", p: [r1(mdP.x + (md.w * 500 + 900)), r1(mdP.y + mdP.s * (TH[0] / 2 + 15))], rot: mdP.s < 0 ? 0 : 180, z: 1500, lvl: "L0", layer: "A-SITE", name: ptxt }); add({ t: "text", p: [r1(mdP.x + md.w * 500 + 600), r1(mdP.y + mdP.s * 800)], s: ptxt, h: 150, lvl: "L0", layer: "A-ANNO" }); }
+      svcNote.push("Nameplate: “" + ptxt + "” (granite, 600 × 300) " + (des.plate === "gate" ? "on the compound wall beside the gate" : "beside the main door"));
     }
     d.planner_svc = svcNote;
     /* frame sizing by load (rule of thumb, IS 456 / IS 875): load on each column from the floor area it carries (half way to the next columns),

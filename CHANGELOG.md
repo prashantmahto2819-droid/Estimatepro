@@ -3,6 +3,9 @@
 This file is for the people maintaining the app. It is not published with the site (see `.assetsignore`).
 The text users see is `EP_NOTES` in `js/version.js`.
 
+## 2026.11.21-z84
+- Planner: outdoor lights (door, walls, gate, path, garden), granite nameplate (gate / door, text from Sanction details), car ramp to porch/parking (1:10, min 1:6), land at NGL.
+
 ## 2026.11.21-z83
 - Planner: RWP → recharge pit underground lines (ring route, plot-bounded), paver driveway + wicket path + lawn, 750 mm PCC plinth protection (land entities), colour by floor (ground / top / alternate). Options paving, apron, paintFloors.
 
