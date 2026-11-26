@@ -1,6 +1,6 @@
 # Estimate Pro — pending work (kept with the code; not published)
 
-Last updated at version 2026.11.21-z88
+Last updated at version 2026.11.21-z89
 
 ## A. Waiting for the owner
 1. Server work: (-z21) module switches and a shared library of blocks and hatch patterns are built — the owner has to run `server/shared.sql` once in Supabase, then check that a switched-off module disappears for a normal user. Still open: shared 3D models / cut-outs / material pictures (large files — need Supabase Storage), WhatsApp update messages with real pictures attached (needs a sending gateway; links to the pictures are already added).
@@ -76,7 +76,7 @@ Last updated at version 2026.11.21-z88
 
 ## E. Building Planner — open
 1. State-wise rules (owner: later, starting with Chhattisgarh — CG Bhumi Vikas Niyam 1984, RWH for plots over 500 m², own setback / FAR tables). India standard (MBBL 2016 / NBC 2016) stays the default.
-2. (-z88: sloped roofs on L / U buildings, one roof per wing.) Still open: courtyard (aangan) house with a sloped roof keeps the court open only on a flat roof.
+2. (-z88: sloped roofs on L / U buildings, one roof per wing.) (-z89: courtyard house with sloped roofs round the court.)
 3. Porch needs a front setback of 2 m or more; car ramp needs about 3.3 m in front of the porch.
 4. Large buildings: MEP drawing gets dense.
 5. (-z86: done — flats fitted to the plot.) (-z87: two per floor on small plots via shallower flats and no lift up to 3 storeys.)

@@ -3,6 +3,9 @@
 This file is for the people maintaining the app. It is not published with the site (see `.assetsignore`).
 The text users see is `EP_NOTES` in `js/version.js`.
 
+## 2026.11.21-z89
+- Planner: sloped roofs round a courtyard — front / back roofs full width, side roofs hipped into them, court left open.
+
 ## 2026.11.21-z88
 - Planner: sloped roofs on L / U outlines — roofWings() cuts the outline into rectangles, wings extended to the main ridge (valleys), wing roofs hipped.
 

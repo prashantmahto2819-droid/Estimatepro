@@ -290,7 +290,15 @@
       var holes = stairs.filter(function (s) { return s.fi === f2 && !(f2 === nF - 1 && (sloped || T.roof === "gi" || des.roof === "gi")); }).map(function (s) { var h = s.hole; return [P(h[0], h[1]), P(h[2], h[1]), P(h[2], h[3]), P(h[0], h[3])]; });
       plan.floors[f2].forEach(function (r) { if (sp(r) && sp(r).open === "court") { var t = 0.115; holes.push([P(r.x + t, r.y + t), P(r.x + r.w - t, r.y + t), P(r.x + r.w - t, r.y + r.d - t), P(r.x + t, r.y + r.d - t)]); } });
       if (sloped && f2 === nF - 1 && T.roof !== "gi") { var tile = /^tile/.test(des.roof), gab = /gable/.test(des.roof), rbase = { t: "roof", kind: gab ? "gable" : "hip", slope: des.roof === "tile_gable" ? 32 : tile ? 25 : 22, th: tile ? 100 : 125, lvl: "L" + f2, off: H, mat: tile ? "tile" : "rcc", over: 600, layer: "A-ROOF" };
-        if (!plan.outline) add(Object.assign({ pts: outer.map(function (q) { return q.slice(); }), dir: W >= D ? 0 : 90 }, rbase));
+        /* a courtyard (aangan) house: four roofs round the open court — the front and back ones run the full width, the side ones run
+           into them up to their ridges — so the court stays open to the sky */
+        var crt = plan.floors[f2].filter(function (r) { return sp(r) && sp(r).open === "court"; })[0];
+        if (!plan.outline && crt) { var c0 = [crt.x, crt.y, crt.x + crt.w, crt.y + crt.d], rs = [];
+          if (c0[1] > 0.5) rs.push([0, 0, W, c0[1]]); if (D - c0[3] > 0.5) rs.push([0, c0[3], W, D]);
+          var fy = c0[1] > 0.5 ? c0[1] / 2 : c0[1], by = D - c0[3] > 0.5 ? c0[3] + (D - c0[3]) / 2 : c0[3];
+          if (c0[0] > 0.5) rs.push([0, fy, c0[0], by, 1]); if (W - c0[2] > 0.5) rs.push([c0[2], fy, W, by, 1]);
+          rs.forEach(function (rc) { var e = 0.115, q = [rc[0] - e, rc[1] - e, rc[2] + e, rc[3] + e]; add(Object.assign({ pts: [P(q[0], q[1]), P(q[2], q[1]), P(q[2], q[3]), P(q[0], q[3])], dir: q[2] - q[0] >= q[3] - q[1] ? 0 : 90 }, rbase, { kind: rc[4] ? "hip" : rbase.kind })); }); }
+        else if (!plan.outline) add(Object.assign({ pts: outer.map(function (q) { return q.slice(); }), dir: W >= D ? 0 : 90 }, rbase));
         else roofWings(plan.outline).forEach(function (rc) { var e = 0.115, q = [rc[0] - e, rc[1] - e, rc[2] + e, rc[3] + e]; add(Object.assign({ pts: [P(q[0], q[1]), P(q[2], q[1]), P(q[2], q[3]), P(q[0], q[3])], dir: q[2] - q[0] >= q[3] - q[1] ? 0 : 90 }, rbase, { kind: gab && rc[4] ? "hip" : rbase.kind })); });
         if (!tile) continue; var hs = holes; if (hs.length) add({ t: "slab", pts: outer.map(function (q) { return q.slice(); }), holes: hs, th: house ? 125 : 150, lvl: "L" + f2, off: H, kind: "ceiling", layer: "S-SLAB" }); else add({ t: "slab", pts: outer.map(function (q) { return q.slice(); }), th: house ? 125 : 150, lvl: "L" + f2, off: H, kind: "ceiling", layer: "S-SLAB" }); continue; }
       if (des.roof === "gi" && f2 === nF - 1 && T.roof !== "gi") T = Object.assign({}, T, { roof: "gi" });
