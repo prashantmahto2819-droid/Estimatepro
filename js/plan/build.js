@@ -531,6 +531,8 @@
       else if (mdP) { add({ t: "asset", kind: "name_plate", p: [r1(mdP.x + (md.w * 500 + 900)), r1(mdP.y + mdP.s * (TH[0] / 2 + 15))], rot: mdP.s < 0 ? 0 : 180, z: 1500, lvl: "L0", layer: "A-SITE", name: ptxt }); add({ t: "text", p: [r1(mdP.x + md.w * 500 + 600), r1(mdP.y + mdP.s * 800)], s: ptxt, h: 150, lvl: "L0", layer: "A-ANNO" }); }
       svcNote.push("Nameplate: “" + ptxt + "” (granite, 600 × 300) " + (des.plate === "gate" ? "on the compound wall beside the gate" : "beside the main door"));
     }
+    if (cfg.phase > 0 && cfg.phase < nF) { svcNote.unshift("Phase 1 now: " + (cfg.phase === 1 ? "ground floor" : "G+" + (cfg.phase - 1)) + " with foundation, columns and stair designed for " + (nF === 1 ? "G" : "G+" + (nF - 1)) + "; column bars left 750 mm above the roof for the next floors; temporary roof waterproofing");
+      bs.levels.forEach(function (L, li) { if (li >= cfg.phase && L.id !== "LT") L.name = L.name + " (phase 2)"; }); }
     d.planner_svc = svcNote;
     /* frame sizing by load (rule of thumb, IS 456 / IS 875): load on each column from the floor area it carries (half way to the next columns),
        w kN/m² per floor (slab + finishes + walls + live load), M20 / Fe500 column with 0.8 % steel, footing on the safe bearing capacity */

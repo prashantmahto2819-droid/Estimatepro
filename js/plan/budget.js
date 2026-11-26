@@ -73,3 +73,19 @@
     opts = opts || {}; return "<table><tr><th>#</th><th>Stage</th><th>Due about week</th><th>%</th><th>Amount ₹</th></tr>" + S.pay.map(function (p, i) { return "<tr><td>" + (i + 1) + "</td><td class='l'>" + p.n + (opts.hi ? " <small>(" + p.hi + ")</small>" : "") + "</td><td>" + p.wk + "</td><td>" + (Math.round(p.pct * 10) / 10) + "</td><td>" + Math.round(p.amt).toLocaleString("en-IN") + "</td></tr>"; }).join("") + "</table>";
   };
 })();
+
+/* building in phases: the whole design (foundation, columns and stair sized for every floor) now, only some floors built now.
+   Split of the rough cost by the programme shares: foundation in full now, the frame / walls / finishes of the floors built now,
+   a temporary roof waterproofing now and again later, about 3 % more for coming back later (setting up again, joints, scaffolding). */
+(function () {
+  var PL = window.EP.plan;
+  PL.phaseSplit = function (o, cost, now) {
+    var n = o.floors.length; now = Math.max(1, Math.min(n, now | 0)); if (now >= n) return null;
+    var perF = 24 + 12 + 10 + 8 + 8 + 11 + 5 + 3, p1 = 3 + 14 + perF * now / n + 2, p2 = perF * (n - now) / n + 2 + 3;
+    return { now: now, n: n, c1: cost * p1 / 100, c2: cost * p2 / 100, extra: cost * 5 / 100,
+      notes: ["Foundation, columns and stair are designed for " + (n === 1 ? "G" : "G+" + (n - 1)) + " now, so the upper floors need no strengthening later.",
+        "Column bars are left 750 mm above the roof (lapping length), with a 75 mm M20 cover cap and bitumen paint against rust.",
+        "The stair goes up to the roof now; a temporary roof waterproofing (and a parapet) is laid till the next phase.",
+        "Keep the drawings, the soil report and the design: the upper floors are built to the same drawings."] };
+  };
+})();
