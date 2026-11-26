@@ -3,6 +3,14 @@
 This file is for the people maintaining the app. It is not published with the site (see `.assetsignore`).
 The text users see is `EP_NOTES` in `js/version.js`.
 
+## 2026.11.21-z108
+Design Studio — new: Portable shelter / gumti for mines (Steel structures):
+• Heat-proof cabin, 2 × 2 m, 2.8 m walls, 0.8 m pyramid roof (all sizes can be changed). Walls: MS sheet + thermocol + plywood, or PUF panel, or GI + glass wool + plywood. Roof: pyramid PUF roof, or flat with a second ventilated roof. Plywood floor on chequered plate.
+• Inside: insulated door, 3 sliding windows 1200 × 600 with grill, LED lights, fan, sockets, plywood bench on two sides (6 seats).
+• Lifting: 4 hooks at the wall-top corners or 1 hook at the roof apex — lug, weld, sling and frame checks, and the sling capacity to order.
+• Heat gain and AC size, weight, wind (tie-down), head-room and window checks; full material list with rates; drawing (plan, elevations, wall build-up) and 3D.
+• Along with it (tick what you want): AC, drinking-water cooler, first-aid box with ORS, fire extinguisher, sunshades, off-grid solar, earthing, concrete pedestals, signs, rain gutter, transport and placing.
+
 ## 2026.11.21-z107
 Building Planner:
 • Rental house: shops on the ground floor facing the road (give the number) — the flats to let go above.

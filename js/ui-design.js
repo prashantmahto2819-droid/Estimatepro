@@ -6,7 +6,7 @@
 (function () {
   "use strict";
   var EP = window.EP, S = EP.S, U = EP.ui, esc = U.esc, inr = U.inr;
-  var FILES = ["core", "materials", "loads", "sections", "steel", "rcc", "detailing", "bbs", "frame2d", "thumbrules", "drawing", "common", "modules_steel", "modules_infra", "modules_rcc", "modules_bridge", "modules_shed", "modules_extra", "modules_extra2", "modules_extra3", "modules_extra4", "modules_extra5", "modules_extra6", "extras", "loadguide", "site", "diagnose", "report", "review", "to3d", "to3d_b1", "to3d_b1b", "to3d_b2", "to3d_b3"]; // modules_shed: complete steel shed; loadguide/site/diagnose: load guide, mining-area profile, fix suggestions
+  var FILES = ["core", "materials", "loads", "sections", "steel", "rcc", "detailing", "bbs", "frame2d", "thumbrules", "drawing", "common", "modules_steel", "modules_infra", "modules_rcc", "modules_bridge", "modules_shed", "modules_extra", "modules_extra2", "modules_extra3", "modules_extra4", "modules_extra5", "modules_extra6", "modules_extra7", "extras", "loadguide", "site", "diagnose", "report", "review", "to3d", "to3d_b1", "to3d_b1b", "to3d_b2", "to3d_b3", "to3d_b4"]; // modules_shed: complete steel shed; loadguide/site/diagnose: load guide, mining-area profile, fix suggestions
   var CATEGORY_ORDER = ["Steel structures", "Drains, culverts & roads", "Masonry, water & site works", "RCC building", "Bridges & frames"];
   var CAT_HI = { "Steel structures": "स्टील स्ट्रक्चर", "Drains, culverts & roads": "नाली, पुलिया, सड़क", "RCC building": "आरसीसी भवन", "Bridges & frames": "पुल एवं फ्रेम", "Masonry, water & site works": "ईंट चिनाई, पानी व साइट कार्य" };
   var ST_CLS = { PASS: "ok", CHECK: "warn", FAIL: "dan" };
