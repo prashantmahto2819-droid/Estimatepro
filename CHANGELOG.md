@@ -3,6 +3,9 @@
 This file is for the people maintaining the app. It is not published with the site (see `.assetsignore`).
 The text users see is `EP_NOTES` in `js/version.js`.
 
+## 2026.11.21-z85
+- Planner: flat templates PL.flatTpl (outer bed/living/master, inner kitchen/dining/toilets, master lobby + attached toilet) and PL.flatTplN (narrow units) compete with band plans by score; unit plans no longer penalised for the entrance via dining; phone overflow fix on type buttons.
+
 ## 2026.11.21-z84
 - Planner: outdoor lights (door, walls, gate, path, garden), granite nameplate (gate / door, text from Sanction details), car ramp to porch/parking (1:10, min 1:6), land at NGL.
 

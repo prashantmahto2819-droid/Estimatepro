@@ -361,6 +361,47 @@
     return r2(Math.max(db + 2, need)); };
 
   /* ---------------- flats: each flat is laid out inside like a small house, entered from the corridor ---------------- */
+  /* a standard flat: bed rooms and the living room on the outer (window) side, kitchen, dining / entry and the toilets on the
+     corridor side; the master bed room is entered through its own small lobby with the attached toilet off it. y = 0 is the corridor. */
+  PL.flatTpl = function (ins, w, d) {
+    var by = function (k) { return ins.filter(function (x) { return x.key === k; }); }, liv = by("living")[0], din = by("dining")[0], kit = by("kitchen")[0], mas = by("master")[0], tl = by("toilet")[0], ut = by("utility")[0], beds = by("bed");
+    if (!liv || !kit || !mas || !tl) return null;
+    var c = Math.min(4.5, Math.max(3.3, d * 0.45)), e = r2(d - c); if (e < 3.0) return null;
+    /* widths: start from the least that still works, then give the spare width to the living room, the master bed room, the other bed rooms */
+    var bw = beds.map(function () { return 2.55; }), mw = 2.85, lw = 2.8, spare = w - mw - lw - 2.55 * beds.length; if (spare < -0.01) return null;
+    var give = function (cur, max) { var g = Math.max(0, Math.min(spare, max - cur)); spare -= g; return cur + g; };
+    lw = give(lw, 3.6); mw = give(mw, 3.3); bw = bw.map(function (b) { return give(b, 3.0); }); lw = give(lw, 4.5); mw = give(mw, 3.9); bw = bw.map(function (b) { return give(b, 3.6); }); lw += spare;
+    mw = r2(mw); bw = bw.map(r2); lw = r2(w - mw - bw.reduce(function (a, b) { return a + b; }, 0));
+    var rooms = [], uid = 0, R = function (inst, x, y, ww, dd, o) { var r = Object.assign({ uid: "t" + (++uid), inst: inst, key: inst.key, name: inst.name, x: r2(x), y: r2(y), w: r2(ww), d: r2(dd), cut: null, z: inst.z }, o || {}); rooms.push(r); return r; };
+    var x = 0; beds.forEach(function (b, i) { R(b, x, e, bw[i], c); x += bw[i]; }); R(liv, x, e, lw, c); x += lw; var mx = x;
+    /* corridor side: kitchen (with the utility strip at the corridor when deep enough), dining / entry, toilets */
+    var kw = Math.max(2.4, Math.min(3.0, beds.length ? bw[0] - (bw[0] - 0.9 >= 2.4 ? 0.9 : 0) : w * 0.3)), dw = r2(mx - kw); if (dw < 2.4) return null;
+    if (ut && e >= 4.2) { R(ut, 0, 0, kw, 1.3); R(kit, 0, 1.3, kw, e - 1.3); } else R(kit, 0, 0, kw, e);
+    if (din) R(din, kw, 0, dw, e); else return null;
+    var t1 = Math.min(2.2, Math.max(1.5, e * 0.42)), tw = Math.min(mw - 1.0, 2.0); if (tw < 1.2 || e - t1 < 1.5) return null;
+    R(tl, mx, 0, mw, t1);
+    var m = R(mas, mx, t1, mw, d - t1, { cut: { x: r2(mx + mw - tw), y: r2(t1), w: r2(tw), d: r2(e - t1) } });
+    var ta = { key: "toilet_att", sp: PL.SPACES.toilet_att, name: "Toilet", a: r2(tw * (e - t1)), z: 3, minW: 1.2 };
+    rooms.push({ x: r2(mx + mw - tw), y: r2(t1), w: r2(tw), d: r2(e - t1), uid: "t" + (++uid), inst: ta, key: "toilet_att", name: "Toilet", parent: m.uid, cut: null });
+    return { mode: "band", W: w, D: d, floors: [rooms], sig: "flat" };
+  };
+  /* a narrow flat (about 6.5–9 m wide): only the bed rooms on the outer side; living over dining in the middle, kitchen on one
+     side and a 1.6 m toilet strip on the other (common toilet at the corridor, the master's toilet beside the master bed room) */
+  PL.flatTplN = function (ins, w, d) {
+    var by = function (k) { return ins.filter(function (x) { return x.key === k; }); }, liv = by("living")[0], din = by("dining")[0], kit = by("kitchen")[0], mas = by("master")[0], tl = by("toilet")[0], beds = by("bed");
+    if (!liv || !kit || !mas || !tl || beds.length > 1) return null;
+    var c = Math.min(4.2, Math.max(3.3, d * 0.42)), e = r2(d - c); if (e < 4.2) return null;
+    var mw = beds.length ? Math.max(2.85, Math.min(4.2, w * 0.54)) : w, bw = r2(w - mw); if (beds.length && bw < 2.55) return null;
+    var tcw = 1.6, kw = 2.4, lw = r2(w - kw - tcw); if (lw < 2.8) return null;
+    var rooms = [], uid = 0, R = function (inst, x, y, ww, dd, o) { var r = Object.assign({ uid: "n" + (++uid), inst: inst, key: inst.key, name: inst.name, x: r2(x), y: r2(y), w: r2(ww), d: r2(dd), cut: null, z: inst.z }, o || {}); rooms.push(r); return r; };
+    if (beds.length) R(beds[0], 0, e, bw, c); var m = R(mas, r2(w - mw), e, mw, c);
+    R(kit, 0, 0, kw, e); var dd = din ? Math.max(2.2, Math.min(2.8, e * 0.45)) : 0; if (din) R(din, kw, 0, lw, dd); R(liv, kw, dd, lw, e - dd);
+    var t1 = r2(e / 2); R(tl, w - tcw, 0, tcw, t1);
+    var ta = { key: "toilet_att", sp: PL.SPACES.toilet_att, name: "Toilet", a: r2(tcw * (e - t1)), z: 3, minW: 1.2 };
+    rooms.push({ x: r2(w - tcw), y: t1, w: tcw, d: r2(e - t1), uid: "n" + (++uid), inst: ta, key: "toilet_att", name: "Toilet", parent: m.uid, cut: null });
+    return { mode: "band", W: w, D: d, floors: [rooms], sig: "flatN" };
+  };
+
   PL.expandUnits = function (p, cfg) {
     if (p.shape) return; var H = PL.TYPES.house; H.id = "house"; var cache = {};
     p.floors.forEach(function (rooms, fi) {
@@ -371,7 +412,7 @@
         if (!best) {
           var items = H.program({ beds: u.beds, attached: u.attached, persons: u.beds + 2, cars: 0, kitchenOpen: 0 }).filter(function (x) { return !x.off && !/^(car_park|stair|lounge|balcony|pooja|bike_park)$/.test(x.key) && !(u.beds < 2 && x.key === "store"); }).map(function (x) { return Object.assign({}, x, { size: u.beds <= 2 ? "S" : "M", fl: "G" }); });
           var ins = PL.expand(H, items, 1); ins.forEach(function (x) { x.fl = "G"; });
-          var cand = PL.bandPlans(H, [ins], r.w, r.d, { unitExt: "b" }); cand.forEach(function (c) { c.sc = PL.score(H, c, { unitExt: "b" }); }); cand.sort(function (a, b) { return b.sc.score - a.sc.score; }); best = cache[key] = cand[0] || null;
+          var cand = PL.bandPlans(H, [ins], r.w, r.d, { unitExt: "b" }), tp = PL.flatTpl(ins, r.w, r.d), tn = PL.flatTplN(ins, r.w, r.d); if (tp) cand.push(tp); if (tn) cand.push(tn); cand.forEach(function (c) { c.sc = PL.score(H, c, { unitExt: "b" }); }); cand.sort(function (a, b) { return b.sc.score - a.sc.score; }); best = cache[key] = cand[0] || null;
         }
         if (!best) { out.push(r); return; }
         var top = corr ? corr.y > r.y : false, no = (fi + 1) * 100 + k, nm = "Flat " + no;
@@ -453,7 +494,7 @@
         if (sp.open === "court") { if (el.all > 0.3) pen += 18; } else if (sp.open && el.all < 1) pen += 15;
         if ((sp.open === "park" || sp.shop) && el.f < 2.4) pen += sp.shop ? 20 : 12;
         if (cfg.unitExt) el.all = el.b;
-        if (r.inst.main && fi === 0 && el.f < 1.0) { pen += 14; notes.acc.push(r.name + " (not on the road side)"); }
+        if (r.inst.main && fi === 0 && el.f < 1.0 && !(cfg.unitExt && rooms.some(function (q) { return q.key === "dining" && q.y < 0.05; }))) { pen += 14; notes.acc.push(r.name + " (not on the road side)"); }
         /* access: shares a wall with a hall / passage / corridor / lobby (or is the entry, or its parent room) */
         if (!r.inst.main && !sp.open && !sp.shop) {
           var ok = rooms.some(function (q) { if (q === r) return false; var circ = (q.pass && (q.live || q.corr)) || q.corr || (q.inst && q.inst.sp && q.inst.sp.circ) || (r.parent && q.uid === r.parent); return circ && shared(r, q) >= (r.parent ? 0.7 : 0.95); });
