@@ -3,6 +3,9 @@
 This file is for the people maintaining the app. It is not published with the site (see `.assetsignore`).
 The text users see is `EP_NOTES` in `js/version.js`.
 
+## 2026.11.21-z90
+- Planner build: MEPSHEETS after MEPAUTO (per-floor E / P sheets with legends), main plans set to MEP view “Building”.
+
 ## 2026.11.21-z89
 - Planner: sloped roofs round a courtyard — front / back roofs full width, side roofs hipped into them, court left open.
 

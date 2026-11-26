@@ -164,6 +164,9 @@
       try { await PL.autoRun(ed, "SCHEDULE", ["Doors", null]); await PL.autoRun(ed, "SCHEDULE", ["Rooms", null]); if (P.frame !== "lb") await PL.autoRun(ed, "SCHEDULE", ["Columns", null]); done.push("door / window, room" + (P.frame !== "lb" ? " and column" : "") + " schedules"); } catch (er) { console.warn("schedule", er); }
       try { var R0 = cfg.rules; await PL.autoRun(ed, "AREASTATEMENT", [String(R0.cov), String(R0.far), String(R0.h), [cfg.plot.w * 1000 + 3000, cfg.plot.d * 1000]]); done.push("area statement"); } catch (er) { console.warn("area", er); }
       try { await PL.autoRun(ed, "SHEET", [undefined, "AllElevations", "Landscape"]); done.push("print sheet"); } catch (er) { console.warn("sheet", er); }
+      /* electrical and plumbing go on their own sheets (one per floor and service, with legends); the architectural plans and the
+         main sheet then show the building only, as drawing sets are normally issued — MEP → View → All brings them back */
+      if (P.mep && ed.doc.d.mep) { try { await PL.autoRun(ed, "MEPSHEETS", []); ed.doc.set("mep", Object.assign({}, ed.doc.d.mep, { view: "B" })); ed.dirty = true; done.push("separate electrical and plumbing sheets"); } catch (er) { console.warn("mepsheets", er); } }
       var sL = ed.doc.d.layers["A-SITE"]; if (sL) sL.on = siteOn !== false; ed.dirty = true;
     }
     try { if (ed.zoomExtents) ed.zoomExtents(); ed.dirty = true; } catch (e) {}
