@@ -31,6 +31,7 @@
     if (cfg.setbackPoly) add({ t: "pline", pts: cfg.setbackPoly.map(function (q) { return [Math.round(q[0] * 1000), Math.round(q[1] * 1000), 0]; }), closed: true, layer: "C-SETBACK" });
     else add({ t: "pline", pts: [[ox, oy, 0], [pw - cfg.rules.rt * 1000, oy, 0], [pw - cfg.rules.rt * 1000, pd - cfg.rules.r * 1000, 0], [ox, pd - cfg.rules.r * 1000, 0]], closed: true, layer: "C-SETBACK" });
     add({ t: "text", p: [pw / 2, -2500], s: "ROAD", h: 600, rot: 0, al: "c", layer: "C-PROP-TXT" });
+    if (cfg.corner === "left" || cfg.corner === "right") add({ t: "text", p: [cfg.corner === "left" ? -2500 : pw + 2500, pd / 2], s: "ROAD", h: 600, rot: 90, al: "c", layer: "C-PROP-TXT" });
     add({ t: "text", p: [pw / 2, pd + 1200], s: (cfg.plotPoly ? "PLOT (four sides " + ring.map(function (q, i) { var r2 = ring[(i + 1) % ring.length]; return (Math.hypot(r2[0] - q[0], r2[1] - q[1]) / 1000).toFixed(2); }).join(" / ") + " m) = " + (+cfg.plotArea).toFixed(2) + " m²   ·   building area" : "PLOT " + cfg.plot.w + " m × " + cfg.plot.d + " m = " + (cfg.plot.w * cfg.plot.d).toFixed(2) + " m²   ·   setbacks") + " F " + cfg.rules.f + " / R " + cfg.rules.r + " / L " + cfg.rules.l + " / R " + cfg.rules.rt + " m", h: 350, rot: 0, al: "c", layer: "C-PROP-TXT" });
 
     var parts = PL.parts, W = plan.W, D = plan.D, stairs = [], perFloor = [];
@@ -351,11 +352,12 @@
     /* porch / portico in front of the main door (into the front setback) */
     var md = perFloor[0] && perFloor[0].mainDoor, fset = cfg.rules.f || 0;
     if (md && des.porch && des.porch !== "none" && md.p.hz && Math.abs(md.p.c) < 1e-3 && fset >= 2.0) {
-      var dp = Math.min(2.4, fset - 0.6), wp = Math.max(3.0, md.w + 2.4), x0 = Math.max(0, md.c - wp / 2), x1 = Math.min(W, x0 + wp); x0 = Math.max(0, x1 - wp);
+      var ver = des.porch === "verandah", dp = Math.min(ver ? 2.1 : 2.4, fset - 0.6), wp = ver ? W : Math.max(3.0, md.w + 2.4), x0 = ver ? 0 : Math.max(0, md.c - wp / 2), x1 = Math.min(W, x0 + wp); if (!ver) x0 = Math.max(0, x1 - wp);
       var cshape = des.porch === "round" || des.porch === "curved" || des.porch === "dome" ? "circle" : des.cols === "rect" ? "rect" : des.cols, pcol = function (x, y) { add({ t: "column", p: P(x, y), w: 300, d: 300, rot: 0, shape: cshape, lvl: "L0", layer: "S-COL", porch: 1 }); if (frame) add({ t: "footing", p: P(x, y), L: 1000, B: 1000, D: 300, df: 1200, rot: 0, lvl: "L0", ped: { w: 300, d: 300 }, pcc: { off: 150, th: 100 }, layer: "S-FOOT" }); };
       var poly;
       if (des.porch === "curved") { poly = []; var n = 10, cx = (x0 + x1) / 2, rx = (x1 - x0) / 2; for (var i = 0; i <= n; i++) { var a = Math.PI * i / n; poly.push(P(cx + rx * Math.cos(a), -dp * Math.sin(a))); } poly = poly.reverse(); [Math.PI * 0.2, Math.PI * 0.5, Math.PI * 0.8].forEach(function (a) { pcol(cx + (rx - 0.25) * Math.cos(a), -(dp - 0.25) * Math.sin(a)); }); }
-      else { poly = [P(x0, -dp), P(x1, -dp), P(x1, 0), P(x0, 0)]; pcol(x0 + 0.2, -dp + 0.2); pcol(x1 - 0.2, -dp + 0.2); }
+      else { poly = [P(x0, -dp), P(x1, -dp), P(x1, 0), P(x0, 0)]; var nc = ver ? Math.max(1, Math.ceil((x1 - x0 - 0.4) / 3.5)) : 1; for (var ci = 0; ci <= nc; ci++) pcol(x0 + 0.2 + (x1 - x0 - 0.4) * ci / nc, -dp + 0.2);
+        if (ver) { var rl = []; for (var cj = 0; cj < nc; cj++) { var xa = x0 + 0.2 + (x1 - x0 - 0.4) * cj / nc + 0.2, xb = x0 + 0.2 + (x1 - x0 - 0.4) * (cj + 1) / nc - 0.2; if (Math.abs(xa + 0.2 - (md.c)) < 0.01) continue; if (md.c > xa - 0.2 && md.c < xb + 0.2 && cj === Math.floor((md.c - x0) / ((x1 - x0) / nc))) continue; add({ t: "railing", pts: [P(xa, -dp + 0.2), P(xb, -dp + 0.2)], h: 900, lvl: "L0", style: des.rail || "ms_bars", layer: "A-RAIL" }); } } }
       if (des.porch === "gable") add({ t: "roof", pts: [P(x0 - 0.15, -dp - 0.15), P(x1 + 0.15, -dp - 0.15), P(x1 + 0.15, 0), P(x0 - 0.15, 0)], kind: "gable", slope: 28, th: 100, lvl: "L0", off: Math.min(H, 3000), mat: /tile/.test(des.roof) ? "tile" : "rcc", over: 300, dir: 90, layer: "A-ROOF", porch: 1 });
       else add({ t: "slab", pts: poly, th: 125, lvl: "L0", off: H, kind: "roof", layer: "S-SLAB", porch: 1 });
       if (des.porch === "dome") add({ t: "dome", c: P((x0 + x1) / 2, -dp / 2), r: Math.round(Math.min(x1 - x0, dp) * 450), h: Math.round(Math.min(x1 - x0, dp) * 400), th: 100, lvl: "L0", off: H + 125, layer: "A-ROOF" });

@@ -1,5 +1,5 @@
 /* App version + "what's new" — the super admin is offered to send this on WhatsApp after each upload. Change both with every release. */
-window.EP_VER = "2026.11.21-z96";
-window.EP_NOTES = "• Building Planner — odd-shaped plots: choose “Odd shape — four sides” and type the front, right, rear and left sides as in the sale deed (and a diagonal if no corner is square). The plot is drawn, the setbacks are taken from each side, and the building goes in the biggest rectangle that fits; the cut-off corners stay open for parking, garden, tank and septic. Compound wall, gate, services, lawn and paving follow the real plot line; coverage and FAR use the real plot area\n• “Full plot” button: setbacks 0 and 100 % coverage in one tap, for row houses and shops where the town allows it\n• Fix: with electrical + plumbing on, the septic tank, soak pit and rain-water pipes were being moved outside the plot (the compound wall was taken as the building) — now they stay where the planner puts them";
+window.EP_VER = "2026.11.21-z97";
+window.EP_NOTES = "• Building Planner — corner plot: choose “Road on the left / right side too” — that side keeps the front setback, and the site plan shows both roads\n• Full-width front verandah (otla): new porch choice in Design and items — a verandah across the whole front of the house on columns, with a roof slab, floor, railing between the columns and the steps at the main door";
 /* pictures of this update: [file in /updates, caption]. Shown to the owner with the WhatsApp "what's new" message. */
 window.EP_PICS = [];
