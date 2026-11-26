@@ -1,5 +1,5 @@
 /* App version + "what's new" — the super admin is offered to send this on WhatsApp after each upload. Change both with every release. */
-window.EP_VER = "2026.11.21-z103";
-window.EP_NOTES = "Colony layout planner:\n• Odd-shaped land: choose \u201cOdd shape — corner points\u201d, type the corners of the land and the side with the entrance road.\n• Each row of plots is fitted inside the land (slanted sides, inward corners); roads are cut to the land outline and street lights stay on the land.\n• The area statement, development cost, plot list and the CAD drawing use the real land shape.";
+window.EP_VER = "2026.11.21-z104";
+window.EP_NOTES = "Interior planner — two new rooms:\n• Modular kitchen: straight, L, parallel or U shape (auto fits the room). Sink unit under the window, hob with chimney on the side counter, fridge at the end nearest the door, base units in 900/600 modules, wall units above (not over the hob or the window), dishwasher at premium level. Cost with dado tiles, plumbing and electrical points.\n• Toilet / bathroom: wet zone at the far wall (glass shower enclosure in a wide room, a shower strip in a narrow one), WC on a side wall clear of it, basin or vanity by the door with a mirror, geyser, towel rod, exhaust fan, floor trap. Choose the WC: floor, wall-hung or Indian.\n• Cost includes wall tiles to 2.1 m, waterproofing and concealed plumbing; Build in CAD adds the tiles to the walls.";
 /* pictures of this update: [file in /updates, caption]. Shown to the owner with the WhatsApp "what's new" message. */
 window.EP_PICS = [];

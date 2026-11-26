@@ -3,6 +3,12 @@
 This file is for the people maintaining the app. It is not published with the site (see `.assetsignore`).
 The text users see is `EP_NOTES` in `js/version.js`.
 
+## 2026.11.21-z104
+Interior planner — two new rooms:
+• Modular kitchen: straight, L, parallel or U shape (auto fits the room). Sink unit under the window, hob with chimney on the side counter, fridge at the end nearest the door, base units in 900/600 modules, wall units above (not over the hob or the window), dishwasher at premium level. Cost with dado tiles, plumbing and electrical points.
+• Toilet / bathroom: wet zone at the far wall (glass shower enclosure in a wide room, a shower strip in a narrow one), WC on a side wall clear of it, basin or vanity by the door with a mirror, geyser, towel rod, exhaust fan, floor trap. Choose the WC: floor, wall-hung or Indian.
+• Cost includes wall tiles to 2.1 m, waterproofing and concealed plumbing; Build in CAD adds the tiles to the walls.
+
 ## 2026.11.21-z103
 Colony layout planner:
 • Odd-shaped land: choose "Odd shape — corner points", type the corners of the land and the side with the entrance road.
