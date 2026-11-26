@@ -3,6 +3,9 @@
 This file is for the people maintaining the app. It is not published with the site (see `.assetsignore`).
 The text users see is `EP_NOTES` in `js/version.js`.
 
+## 2026.11.21-z95
+- Planner modes: js/plan/p_colony.js (colony layout), js/plan/p_interior.js (room interior), js/plan/p_renov.js (renovation / extension, new floor over the old house).
+
 ## 2026.11.21-z94
 - Planner modes (PL.MODES, mode bar); js/plan/p_road.js — road & drain planner (sections, BOQ with indicative rates, CAD build: road + culverts + drain walls / beds).
 
