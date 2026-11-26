@@ -3,6 +3,9 @@
 This file is for the people maintaining the app. It is not published with the site (see `.assetsignore`).
 The text users see is `EP_NOTES` in `js/version.js`.
 
+## 2026.11.21-z83
+- Planner: RWP → recharge pit underground lines (ring route, plot-bounded), paver driveway + wicket path + lawn, 750 mm PCC plinth protection (land entities), colour by floor (ground / top / alternate). Options paving, apron, paintFloors.
+
 ## 2026.11.21-z82
 - Planner: meter board at the gate + 2 earth pits (≥ 5 m apart, IS 3043); parking bays 2.5 × 5 m with cars, aisle, two-wheeler bays; terrace drainage — RWPs at convex corners (1 per 40 m²) and SLOPE 1:100 leaders. Options: meter, roofDrain, park.
 

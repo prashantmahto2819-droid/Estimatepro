@@ -434,7 +434,45 @@
         add({ t: "asset", kind: "rwp_110", p: rp, rot: 0, lvl: "L0", layer: "P-FIX", rwp: true, mauto: 1, name: "RWP" });
         add({ t: "leader", pts: [[r1(inr[0]), r1(inr[1])], [r1(tail[0]), r1(tail[1])]], s: "SLOPE 1:100", lvl: "LT", layer: "A-ANNO" }); });
       if (!d.layers["A-ANNO"]) d.layers["A-ANNO"] = { color: 7, lw: 0.18, lt: "CONTINUOUS", on: true, lock: false, frz: false };
-      if (pick.length) svcNote.push("Terrace drainage: " + pick.length + " rain-water pipes 110 mm" + (pick.length < nR ? " (" + nR + " needed for " + Math.round(Math.abs(ar) / 1e6) + " m² — add more on the long sides)" : "") + ", roof sloped 1:100 to them" + (des.rwh !== "no" ? "; lead them to the recharge pits" : ""));
+      if (pick.length) svcNote.push("Terrace drainage: " + pick.length + " rain-water pipes 110 mm" + (pick.length < nR ? " (" + nR + " needed for " + Math.round(Math.abs(ar) / 1e6) + " m² — add more on the long sides)" : "") + ", roof sloped 1:100 to them");
+    }
+    /* rain-water pipes led to the recharge pits (else to the road drain): along a ring 450 mm outside the building, underground uPVC 110 mm */
+    var pits = ents.filter(function (e) { return e.t === "asset" && e.kind === "rwh_pit"; }), rwps = ents.filter(function (e) { return e.t === "asset" && e.kind === "rwp_110" && e.lvl === "L0"; });
+    if (rwps.length && cfg.site !== false && B.mepKindFor && des.roofDrain !== "no") {
+      var Rg = [ox - 450, oy - 450, ox + W * 1000 + 450, oy + D * 1000 + 450], per = 2 * (Rg[2] - Rg[0] + Rg[3] - Rg[1]);
+      var toS = function (q) { var x = Math.min(Rg[2], Math.max(Rg[0], q[0])), y = Math.min(Rg[3], Math.max(Rg[1], q[1])), dl = [Math.abs(y - Rg[1]), Math.abs(x - Rg[2]), Math.abs(y - Rg[3]), Math.abs(x - Rg[0])], k = dl.indexOf(Math.min.apply(null, dl)), Wd = Rg[2] - Rg[0], Hd = Rg[3] - Rg[1];
+        return k === 0 ? x - Rg[0] : k === 1 ? Wd + (y - Rg[1]) : k === 2 ? Wd + Hd + (Rg[2] - x) : 2 * Wd + Hd + (Rg[3] - y); };
+      var atS = function (t) { t = ((t % per) + per) % per; var Wd = Rg[2] - Rg[0], Hd = Rg[3] - Rg[1]; return t <= Wd ? [Rg[0] + t, Rg[1]] : t <= Wd + Hd ? [Rg[2], Rg[1] + t - Wd] : t <= 2 * Wd + Hd ? [Rg[2] - (t - Wd - Hd), Rg[3]] : [Rg[0], Rg[3] - (t - 2 * Wd - Hd)]; };
+      var cornersT = [0, Rg[2] - Rg[0], Rg[2] - Rg[0] + Rg[3] - Rg[1], 2 * (Rg[2] - Rg[0]) + Rg[3] - Rg[1]], rwLen = 0;
+      rwps.forEach(function (rp) { var tgt = pits.length ? pits.slice().sort(function (a, b) { return Math.hypot(a.p[0] - rp.p[0], a.p[1] - rp.p[1]) - Math.hypot(b.p[0] - rp.p[0], b.p[1] - rp.p[1]); })[0].p : [Math.min(pw - 400, Math.max(400, rp.p[0])), 0];
+        var t0 = toS(rp.p), t1 = toS(tgt), fw = ((t1 - t0) % per + per) % per;
+        var path = function (dir) { var len = dir > 0 ? fw : per - fw, pts = [rp.p.slice(), atS(t0)], cs2 = [];
+          for (var k5 = -1; k5 <= 2; k5++) cornersT.forEach(function (c) { var cc = c + k5 * per, rel = dir > 0 ? cc - t0 : t0 - cc; if (rel > 1 && rel < len - 1) cs2.push([rel, cc]); });
+          cs2.sort(function (a, b) { return a[0] - b[0]; }).forEach(function (c) { pts.push(atS(c[1])); }); var e1 = atS(t1); pts.push(e1); var vs = Math.abs(e1[0] - Rg[0]) < 1 || Math.abs(e1[0] - Rg[2]) < 1; pts.push(vs ? [e1[0], tgt[1]] : [tgt[0], e1[1]]); pts.push(tgt.slice());
+          var okP = true; for (var m = dir > 0 ? 0 : 0; m <= len; m += 400) { var q = atS(t0 + dir * m); if (q[0] < 150 || q[1] < 150 || q[0] > pw - 150 || q[1] > pd - 150) { okP = false; break; } }
+          return { pts: pts, len: len, ok: okP }; };
+        var cands = [path(1), path(-1)].filter(function (c) { return c.ok; }).sort(function (a, b) { return a.len - b.len; }); if (!cands.length) return; var pts = cands[0].pts;
+        var clean = []; pts.forEach(function (q) { q = [Math.round(q[0]), Math.round(q[1])]; var l = clean[clean.length - 1]; if (!l || Math.hypot(l[0] - q[0], l[1] - q[1]) > 50) clean.push(q); });
+        for (var k6 = 1; k6 < clean.length; k6++) rwLen += Math.hypot(clean[k6][0] - clean[k6 - 1][0], clean[k6][1] - clean[k6 - 1][1]);
+        if (clean.length >= 2) add({ t: "run", kind: B.mepKindFor("rw", 110), pts: clean, side: 1, z: -450, lvl: "L0", svc: "rw", dia: 110, slope: 100, layer: "P-RW", mauto: 1 }); });
+      svcNote.push("Rain-water lines: " + rwps.length + " × 110 mm uPVC underground, " + (rwLen / 1000).toFixed(0) + " m in all, to " + (pits.length ? "the recharge pits" : "the road drain"));
+    }
+    /* yard finishes: 750 mm PCC plinth protection round the building, paver-block driveway from the gate, a 1.2 m path from the wicket gate, lawn in the rest of the front yard */
+    if (cfg.site !== false && des.paving && des.paving !== "none") {
+      var land = function (kind, x0, y0, x1, y1, nm) { if (x1 - x0 > 200 && y1 - y0 > 200) add({ t: "land", kind: kind, pts: [[r1(x0), r1(y0)], [r1(x1), r1(y0)], [r1(x1), r1(y1)], [r1(x0), r1(y1)]], lvl: "L0", layer: "L-LAND", name: nm }); };
+      var apr = des.apron === "no" ? 0 : 750, area0 = 0;
+      if (apr) { var ol2 = olM, ar2 = 0; ol2.forEach(function (q, j) { var r2 = ol2[(j + 1) % ol2.length]; ar2 += q[0] * r2[1] - r2[0] * q[1]; }); var sg2 = ar2 > 0 ? 1 : -1;
+        ol2.forEach(function (q, j) { var r2 = ol2[(j + 1) % ol2.length], dx = r2[0] - q[0], dy = r2[1] - q[1], L3 = Math.hypot(dx, dy); if (L3 < 300) return; var nx = sg2 * dy / L3 * apr, ny = -sg2 * dx / L3 * apr;
+          var pts2 = [q, r2, [r2[0] + nx, r2[1] + ny], [q[0] + nx, q[1] + ny]].map(function (z) { return [r1(Math.min(pw - 115, Math.max(115, z[0]))), r1(Math.min(pd - 115, Math.max(115, z[1])))]; });
+          add({ t: "land", kind: "pcc", pts: pts2, lvl: "L0", layer: "L-LAND", name: "Plinth protection" }); area0 += L3 * apr / 1e6; }); }
+      var porchY = oy; ents.forEach(function (e) { if (e.t === "slab" && e.lvl === "L0" && e.pts && e.pts.some(function (q) { return q[1] < oy - 100; })) porchY = Math.min(porchY, Math.min.apply(null, e.pts.map(function (q) { return q[1]; }))); });
+      var yEnd = oy - apr, gw = 0; ents.forEach(function (e) { if (e.gate && e.w && Math.abs(e.at - gx) < 50) gw = Math.max(gw, e.w); }); gw = gw || 3000;
+      var dr = [Math.max(115, gx - gw / 2), Math.min(pw - 115, gx + gw / 2)], walk = typeof wx === "number" ? [wx - 600, wx + 600] : null, segs = [dr].concat(walk ? [walk] : []).sort(function (a, b) { return a[0] - b[0]; });
+      if (yEnd > 600) {
+        land("paver", dr[0], 115, dr[1], Math.min(yEnd, porchY < oy ? porchY : yEnd), "Driveway"); if (walk) land("paver", walk[0], 115, walk[1], yEnd, "Walkway");
+        if (des.paving === "drive") { var xs2 = [115]; segs.forEach(function (sgm) { xs2.push(sgm[0], sgm[1]); }); xs2.push(pw - 115); for (var k7 = 0; k7 < xs2.length; k7 += 2) land("lawn", xs2[k7], 115, xs2[k7 + 1], yEnd, "Lawn"); }
+      }
+      svcNote.push("Yard: paver driveway " + ((dr[1] - dr[0]) / 1000).toFixed(1) + " m wide from the gate" + (walk ? ", 1.2 m paver path from the wicket gate" : "") + (des.paving === "drive" ? ", lawn in the front yard" : "") + (apr ? ", 750 mm PCC plinth protection round the building" : ""));
     }
     d.planner_svc = svcNote;
     /* frame sizing by load (rule of thumb, IS 456 / IS 875): load on each column from the floor area it carries (half way to the next columns),
@@ -461,7 +499,8 @@
     [[[mx, 0], [mx, by0], [mx + 600, by0 / 2]], [[mx, pd], [mx, by1], [mx + 600, (pd + by1) / 2]], [[0, my], [bx0, my], [bx0 / 2, my + 600]], [[pw, my], [bx1, my], [(pw + bx1) / 2, my + 600]]].forEach(function (q) { if (Math.abs(q[0][0] - q[1][0]) + Math.abs(q[0][1] - q[1][1]) > 100) add({ t: "dim", kind: "ali", a: q[0], b: q[1], p: q[2], layer: dimL }); });
     /* colours: outside walls, an accent on the road-side walls of the entrance room and the stair cabin, inside walls */
     var pe = (PL.PAINT && PL.PAINT[des.paintExt]) || null, pi = des.paintInt ? (PL.PAINT[des.paintInt] || PL.PAINT[des.paintInt + "_i"]) : null, LKS = B.LOOKS || {};
-    ents.forEach(function (e) { if (e.t !== "wall" || e._del) return; if (pi && LKS[pi] && !e.site) e.lookI = pi; if (e.ext && pe && LKS[pe[0]]) e.lookO = pe[0]; });
+    var accLv = des.paintFloors === "ground" ? "L0" : des.paintFloors === "top" ? "L" + (nF - 1) : null;
+    ents.forEach(function (e) { if (e.t !== "wall" || e._del) return; if (pi && LKS[pi] && !e.site) e.lookI = pi; if (e.ext && pe && LKS[pe[0]]) e.lookO = (accLv && e.lvl === accLv && nF > 1 && LKS[pe[1]]) ? pe[1] : (des.paintFloors === "alt" && nF > 1 && LKS[pe[1]] && /^L\d+$/.test(e.lvl || "") && (+e.lvl.slice(1)) % 2 === 1) ? pe[1] : pe[0]; });
     if (pe && LKS[pe[1]]) { ents.forEach(function (e) { if (e.t === "wall" && !e._del && e.ext && (e.lvl === "LT" || e.site)) e.lookO = pe[1]; });
       (perFloor[0] && perFloor[0].mainDoor ? [perFloor[0].mainDoor.p.w] : []).forEach(function (w) { if (w && w.e && !w.e._del) w.e.lookO = pe[1]; }); }
     /* front screen: louvres / fins / stone strips on the road side of the stair (else the widest road-side wall of the top floor) */
