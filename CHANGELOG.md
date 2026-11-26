@@ -3,6 +3,9 @@
 This file is for the people maintaining the app. It is not published with the site (see `.assetsignore`).
 The text users see is `EP_NOTES` in `js/version.js`.
 
+## 2026.11.21-z100
+- CAD: .epcad drawing file export (File ▾) and “Open drawing file…” in the drawings list.
+
 ## 2026.11.21-z99
 - Planner: plot from corner points (tap pad / typed) or from a closed CAD polyline; PL.normPoly, PL.isConvex, PL.edgeSetbacks (setback per side by its facing); road side chooser.
 

@@ -159,7 +159,7 @@
     r.innerHTML = "<div class='cad-top'><button type='button' class='btn ghost sm' data-cad='back'>← Drawings</button><input class='in cad-name' aria-label='Drawing name'><span class='cad-save muted'></span><span class='grow'></span>" +
       "<button type='button' class='btn ghost sm' data-cad='undo' title='Undo (Ctrl+Z)'>↶ Undo</button><button type='button' class='btn ghost sm' data-cad='redo' title='Redo (Ctrl+Y)'>↷ Redo</button>" +
       "<div class='cad-menu'><button type='button' class='btn sec sm' data-cad='menu' aria-haspopup='true'>File ▾</button><div class='cad-pop' hidden>" +
-      [["save", "Save now (Ctrl+S)"], ["rev", "Save as revision…"], ["revs", "Revisions…"], ["-"], ["impdxf", "Insert DXF into this drawing…"], ["img", "Attach image underlay (JPG / PNG)…"], ["pdf", "Attach PDF (vectors or image)…"], ["-"], ["expdxf", "Export DXF (AutoCAD R12)"], ["expdxfd", "Export DXF with real dimensions (trial)"], ["exppdf", "Plot PDF sheet…"], ["exppng", "Export PNG image"]].concat(CAD.MENU_EXTRA || [], [["-"], ["takeoff", "Take-off to estimate…"], ["dup", "Save a copy"], ["delete", "Delete this drawing"]]).map(function (m) { return m[0] === "-" ? "<hr>" : "<button type='button' data-cad='" + m[0] + "'>" + m[1] + "</button>"; }).join("") + "</div></div>" +
+      [["save", "Save now (Ctrl+S)"], ["rev", "Save as revision…"], ["revs", "Revisions…"], ["-"], ["impdxf", "Insert DXF into this drawing…"], ["img", "Attach image underlay (JPG / PNG)…"], ["pdf", "Attach PDF (vectors or image)…"], ["-"], ["expdxf", "Export DXF (AutoCAD R12)"], ["expdxfd", "Export DXF with real dimensions (trial)"], ["exppdf", "Plot PDF sheet…"], ["exppng", "Export PNG image"], ["expep", "Download drawing file (.epcad — opens in Estimate Pro with 3D)"]].concat(CAD.MENU_EXTRA || [], [["-"], ["takeoff", "Take-off to estimate…"], ["dup", "Save a copy"], ["delete", "Delete this drawing"]]).map(function (m) { return m[0] === "-" ? "<hr>" : "<button type='button' data-cad='" + m[0] + "'>" + m[1] + "</button>"; }).join("") + "</div></div>" +
       CAD.HOOKS.top.map(function (f) { return f(); }).join("") + "<button type='button' class='btn ghost sm cad-sidebtn' data-cad='side' title='Show / hide the side panel'>☰ Panel</button><button type='button' class='btn ghost sm' data-cad='fullscr' aria-pressed='" + document.body.classList.contains("cadmax") + "' title='Use the whole screen for CAD Studio'>" + (document.body.classList.contains("cadmax") ? "⤡ Exit full screen" : "⛶ Full screen") + "</button></div>" +
       ribbonHtml() +
       "<div class='cad-body'><div class='cad-edhost'></div><aside class='cad-side'><div class='seg cad-tabs' role='tablist'>" + CAD.SIDE_TABS.map(function (t) { return "<button type='button' data-cadtab='" + t[0] + "'>" + t[1] + "</button>"; }).join("") + "</div><div class='cad-panel'></div></aside></div>" +
@@ -352,6 +352,7 @@
       case "exppng": var url = CAD.plotPng(ed, null, 3000), b = await (await fetch(url)).blob(); dl(b, fname(ed.doc.d.name) + ".png"); return;
       case "exppdf": return plotDialog();
       case "impdxf": return pickFile(".dxf,.dwg", function (f) { importDxfFile(f, true); });
+      case "expep": dl(new Blob([JSON.stringify(ed.doc.json())], { type: "application/json" }), fname(ed.doc.d.name) + ".epcad"); U.toast("Drawing file saved — open it on any device with CAD Studio → Open drawing file"); return;
       case "img": return pickFile("image/*", attachImage);
       case "pdf": return pickFile("application/pdf,.pdf", attachPdf);
       case "takeoff": ed.exec("TAKEOFF"); return;
@@ -640,7 +641,7 @@
     if (C.cur && C.root) return "<div id='cad-host' class='cad-host'></div>";
     if (C.list === null) { loadList(); return "<div class='empty'>Loading drawings…</div>"; }
     var h = "<div style='display:flex;flex-direction:column;gap:12px;max-width:1200px'><div class='row' style='gap:8px;align-items:center;flex-wrap:wrap'><h1 class='grow' style='margin:0'>CAD Studio <span class='muted' style='font-size:.55em;font-weight:500'>2D drafting · DXF · take-off</span></h1>" +
-      "<button type='button' class='btn sec' data-cadh='imp'>Import DXF…</button><button type='button' class='btn sec' data-cadh='imppdf'>Import PDF…</button><button type='button' class='btn pri' data-cadh='new'>+ New drawing</button></div>" +
+      "<button type='button' class='btn sec' data-cadh='impep' title='A drawing saved from Estimate Pro (.epcad) — walls, 3D, materials and everything'>Open drawing file…</button><button type='button' class='btn sec' data-cadh='imp'>Import DXF…</button><button type='button' class='btn sec' data-cadh='imppdf'>Import PDF…</button><button type='button' class='btn pri' data-cadh='new'>+ New drawing</button></div>" +
       "<p class='muted' style='margin:0'>Draw and edit plans, sections and details like AutoCAD: lines, polylines, arcs, hatches, dimensions, blocks, layers, object snaps, ortho / polar tracking, trim / extend / offset / fillet, and typed coordinates in mm, m or feet-inches. Open DXF files (DWG: save as DXF first, e.g. with the free ODA File Converter), trace over PDF / scanned drawings, plot PDF sheets and send lengths, areas and counts straight into an estimate.</p>";
     if (!C.cloudOk) h += "<div class='ds-msg' role='note'>Drawings are saved on this device. To keep them online and on all your devices, the super admin runs <code>supabase/cad.sql</code> once in Supabase → SQL Editor. <span class='muted'>(" + esc(C.cloudErr) + ")</span></div>";
     if (!C.list.length) h += "<div class='panel empty'>No drawings yet. Start with <b>+ New drawing</b> or import a DXF.</div>";
@@ -666,6 +667,8 @@
         function (b, dlg) { if (!b.dataset.nd) return; var nm = dlg.querySelector("#nd-n").value.trim() || "Drawing", u = dlg.querySelector("#nd-u").value, sc = +dlg.querySelector("#nd-s").value || 100; closeDialog(); var d = CAD.newDoc(nm, u); d.dim.sc = sc; d.sheet.scale = sc; newDrawing(nm, u, d); });
       return;
     }
+    if (ds.cadh === "impep") { pickFile(".epcad,.json", function (f) { var rd = new FileReader(); rd.onload = async function () { var d; try { d = JSON.parse(rd.result); } catch (er) { U.toast("This is not an Estimate Pro drawing file"); return; }
+        if (!d || !Array.isArray(d.ents) || !d.layers) { U.toast("This is not an Estimate Pro drawing file"); return; } d.name = d.name || f.name.replace(/\.(epcad|json)$/i, ""); await newDrawing(d.name, (d.units && d.units.disp) || "mm", d); U.toast("Opened: " + d.name + " — saved to your drawings"); }; rd.readAsText(f); }); return; }
     if (ds.cadh === "imp") { pickFile(".dxf,.dwg", function (f) { importDxfFile(f, false); }); return; }
     if (ds.cadh === "imppdf") { pickFile("application/pdf,.pdf", async function (f) { var nm = f.name.replace(/\.pdf$/i, ""); var d = CAD.newDoc(nm, "m"); await newDrawing(nm, "m", d); attachPdf(f); }); return; }
   });
