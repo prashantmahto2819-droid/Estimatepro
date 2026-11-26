@@ -89,3 +89,41 @@
         "Keep the drawings, the soil report and the design: the upper floors are built to the same drawings."] };
   };
 })();
+
+/* walk-through: a camera path on the ground floor — from the gate to the main door, then room to room through the doors
+   (living / hall rooms first, then dining, kitchen, bed rooms), going back the way it came; saved on layer A-CAMPATH so that
+   3D → Tour walks it and ● Record makes the video */
+(function () {
+  var PL = window.EP.plan;
+  PL.walkPath = function (d) {
+    var E = d.ents, byId = {}; E.forEach(function (e) { byId[e.id] = e; });
+    var rooms = E.filter(function (e) { return e.t === "room" && e.lvl === "L0" && e.pts && e.pts.length > 2; });
+    var inPoly = function (p, P) { var c = false; for (var i = 0, j = P.length - 1; i < P.length; j = i++) { if ((P[i][1] > p[1]) !== (P[j][1] > p[1]) && p[0] < (P[j][0] - P[i][0]) * (p[1] - P[i][1]) / (P[j][1] - P[i][1]) + P[i][0]) c = !c; } return c; };
+    var cen = function (P) { var x = 0, y = 0; P.forEach(function (q) { x += q[0]; y += q[1]; }); return [x / P.length, y / P.length]; };
+    var roomAt = function (p) { return rooms.filter(function (r) { return inPoly(p, r.pts); })[0] || null; };
+    var doors = [], mainD = null;
+    E.forEach(function (e) { if ((e.t !== "door" && e.t !== "opening") || e.lvl !== "L0" && byId[e.host] && byId[e.host].lvl !== "L0") return; var w = byId[e.host]; if (!w || w.t !== "wall" || w.lvl !== "L0" || w.site) return;
+      var L = Math.hypot(w.b[0] - w.a[0], w.b[1] - w.a[1]); if (L < 1) return; var u = [(w.b[0] - w.a[0]) / L, (w.b[1] - w.a[1]) / L], n = [-u[1], u[0]], p = [w.a[0] + u[0] * e.at, w.a[1] + u[1] * e.at];
+      var A = roomAt([p[0] + n[0] * 400, p[1] + n[1] * 400]), Bq = roomAt([p[0] - n[0] * 400, p[1] - n[1] * 400]), dd = { p: p, n: n, a: A, b: Bq, main: !!e.main };
+      if (A !== Bq) doors.push(dd); if (e.main) mainD = dd; });
+    if (!mainD) return null;
+    /* rooms open to each other without a wall between them (living + dining, lobby + passage …) are connected too */
+    var bb = function (P) { var xs = P.map(function (q) { return q[0]; }), ys = P.map(function (q) { return q[1]; }); return [Math.min.apply(null, xs), Math.min.apply(null, ys), Math.max.apply(null, xs), Math.max.apply(null, ys)]; };
+    var walls = E.filter(function (e) { return e.t === "wall" && e.lvl === "L0" && !e.site; }), segD = function (p, a, b) { var dx = b[0] - a[0], dy = b[1] - a[1], L2 = dx * dx + dy * dy, t = L2 ? Math.max(0, Math.min(1, ((p[0] - a[0]) * dx + (p[1] - a[1]) * dy) / L2)) : 0; return Math.hypot(p[0] - a[0] - t * dx, p[1] - a[1] - t * dy); };
+    rooms.forEach(function (r1, i) { var A = bb(r1.pts); rooms.forEach(function (r2, j) { if (j <= i) return; var Bb = bb(r2.pts), m = null;
+      var ox = Math.min(A[2], Bb[2]) - Math.max(A[0], Bb[0]), oy = Math.min(A[3], Bb[3]) - Math.max(A[1], Bb[1]);
+      if (ox >= 900 && ((Bb[1] - A[3] >= 0 && Bb[1] - A[3] <= 350) || (A[1] - Bb[3] >= 0 && A[1] - Bb[3] <= 350))) { var y = Bb[1] >= A[3] ? (A[3] + Bb[1]) / 2 : (Bb[3] + A[1]) / 2; m = [(Math.max(A[0], Bb[0]) + Math.min(A[2], Bb[2])) / 2, y]; }
+      else if (oy >= 900 && ((Bb[0] - A[2] >= 0 && Bb[0] - A[2] <= 350) || (A[0] - Bb[2] >= 0 && A[0] - Bb[2] <= 350))) { var x = Bb[0] >= A[2] ? (A[2] + Bb[0]) / 2 : (Bb[2] + A[0]) / 2; m = [x, (Math.max(A[1], Bb[1]) + Math.min(A[3], Bb[3])) / 2]; }
+      if (m && !walls.some(function (w) { return segD(m, w.a, w.b) < 160; })) doors.push({ p: m, a: r1, b: r2 }); }); });
+    var inside = mainD.a || mainD.b, outN = mainD.a ? [-mainD.n[0], -mainD.n[1]] : mainD.n, pts = [];
+    var push = function (q) { var l = pts[pts.length - 1]; if (!l || Math.hypot(l[0] - q[0], l[1] - q[1]) > 300) pts.push([Math.round(q[0]), Math.round(q[1]), 0]); };
+    push([mainD.p[0] + outN[0] * 6000, mainD.p[1] + outN[1] * 6000]); push([mainD.p[0] + outN[0] * 800, mainD.p[1] + outN[1] * 800]); push(mainD.p);
+    var rank = function (r) { var n = (r.name || "").toLowerCase(); return /living|drawing|hall|lobby|lounge|reception|foyer/.test(n) ? 0 : /dining/.test(n) ? 1 : /kitchen/.test(n) ? 2 : /master/.test(n) ? 3 : /bed|room/.test(n) ? 4 : /toilet|bath|wc|store|duct|utility|stair|wash|shaft|lift/.test(n) ? 9 : 5; };
+    var seen = {}, count = 0;
+    (function visit(r, from) { if (!r || seen[r.id] || count > 9) return; seen[r.id] = 1; count++; push(cen(r.pts));
+      var nx = doors.filter(function (dd) { return (dd.a === r || dd.b === r) && dd !== from; }).map(function (dd) { return { d: dd, r: dd.a === r ? dd.b : dd.a }; }).filter(function (x) { return x.r && !seen[x.r.id] && rank(x.r) < 9; });
+      nx.sort(function (x, y) { return rank(x.r) - rank(y.r); });
+      nx.forEach(function (x) { if (seen[x.r.id] || count > 9) return; push(x.d.p); visit(x.r, x.d); push(x.d.p); push(cen(r.pts)); }); })(inside, mainD);
+    return pts.length >= 3 ? pts : null;
+  };
+})();

@@ -3,6 +3,9 @@
 This file is for the people maintaining the app. It is not published with the site (see `.assetsignore`).
 The text users see is `EP_NOTES` in `js/version.js`.
 
+## 2026.11.21-z93
+- Planner: PL.walkPath (gate → main door → rooms via doors / open connections) saved on A-CAMPATH after Build; entrance room gets an opening to dining / lobby / passage.
+
 ## 2026.11.21-z92
 - Planner: phased construction (P.phase, PL.phaseSplit, level names “(phase 2)”, sanction note); js/plan/climate.js — PL.sunWind, PL.sunSVG; card line + report section.
 

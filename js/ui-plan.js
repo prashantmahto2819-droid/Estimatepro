@@ -175,6 +175,9 @@
       try { await PL.autoRun(ed, "SHEET", [undefined, "AllElevations", "Landscape"]); done.push("print sheet"); } catch (er) { console.warn("sheet", er); }
       /* electrical and plumbing go on their own sheets (one per floor and service, with legends); the architectural plans and the
          main sheet then show the building only, as drawing sets are normally issued — MEP → View → All brings them back */
+      /* walk-through path for 3D → Tour / ● Record */
+      try { var wp = PL.walkPath && PL.walkPath(ed.doc.d); if (wp) { var Lw = ed.doc.d.layers; if (!Lw["A-CAMPATH"]) { var Lc2 = JSON.parse(JSON.stringify(Lw)); Lc2["A-CAMPATH"] = { color: 6, lw: 0.25, lt: "DASHED", on: true, lock: false, frz: false, plot: false }; ed.doc.set("layers", Lc2); }
+        ed.doc.begin("Walk-through path"); ed.doc.d.ents.filter(function (e) { return e.layer === "A-CAMPATH"; }).forEach(function (e) { ed.doc.del(e.id); }); ed.doc.add({ t: "pline", pts: wp, closed: false, layer: "A-CAMPATH", lvl: "L0" }); ed.doc.commit(); done.push("walk-through path (3D → Tour, ● Record for the video)"); } } catch (er) { console.warn("walk", er); }
       if (P.mep && ed.doc.d.mep) { try { await PL.autoRun(ed, "MEPSHEETS", []); ed.doc.set("mep", Object.assign({}, ed.doc.d.mep, { view: "B" })); ed.dirty = true; done.push("separate electrical and plumbing sheets"); } catch (er) { console.warn("mepsheets", er); } }
       var sL = ed.doc.d.layers["A-SITE"]; if (sL) sL.on = siteOn !== false; ed.dirty = true;
     }

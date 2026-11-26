@@ -1,5 +1,5 @@
 /* App version + "what's new" — the super admin is offered to send this on WhatsApp after each upload. Change both with every release. */
-window.EP_VER = "2026.11.21-z92";
-window.EP_NOTES = "• Building Planner — Build in phases: choose “Ground now, rest later” (or G+1 / G+2 now). Each layout shows the phase 1 and phase 2 cost; foundation, columns and stair are designed for all floors; the report and the client proposal show the split; the CAD floors of phase 2 are marked\n• Sun and wind check: each layout shows hot west-only bed rooms and how many rooms get cross ventilation; the report has a sun-path chart (June, March, December) over your building, the summer / monsoon breeze, advice for each wall and a room-by-room table";
+window.EP_VER = "2026.11.21-z93";
+window.EP_NOTES = "• Building Planner — 3D walk-through: every Build now draws a walk path — from the road through the gate and the main door, then living, dining and the other rooms through their doors. In 3D press Tour to walk it, ● Record to make the video for the client\n• The room the main door opens into now always opens on to the rest of the house (an arch / opening to the dining, lobby or passage) — no more dead-end living rooms";
 /* pictures of this update: [file in /updates, caption]. Shown to the owner with the WhatsApp "what's new" message. */
 window.EP_PICS = [];

@@ -1,6 +1,6 @@
 # Estimate Pro — pending work (kept with the code; not published)
 
-Last updated at version 2026.11.21-z92
+Last updated at version 2026.11.21-z93
 
 ## A. Waiting for the owner
 1. Server work: (-z21) module switches and a shared library of blocks and hatch patterns are built — the owner has to run `server/shared.sql` once in Supabase, then check that a switched-off module disappears for a normal user. Still open: shared 3D models / cut-outs / material pictures (large files — need Supabase Storage), WhatsApp update messages with real pictures attached (needs a sending gateway; links to the pictures are already added).
@@ -81,7 +81,7 @@ Last updated at version 2026.11.21-z92
 4. (-z90: MEP on separate E / P sheets per floor; plans show the building only.)
 5. (-z86: done — flats fitted to the plot.) (-z87: two per floor on small plots via shallower flats and no lift up to 3 storeys.)
 6. Not yet checked by the owner on a real phone.
-7. Owner's list of 26 Nov — to build: budget plan (-z91 done), construction programme + payment stages (-z91 done), client proposal (-z91 done), floor-by-floor (phased) plan (-z92 done), sun and wind check (-z92 done), auto 3D walkthrough video, colony / layout planner, road / drain / culvert planner, interior planner, renovation / extension planner.
+7. Owner's list of 26 Nov — to build: budget plan (-z91 done), construction programme + payment stages (-z91 done), client proposal (-z91 done), floor-by-floor (phased) plan (-z92 done), sun and wind check (-z92 done), auto 3D walkthrough video (-z93: path made on Build; Tour / Record by the user), colony / layout planner, road / drain / culvert planner, interior planner, renovation / extension planner.
 8. Owner's list of 26 Nov — kept for later (owner said: pending): rental house (shop below / tenant floor with own stair), farmhouse / village house (cow shed, grain store, biogas, well, solar pump), government scheme buildings (PMAY house, community hall, toilet block, godown) to their type designs.
 
 ## D. Other

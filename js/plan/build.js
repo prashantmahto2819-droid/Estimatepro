@@ -148,6 +148,11 @@
         if (/kitchen$|^ckitchen|^hkitchen|^hall_kit/.test(r.key)) { var pk = piecesOf(r).filter(function (p) { var q = other(p, r); return q && /^(dining|serve|din_hall|restaurant|mess)$/.test(q.key) && p !== (accessOf[r.uid] || {}).p; })[0]; if (pk) { var ok = { w: house ? 1000 : 1500, h: 2100, sill: 0, preset: "OP", kind: "opening" }, c3 = placeOn(pk, ok.w / 1000, "m"); if (c3 != null) hostAdd("opening", pk, c3, ok, r); } }
         if (r.key === "utility" || r.key === "dish") { var pu = piecesOf(r).filter(function (p) { return !other(p, r); })[0], du = preset("d", "D2"), c4 = pu && placeOn(pu, du.w / 1000, "b"); if (c4 != null) hostAdd("door", pu, c4, du, r); }
       });
+      /* the room the main door opens into also opens on to the rest of the house (living → dining / lobby / passage), else it is a dead end */
+      rooms.forEach(function (r) { if (accessOf[r.uid] === "out" && r.inst && r.inst.main) { var pin = piecesOf(r).filter(function (p) { var q = other(p, r); return q && (p.b - p.a) >= 1.3 && !/^(toilet|bath|wc|store|stair|lift|duct|utility)/.test(q.key || "") && !(sp(q) && (sp(q).wet || sp(q).stair || sp(q).open)); })
+          .sort(function (a, b) { var ra = /dining|lobby|lounge|foyer|corr|pass/.test(other(a, r).key || "") || other(a, r).pass ? 0 : 1, rb = /dining|lobby|lounge|foyer|corr|pass/.test(other(b, r).key || "") || other(b, r).pass ? 0 : 1; return ra - rb || (b.b - b.a) - (a.b - a.a); })[0];
+          if (pin) { var oi = { w: 1200, h: 2100, sill: 0, preset: "OP", kind: "opening" }; if (des.arch) oi.head = des.arch; var ci = placeOn(pin, 1.2, "m"); if (ci != null) hostAdd("opening", pin, ci, oi, r); } } });
+
       /* passages, lobbies and corridors open into the hall / lobby / stair they join */
       rooms.filter(function (q) { return (q.pass || q.corr) && !q.fill; }).forEach(function (q) {
         var cand = piecesOf(q).filter(function (p) { var o = other(p, q); if (!o || p.b - p.a < 1.1) return false; var s2 = sp(o); return (s2 && (s2.circ || s2.stair) && !s2.open) || (o.corr && !q.corr) || (o.pass && q.corr); })
