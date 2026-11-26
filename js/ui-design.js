@@ -36,7 +36,7 @@
   }
   function project() { var d = S.est && S.est.cur ? S.est.cur.doc : null; return d ? (d.header.work || S.est.cur.name || "") : ""; }
   function editKey() { return D.mid + "|" + (D.mid && MODS()[D.mid] ? mode() : ""); }
-  function ctx() { return { site: D.ctx.site === "mine" ? "mine" : "general", detail: D.ctx.detail === "code" ? "code" : "practice", site_cfg: D.siteCfg, bbs_cfg: D.bbsCfg, bbs_edits: D.bbsEdits[editKey()] || null }; }
+  function ctx() { return { site: D.ctx.site === "mine" ? "mine" : "general", detail: D.ctx.detail === "code" ? "code" : "practice", basis: D.ctx.basis === "mix" ? "mix" : "sor", site_cfg: D.siteCfg, bbs_cfg: D.bbsCfg, bbs_edits: D.bbsEdits[editKey()] || null }; }
   function run() {
     var sp = spec(), md = mode(), v = values(), key = D.mid + "|" + md + "|" + JSON.stringify(v) + "|" + project() + "|" + JSON.stringify(company()) + "|" + JSON.stringify(ctx());
     if (key === D.key) return D.res;
@@ -77,8 +77,8 @@
       '<div class="seg" role="group" aria-label="Mode">' + sp.modes.map(function (m) { return '<button type="button" data-dsmode="' + m + '" aria-pressed="' + (m === md) + '" title="' + esc(DS.core.MODE_LABEL[m]) + '">' + esc({ design: "Design", check: "Check my design", thumb: "Thumb rule", free: "Free / custom (my dimensions)" }[m] || m) + "</button>"; }).join("") + "</div></div>";
     h += '<p class="muted" style="margin:6px 0 0;font-size:13px">' + esc(DS.core.MODE_LABEL[md]) + "</p>";
     var cx = ctx();
-    h += '<div class="row ds-ctx" style="gap:10px;flex-wrap:wrap;align-items:center"><span class="lbl" style="margin:0">Site</span><div class="seg" role="group" aria-label="Site condition">' + [["general", "General site"], ["mine", "⛏️ Mining area (SECL)"]].map(function (x) { return '<button type="button" data-dsctx="site:' + x[0] + '" aria-pressed="' + (cx.site === x[0]) + '">' + x[1] + "</button>"; }).join("") + '</div><span class="lbl" style="margin:0">Bar detailing</span><div class="seg" role="group" aria-label="Detailing rule">' + [["practice", "Good practice"], ["code", "IS code minimum"]].map(function (x) { return '<button type="button" data-dsctx="detail:' + x[0] + '" aria-pressed="' + (cx.detail === x[0]) + '">' + x[1] + "</button>"; }).join("") + "</div></div>";
-    h += '<p class="muted" style="margin:0;font-size:12.5px">' + (cx.site === "mine" ? "Mining area: exposure Severe, M30, 45–50 mm cover, SBC × 0.8, soil γ 20, φ ≤ 28°, μ ≤ 0.45, surcharge ≥ 24 kN/m², imposed load × 1.10, coal dust on roofs, k1 1.07 — applied automatically (design mode) and reported in the calculation. खदान क्षेत्र: अतिरिक्त सुरक्षा।" : "General site: your inputs are used as given. Switch to Mining area for SECL / Korba / Gevra sites (extra factor of safety).") + " " + (cx.detail === "code" ? "Bars: IS 456 minimum sizes." : "Bars: site practice sizes (e.g. slab ≥ 10Ø main, footing ≥ 12Ø, column ties ≥ 8Ø).") + "</p>";
+    h += '<div class="row ds-ctx" style="gap:10px;flex-wrap:wrap;align-items:center"><span class="lbl" style="margin:0">Site</span><div class="seg" role="group" aria-label="Site condition">' + [["general", "General site"], ["mine", "⛏️ Mining area (SECL)"]].map(function (x) { return '<button type="button" data-dsctx="site:' + x[0] + '" aria-pressed="' + (cx.site === x[0]) + '">' + x[1] + "</button>"; }).join("") + '</div><span class="lbl" style="margin:0">Bar detailing</span><div class="seg" role="group" aria-label="Detailing rule">' + [["practice", "Good practice"], ["code", "IS code minimum"]].map(function (x) { return '<button type="button" data-dsctx="detail:' + x[0] + '" aria-pressed="' + (cx.detail === x[0]) + '">' + x[1] + "</button>"; }).join("") + '</div><span class="lbl" style="margin:0">Estimate basis</span><div class="seg" role="group" aria-label="Estimate basis">' + [["sor", "🏛️ SOR first (government)"], ["mix", "SOR + Non-SOR mix"]].map(function (x) { return '<button type="button" data-dsctx="basis:' + x[0] + '" aria-pressed="' + (cx.basis === x[0]) + '">' + x[1] + "</button>"; }).join("") + "</div></div>";
+    h += '<p class="muted" style="margin:0;font-size:12.5px">' + (cx.site === "mine" ? "Mining area: exposure Severe, M30, 45–50 mm cover, SBC × 0.8, soil γ 20, φ ≤ 28°, μ ≤ 0.45, surcharge ≥ 24 kN/m², imposed load × 1.10, coal dust on roofs, k1 1.07 — applied automatically (design mode) and reported in the calculation. खदान क्षेत्र: अतिरिक्त सुरक्षा।" : "General site: your inputs are used as given. Switch to Mining area for SECL / Korba / Gevra sites (extra factor of safety).") + " " + (cx.detail === "code" ? "Bars: IS 456 minimum sizes." : "Bars: site practice sizes (e.g. slab ≥ 10Ø main, footing ≥ 12Ø, column ties ≥ 8Ø).") + " " + (cx.basis === "mix" ? "Estimate: SOR items where the design matches one, market-rate (Non-SOR) items for the rest." : "Estimate: SOR first — the design takes specifications that have a CPWD DSR / DSR (E&M) / MPPWD SOR item wherever one fits, and Non-SOR items only where no SOR item exists. सरकारी कार्य: अधिकतम SOR आइटम।") + "</p>";
     if (cx.site === "mine" && DS.site && DS.site.CFG_FIELDS) {
       var SC = DS.site, chg = SC.changed ? (SC.setCfg(D.siteCfg), SC.changed()) : [];
       h += '<details class="ds-grp"' + (chg.length ? " open" : "") + '><summary>⚙️ Site values for this mining area (editable' + (chg.length ? " – " + chg.length + " changed" : "") + ')</summary><p class="muted" style="margin:4px 0;font-size:12.5px">Change these to suit the actual site (soil report, mine road, CHP nearness). 0 switches a rule off. Values are kept in this browser and listed in the calculation.</p><div class="ds-fields">' +
@@ -266,7 +266,44 @@
     [/^Prime coat/i, function () { return ["m", "5.1"]; }], [/^Tack coat/i, function () { return ["m", "5.2(i)"]; }],
     [/^Dense bituminous macadam/i, function () { return ["m", "5.5a)(i)"]; }], [/^Bituminous concrete/i, function () { return ["m", "5.6a)(i)"]; }]
   ];
-  function unitOk(a, b) { var n = function (u) { u = String(u || "").toLowerCase().replace(/[^a-z]/g, ""); return { rm: "metre", m: "metre", metre: "metre", nos: "each", no: "each", each: "each" }[u] || u; }; return n(a) === n(b); }
+  /* SOR first (government works): more design items matched to a schedule item when the units agree — c = CPWD DSR (the chosen
+     edition, else the other), e = CPWD DSR (E&M) 2022, m = MPPWD SOR 2025 (else 2017) */
+  var SOR_RULES = [
+    [/^Base skid|^Structural steel/i, "c", "10.2"],
+    [/MS angle .*posts|steel work|^MS frame|lifting lug|bracket|chequered plate|outer MS sheet|GI sheet 0\.8|MS .*stand|wheel stopper|grating/i, "c", "10.25.2"],
+    [/anchor \/ foundation bolts|holding.down|foundation bolt/i, "c", "10.19"],
+    [/\bridges?\b|ridge cap|hip capping/i, "c", "12.51.1"], [/flashing/i, "c", "12.51.2"], [/gutter/i, "c", "12.51.6"],
+    [/downpipe 110|110 mm.*(pvc|upvc)|pvc pipe 110|rain water pipe/i, "c", "12.41.2"], [/vent pipe 50 mm|75 mm.*pvc/i, "c", "12.41.1"],
+    [/PVC \/ SW pipe 100|stoneware/i, "c", "19.1.1"], [/granular bedding|sand bedding/i, "c", "2.27"], [/masonry CM 1:4|brick masonry/i, "c", "6.1.1"],
+    [/wearing course \/ screed|cement concrete flooring|CC screed/i, "c", "11.3.1"],
+    [/painting outside|painting on G\.?S/i, "c", "13.53.1"], [/heat-reflective|cool roof|albedo/i, "c", "12.63"], [/painting structural steel|painting.*steel|synthetic enamel/i, "c", "13.61.1"],
+    [/\bEPS\b|thermocol|expanded polystyrene/i, "c", "12.36.1"], [/glass wool/i, "c", "12.35"], [/particle board.*lining|wall lining/i, "c", "8.26.1"], [/false ceiling|^Ceiling under/i, "c", "12.45.1"],
+    [/^PCC 1:2:4|M15 pedestal|concrete pedestals/i, "c", "4.1.3"],
+    [/^Earthing/i, "e", "5.1"], [/distribution board|MCB DB/i, "e", "2.3.1"],
+    [/crash barrier/i, "m", "8.19 (i)"], [/elastomeric bearing/i, "m", "13.12"], [/mastic asphalt|wearing coat/i, "m", "14.12"], [/drainage spouts?/i, "m", "14.17"], [/joint filler.*fibre board/i, "m", "14.24 (ii)"]
+  ];
+  /* bridges (MPPWD SOR 2025 ch. 14): superstructure concrete by grade / type (formwork & staging are part of that item), HYSD bars in tonne */
+  var GR = { 20: "A", 25: "B", 30: "C", 35: "D", 40: "E" };
+  function bridgeRule(q) {
+    var d = q.description, g = /\bM\s?(\d\d)\b/.exec(d);
+    if (/RCC M\d\d in (deck slab|T-beam superstructure)/i.test(d) && g && GR[g[1]] && /^cum$/i.test(q.unit)) { var c = "14.1 " + GR[g[1]] + " [drum] (" + (/T-beam/i.test(d) ? "ii" : "i") + ") 1"; if (EP.item("mp25", c)) return { b: "mp25", c: c }; }
+    if (/^Centering.*(deck|T-beam)/i.test(d)) return { incl: "Included in the MPPWD SOR 2025 superstructure concrete item (formwork & staging)" };
+    if (/strip seal expansion joint/i.test(d) && EP.item("mp25", "14.28")) return { b: "mp25", c: "14.28" };
+    var hp = /hume pipe (\d{3,4}) mm/i.exec(d), HD = { 600: "A", 1000: "B", 1200: "C", 1500: "D" }; if (hp && HD[hp[1]] && EP.item("mp25", "9.2 " + HD[hp[1]])) return { b: "mp25", c: "9.2 " + HD[hp[1]] };
+    if (D.mid === "pipe_culvert" && /^Granular bedding/i.test(d)) return { incl: "Included in the MPPWD SOR 2025 pipe item 9.2 (first-class bedding)" };
+    if (/^Reinforcement TMT Fe500 for (deck|superstructure)/i.test(d) && /^kg$/i.test(q.unit) && EP.item("mp25", "14.4 (i)")) return { b: "mp25", c: "14.4 (i)", f: 0.001 };
+    return null;
+  }
+  function sorRule(q) {
+    var br = bridgeRule(q); if (br) return br;
+    for (var i = 0; i < SOR_RULES.length; i++) {
+      var r = SOR_RULES[i]; if (!r[0].test(q.description)) continue;
+      var cands = r[1] === "c" ? [D.cpwd, D.cpwd === "cpwd23" ? "cpwd" : "cpwd23"] : r[1] === "e" ? ["em22"] : ["mp25", "mp"];
+      for (var k = 0; k < cands.length; k++) { var it = EP.BOOKS[cands[k]] && EP.item(cands[k], r[2]); if (it && unitOk(it.unit, q.unit)) return { b: cands[k], c: r[2] }; }
+    }
+    return null;
+  }
+  function unitOk(a, b) { var n = function (u) { u = String(u || "").toLowerCase().replace(/[^a-z]/g, ""); return { rm: "metre", m: "metre", metre: "metre", nos: "each", no: "each", each: "each", cc: "cc", cubiccentimetre: "cc", point: "point", points: "point" }[u] || u; }; return n(a) === n(b); }
   function ruleItem(q) {
     for (var i = 0; i < RULES.length; i++) {
       if (!RULES[i][0].test(q.description)) continue;
@@ -284,14 +321,20 @@
       if (/^CPWD/.test(bk)) { var pref = D.cpwd, other = pref === "cpwd23" ? "cpwd" : "cpwd23"; if (EP.item(pref, code)) return { b: pref, c: code }; if (EP.item(other, code)) return { b: other, c: code }; }
       if (/^MPPWD/.test(bk) && EP.item("mp", code)) return { b: "mp", c: code };
       if (/^DSR_EM|^em22/i.test(bk) && EP.item("em22", code)) return { b: "em22", c: code };
+      if (/^MPPWD_SOR_2025|^mp25/i.test(bk)) { if (EP.item("mp25", code)) return { b: "mp25", c: code }; if (EP.item("mp", code)) return { b: "mp", c: code }; }
     }
+    if (ctx().basis !== "mix") return sorRule(q);
     return null;
   }
+  window.DS = window.DS || {}; window.DS.ui = window.DS.ui || {}; window.DS.ui.mapItem = function (q) { return mapItem(q); };
   function measRows(q) { return q.rows.map(function (r) { var o = { k: r.deduction ? "-" : "+", d: r.description || "" }; if (r.nos != null && r.nos !== "") o.n = String(r.nos); if (r.length != null) o.l = String(r.length); if (r.breadth != null) o.b = String(r.breadth); if (r.depth != null) o.h = String(r.depth); return o; }); }
   function tQty(res) {
     var est = S.est && S.est.cur, h = "";
     if (!D.dest) D.dest = "open";
-    h += tableHtml({ columns: ["Item", "Unit", "Quantity", "Goes into the estimate as"], rows: res.quantities.map(function (q) { var m = mapItem(q), it = m && EP.item(m.b, m.c); return [q.description, q.unit, DS.core.pyround(q.quantity, 3), m ? (EP.BOOKS[m.b].name + " " + m.c + (it ? " · ₹" + inr(it.sor) + "/" + it.unit : "")) : "Non-SOR · indicative ₹" + inr(q.rate) + " (edit)"]; }) });
+    var vS = 0, vN = 0, nN = 0; res.quantities.forEach(function (q) { var m = mapItem(q), it = m && m.b && EP.item(m.b, m.c), qq = (+q.quantity || 0) * (m && m.f || 1); if (m && m.incl) return; if (it) vS += qq * (+it.sor || 0); else { vN += qq * (+q.rate || 0); nN++; } });
+    var pS = vS + vN > 0 ? Math.round(100 * vS / (vS + vN)) : 0;
+    h += '<p class="small" style="margin:4px 0 8px"><b>' + (ctx().basis === "mix" ? "SOR + Non-SOR mix" : "🏛️ SOR first") + ":</b> " + pS + " % of the value from SOR items (₹" + inr(Math.round(vS)) + "), " + (100 - pS) + " % Non-SOR (₹" + inr(Math.round(vN)) + ", " + nN + " item" + (nN === 1 ? "" : "s") + ")" + (ctx().basis === "mix" ? ' — switch the <b>Estimate basis</b> above to “SOR first” for government works.' : " — the rest have no SOR item; the engineer may keep or replace them.") + "</p>";
+    h += tableHtml({ columns: ["Item", "Unit", "Quantity", "Goes into the estimate as"], rows: res.quantities.map(function (q) { var m = mapItem(q), it = m && m.b && EP.item(m.b, m.c); return [q.description, q.unit, DS.core.pyround(q.quantity, 3), m && m.incl ? "— " + m.incl : m ? (EP.BOOKS[m.b].name + " " + m.c + (it ? " · ₹" + inr(it.sor) + "/" + it.unit : "") + (m.f ? " (" + DS.core.pyround(q.quantity * m.f, 3) + " " + (it ? it.unit : "") + ")" : "")) : "Non-SOR · indicative ₹" + inr(q.rate) + " (edit)"]; }) });
     var mine = (S.est && S.est.mine) || [], canOpen = !!(est && !U.est.ro());
     if (D.dest === "open" && !canOpen) D.dest = mine.length ? "other" : "new";
     if (D.dest === "other" && !mine.filter(function (x) { return !est || x.id !== est.id || !canOpen; }).length) D.dest = canOpen ? "open" : "new";
@@ -314,6 +357,8 @@
       if (!pid || pid === "__new" || !d.parts.some(function (p) { return p.id === pid; })) { pid = EP.uid(); d.parts.push({ id: pid, name: ("Design – " + res.title).slice(0, 60) }); }
       res.quantities.forEach(function (q) {
         var m = mapItem(q), rows = measRows(q);
+        if (m && m.incl) return;
+        if (m && m.f) rows = rows.map(function (r) { if (r.k === "h") return r; return Object.assign({}, r, { n: "(" + (r.n || "1") + ")*" + m.f }); });
         if (m) {
           var ex = U.est.dupe(d, pid, m.b, m.c);
           if (ex) { ex.meas = (ex.meas || []).concat([{ k: "h", d: "From Design Studio: " + res.title }]).concat(rows); merged++; return; }

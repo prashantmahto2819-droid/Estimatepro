@@ -3,6 +3,14 @@
 This file is for the people maintaining the app. It is not published with the site (see `.assetsignore`).
 The text users see is `EP_NOTES` in `js/version.js`.
 
+## 2026.11.21-z111
+Design Studio — new choice for every design: Estimate basis
+• 🏛️ SOR first (government) — the default. The design takes specifications that have a schedule item wherever one fits: CPWD DSR 2023 / 2021, DSR (E&M) 2022 and MPPWD SOR 2025. Non-SOR items stay only where no SOR item exists.
+• SOR + Non-SOR mix — the earlier way (market-rate items where the design needs them).
+• The quantities page shows how much of the value is SOR and how much Non-SOR, so the engineer can decide what to keep.
+• Across all 39 designs the SOR share went from about 60 % to about 99 % of the value. Bridges now use MPPWD SOR 2025 (superstructure concrete by grade, HYSD bars, strip seal, drainage spouts, crash barrier, bearings, wearing coat; hume pipes by diameter); sheds, drains and tanks pick up more DSR items (steel work, ridges, gutters, rain-water pipes, painting, insulation, earthing, DB).
+• Gumti in SOR first: MS frame / skid / sheet / chequered plate as DSR steel work, particle-board lining, pre-coated GI roof with EPS and false ceiling, MS sheet door, uPVC windows with grill, enamel and high-albedo paint, wiring points, DB and earthing from DSR (E&M) — about 91 % SOR.
+
 ## 2026.11.21-z110
 Fix — sections no longer fold up on their own:
 • Picking an option in a dropdown (or ticking a box) redraws the form; the open sections (e.g. Inside, Along with the gumti) used to close each time. Now every section stays open or closed exactly as you left it.
