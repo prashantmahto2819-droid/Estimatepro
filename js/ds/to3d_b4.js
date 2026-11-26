@@ -6,8 +6,8 @@
   function num(x, d) { x = +x; return isFinite(x) ? x : d; }
   T.reg("mine_gumti", function (v, res, H) {
     var s = String, L = num(v.L, 2) * 1000, W = num(v.W, 2) * 1000, Hm = num(v.H, 2.8) * 1000, P = [], roof = s(v.roof || "Pyramid"), pyr = /Pyramid/.test(roof), dbl = !pyr && !/only$/.test(roof);
-    var sk = /ISMC 75/.test(s(v.frame || "ISMC 75")) ? 75 : 100, post = /72×72/.test(s(v.frame)) ? 72 : /50×50/.test(s(v.frame)) ? 50 : 40, z0 = v.x_pedestal ? 450 : 0, zf = z0 + sk, zt = z0 + Hm, t = 60;
-    var rise = pyr ? num(v.rise, 0.8) * 1000 : 0, ov = pyr ? 300 : 0, yellow = /yellow/.test(s(v.paint)), wl = yellow ? "paint_peach" : "paint_white", dW = /800/.test(s(v.door)) ? 800 : 750, ww = num(v.win_w, 1.2) * 1000, wh = 600, sill = 1100;
+    var sk = /ISMC 75/.test(s(v.frame || "ISMC 75")) ? 75 : 100, post = /72×72/.test(s(v.frame)) ? 72 : /50×50/.test(s(v.frame)) ? 50 : 40, z0 = v.x_pedestal ? 450 : 0, zf = z0 + sk, t = 60;
+    var rise = pyr ? num(v.rise, 0.8) * 1000 : 0; var zt = z0 + Hm - (pyr ? rise : dbl ? 250 : 60), dHt = Math.min(2000, Math.floor((zt - zf - 140) / 50) * 50); var ov = pyr ? 300 : 0, yellow = /yellow/.test(s(v.paint)), wl = yellow ? "paint_peach" : "paint_white", dW = /800/.test(s(v.door)) ? 800 : 750, ww = num(v.win_w, 1.2) * 1000, wh = 600, sill = 1100;
     var nWin = Math.max(0, Math.round(num(v.windows, 3))), apex = /apex/.test(s(v.hook || "")), dx0 = L / 2 - 150 - dW, dx1 = L / 2 - 150;
     if (v.x_pedestal) [[-1, -1], [1, -1], [1, 1], [-1, 1]].forEach(function (q) { P.push(H.box(q[0] * (L / 2 - 225), q[1] * (W / 2 - 225), 450, 450, 0, 450, "concrete")); });
     /* base: three cross runners under, frame ring, floor */
@@ -27,10 +27,10 @@
     face(true, W / 2 - t / 2, -L / 2, L / 2, has(0) ? [[-ww / 2, ww / 2, zS, zE]] : []); if (has(0)) win(true, W / 2 - t / 2, -ww / 2, 1);
     face(false, -L / 2 + t / 2, -W / 2 + t, W / 2 - t, has(1) ? [[-ww / 2, ww / 2, zS, zE]] : []); if (has(1)) win(false, -L / 2 + t / 2, -ww / 2, -1);
     face(false, L / 2 - t / 2, -W / 2 + t, W / 2 - t, has(2) ? [[-ww / 2, ww / 2, zS, zE]] : []); if (has(2)) win(false, L / 2 - t / 2, -ww / 2, 1);
-    var fh = [[dx0, dx1, zf, zf + 2060]]; if (has(3)) fh.unshift([-L / 2 + 150, -L / 2 + 150 + ww, zS, zE]); face(true, -W / 2 + t / 2, -L / 2, L / 2, fh); if (has(3)) win(true, -W / 2 + t / 2, -L / 2 + 150, -1);
+    var fh = [[dx0, dx1, zf, zf + 60 + dHt]]; if (has(3)) fh.unshift([-L / 2 + 150, -L / 2 + 150 + ww, zS, zE]); face(true, -W / 2 + t / 2, -L / 2, L / 2, fh); if (has(3)) win(true, -W / 2 + t / 2, -L / 2 + 150, -1);
     /* door, corner posts */
     P.push(H.bx(dx0, -W / 2 - 10, dx1, -W / 2 + 30, zf + 60, zf + 2060, "steel"), H.box(dx0 + 90, -W / 2 - 30, 20, 120, zf + 1000, zf + 1030, "chrome"));
-    if (v.x_canopy) P.push(H.bx(dx0 - 200, -W / 2 - 600, dx1 + 200, -W / 2, zf + 2250, zf + 2290, "sheet_gi"));
+    if (v.x_canopy) P.push(H.bx(dx0 - 200, -W / 2 - 600, dx1 + 200, -W / 2, zf + dHt + 190, zf + dHt + 230, "sheet_gi"));
     [[-1, -1], [1, -1], [1, 1], [-1, 1]].forEach(function (q) { P.push(H.box(q[0] * (L / 2 - post / 2), q[1] * (W / 2 - post / 2), post + 4, post + 4, zf, zt, "steel_member")); });
     P.push(H.bx(-L / 2, -W / 2, L / 2, W / 2, zt - 10, zt + 40, "steel_member"));
     /* roof */

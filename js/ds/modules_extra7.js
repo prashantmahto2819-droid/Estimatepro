@@ -51,13 +51,15 @@
     var c = new C.Calc("Portable shelter / gumti for mines");
     var L = num(inp.L, 2), W = num(inp.W, 2), H = num(inp.H, 2.8), nos = Math.max(1, Math.round(num(inp.nos, 1)));
     var wall = pickN(WALLS, inp.wall), roof = pickN(ROOFS, inp.roof), flr = pickN(FLOORS, inp.floor), fr = pickN(FRAMES, inp.frame);
-    var nWin = Math.max(0, Math.round(num(inp.windows, 3))), dW = /800/.test(String(inp.door)) ? 0.8 : 0.75, dH = 2.0, ww = num(inp.win_w, 1.2), wh = 0.6, wS = ww;
-    var skidH = fr.skid[0] === "ISMC 75" ? 0.075 : 0.1, dbl = roof.dbl, pyr = !!roof.pyr, rise = pyr ? num(inp.rise, 0.8) : 0, ov = pyr ? 0.3 : 0, Hroof = pyr ? rise : dbl ? 0.25 : 0.06, flTh = (flr.ply + flr.chq + 50) / 1000, Hwall = H - skidH;
+    var nWin = Math.max(0, Math.round(num(inp.windows, 3))), dW = /800/.test(String(inp.door)) ? 0.8 : 0.75, dH0 = 2.0, ww = num(inp.win_w, 1.2), wh = 0.6, wS = ww;
+    var skidH = fr.skid[0] === "ISMC 75" ? 0.075 : 0.1, dbl = roof.dbl, pyr = !!roof.pyr, rise = pyr ? num(inp.rise, 0.8) : 0, ov = pyr ? 0.3 : 0, Hroof = pyr ? rise : dbl ? 0.25 : 0.06, flTh = (flr.ply + flr.chq + 50) / 1000, Heave = H - Hroof, Hwall = Heave - skidH;
     var clearH = Hwall - flTh - (pyr ? 0 : 0.06), Afl = L * W, per = 2 * (L + W), apex = /apex/.test(String(inp.hook || ""));
+    var dH = Math.min(dH0, Math.floor((Hwall - flTh - 0.1) * 20) / 20);
     var Ra = (L + 2 * ov) * Math.sqrt(Math.pow((W + 2 * ov) / 2, 2) + rise * rise) + (W + 2 * ov) * Math.sqrt(Math.pow((L + 2 * ov) / 2, 2) + rise * rise), Aroof = pyr ? Ra : (L + 0.1) * (W + 0.1);
     c.section("Size");
-    c.let("Outside size L × W, wall height (with skid)", "", F(L, ".2f") + " × " + F(W, ".2f") + ", " + F(H, ".2f") + (pyr ? " + roof rise " + F(rise, ".2f") + " = " + F(H + rise, ".2f") : " (top of roof " + F(H + Hroof, ".2f") + ")"), "m");
-    c.check("Clear head-room inside", clearH, 2.4, { unit: "m", mode: ">=", clause: "NBC 2016 Part 3 (2.4 m for a cabin / store) — practice", note: "floor build-up " + G(Math.round(flTh * 1000)) + " mm, roof panel 60 mm" });
+    c.let("Outside size L × W, total height (skid bottom to roof top) = walls + roof", "", F(L, ".2f") + " × " + F(W, ".2f") + ", " + F(H, ".2f") + " = " + F(Heave, ".2f") + " + " + F(Hroof, ".2f"), "m");
+    c.let("Door height that fits under the eave", "hd", G(Math.round(dH * 1000)), "mm", "", dH < 2.0 ? "lower than 2000 — a short door (mind your head sign), or raise the total height / lower the roof rise" : "");
+    c.ok("Clear height inside at the walls " + F(clearH, ".2f") + " m" + (pyr ? " (more under the pyramid roof up to " + F(clearH + rise, ".2f") + " m)" : ""), clearH >= 2.1, { detail: clearH >= 2.1 ? "≥ 2.1 m — people can stand" : "below 2.1 m — fine for sitting and resting; for standing head-room raise the total height or lower the roof rise", clause: "NBC 2016 Part 3 — practice (2.1 m under beams / lofts)", warn_only: true });
     var Aop = dW * dH + nWin * ww * wh, Awall = per * Hwall - Aop;
     c.check("Window area for light and air ≥ 1/10 of the floor", nWin * ww * wh, Afl / 10, { unit: "m²", mode: ">=", clause: "NBC 2016 Part 8 cl 4.2.1 (1/10 of floor area)" });
 
@@ -120,8 +122,8 @@
     /* ----- wind ----- */
     c.section("Wind — standing loose on the bench / pedestals");
     var vb = num(inp.vb, 39), Vz = c.calc("Design wind speed (k1 1.0, k2 0.91 for 3 m in terrain 2, k3 1.0)", "Vz", "vb*1.0*0.91*1.0", "m/s", "IS 875-3:2015 cl 6.3", { vb: vb });
-    var pz = 0.6 * Vz * Vz / 1000, Fw = c.calc("Wind force on the long face (Cf 1.3 for a box)", "Fw", "1.3*pz*Lf*H", "kN", "IS 875-3 Table 23 [APPROX]", { pz: Math.round(pz * 1000) / 1000, Lf: Math.max(L, W), H: H + Hroof * 0.5 });
-    var Mo = Fw * (H + Hroof * 0.5) / 2, Mr = Wt * 9.81 / 1000 * Math.min(L, W) / 2;
+    var pz = 0.6 * Vz * Vz / 1000, Fw = c.calc("Wind force on the long face (Cf 1.3 for a box)", "Fw", "1.3*pz*Lf*H", "kN", "IS 875-3 Table 23 [APPROX]", { pz: Math.round(pz * 1000) / 1000, Lf: Math.max(L, W), H: H - Hroof * 0.5 });
+    var Mo = Fw * (H - Hroof * 0.5) / 2, Mr = Wt * 9.81 / 1000 * Math.min(L, W) / 2;
     var fos = c.calc("Overturning: resisting (empty weight) / overturning", "FOS", "Mr/Mo", "", "IS 875 / practice — need 1.5", { Mr: Math.round(Mr * 100) / 100, Mo: Math.round(Mo * 100) / 100 });
     var tie = fos < 1.5 ? (1.5 * Mo - Mr) / Math.min(L, W) : 0;
     if (fos < 1.5) c.warn("Tie it down", "the empty gumti can overturn in a " + G(vb) + " m/s wind: tie the two windward skid ends down (chain + anchor / ground block) for " + F(tie, ".1f") + " kN each, or keep it on bolted pedestals", "IS 875-3");
@@ -143,7 +145,7 @@
     if (flr.ply) q.push(Q("Floor — " + flr.ply + " mm BWP / marine plywood screwed down", "sqm", [row("Floor", N, L - 0.1, W - 0.1)], null, 1650, NS));
     if (flr.vinyl) q.push(Q("Floor — vinyl sheet 1.5 mm, coved 100 mm up the walls", "sqm", [row("Floor", N, L - 0.1, W - 0.1)], null, 420, NS));
     if (flr.mat) q.push(Q("Floor — 6 mm rubber mat (anti-slip)", "sqm", [row("Floor", N, L - 0.1, W - 0.1)], null, 650, NS));
-    q.push(Q("Door " + G(dW * 1000) + " × 2000, MS frame, PUF-filled insulated shutter, 3 hinges, tower bolt, lock & handle" + (/closer/.test(String(inp.door)) ? ", hydraulic door closer" : ""), "each", [row("Door", N)], null, /closer/.test(String(inp.door)) ? 12500 : 9500, NS));
+    q.push(Q("Door " + G(dW * 1000) + " × " + G(Math.round(dH * 1000)) + ", MS frame, PUF-filled insulated shutter, 3 hinges, tower bolt, lock & handle" + (/closer/.test(String(inp.door)) ? ", hydraulic door closer" : ""), "each", [row("Door", N)], null, /closer/.test(String(inp.door)) ? 12500 : 9500, NS));
     if (nWin) q.push(Q("Window " + G(ww * 1000) + " × 600 two-track sliding aluminium with 5 mm toughened glass, mosquito mesh and MS grill (12 mm bars @ 100)", "each", [row("Windows", N * nWin)], null, ww >= 1.0 ? 6800 : 4800, NS));
     q.push(Q("Silicone sealing of all joints, aluminium beading inside at corners and ceiling", "m", [row("Corners + ceiling + openings", N, 4 * Hwall + 2 * per + 2 * (dW + dH) + nWin * 2 * (ww + wh))], null, 60, NS));
     q.push(Q("Painting outside — " + String(inp.paint || PAINTS[0]) + ", over primer", "sqm", [row("Walls + roof edge", N, per * Hwall + per * 0.15)], null, refl ? 190 : 140, NS));
@@ -172,11 +174,11 @@
     if (inp.x_transport) { q.push(Q("Loading, transport to the mine and placing by Hydra / crane", "trip", [row("Placing", N)], null, 6000, NS)); sum2.push("transport & placing"); }
 
     var seats = benchL ? Math.floor(benchL / 0.5) : /chairs/.test(String(inp.seat)) ? 2 : 0;
-    var summary = { "Gumti": nos + " no. " + F(L, ".2f") + " × " + F(W, ".2f") + " m, walls " + F(H, ".2f") + " m" + (pyr ? " + pyramid roof " + F(rise, ".2f") + " m" : "") + " (clear inside " + F(clearH, ".2f") + " m)", "Frame": fr.n, "Walls": wall.n + " — U = " + F(Uw, ".2f") + " W/m²K", "Roof": roof.n + " — U = " + F(Ur, ".2f") + " W/m²K",
-      "Floor": flr.n, "Door / windows": "door " + G(dW * 1000) + " × 2000 insulated, " + nWin + " windows " + G(ww * 1000) + " × 600 sliding", "Inside": nL + " LED battens, " + (inp.fan || "no fan") + ", " + nS + " sockets; " + (inp.seat || "no seats") + (seats ? " (" + seats + " seats)" : ""),
+    var summary = { "Gumti": nos + " no. " + F(L, ".2f") + " × " + F(W, ".2f") + " m, total height " + F(H, ".2f") + " m = walls " + F(Heave, ".2f") + (pyr ? " + pyramid roof " + F(rise, ".2f") : " + roof") + " (clear inside at the walls " + F(clearH, ".2f") + " m)", "Frame": fr.n, "Walls": wall.n + " — U = " + F(Uw, ".2f") + " W/m²K", "Roof": roof.n + " — U = " + F(Ur, ".2f") + " W/m²K",
+      "Floor": flr.n, "Door / windows": "door " + G(dW * 1000) + " × " + G(Math.round(dH * 1000)) + " insulated, " + nWin + " windows " + G(ww * 1000) + " × 600 sliding", "Inside": nL + " LED battens, " + (inp.fan || "no fan") + ", " + nS + " sockets; " + (inp.seat || "no seats") + (seats ? " (" + seats + " seats)" : ""),
       "Heat gain": F(Qt / 1000, ".2f") + " kW (bare MS box ≈ " + F(Qbare / 1000, ".1f") + " kW) → " + G(acT) + " ton AC if cooled", "Weight": "≈ " + F(Wt, ".0f") + " kg empty", "Lifting": apex ? "1 lifting eye " + G(tL) + " mm at the roof apex, sling SWL ≥ " + F(swl, ".1f") + " t" : "4 lugs " + G(tL) + " mm at the wall-top corners, sling legs SWL ≥ " + F(swl, ".1f") + " t at " + G(ang) + "°",
       "Wind": fos < 1.5 ? "tie down — " + F(tie, ".1f") + " kN at each windward end" : "stable empty (FOS " + F(fos, ".2f") + ")", "Along with": sum2.join(", ") || "—" };
-    var sheet = drawing(inp, L, W, H, Hwall, skidH, Hroof, dbl, dW, dH, nWin, ww, wall, roof, flr, fr, tL, benchL, summary, pyr, rise, ov, apex);
+    var sheet = drawing(inp, L, W, Heave, Hwall, skidH, Hroof, dbl, dW, dH, nWin, ww, wall, roof, flr, fr, tL, benchL, summary, pyr, rise, ov, apex);
     var refs = ["DGMS (Tech) Circular (SOMA)/02, 22-04-2026 — heat stress: cool rest shelters, cool drinking water, first aid", "IS 875-3:2015 — wind", "IS 800:2007 — steel (lugs, welds, members)", "NBC 2016 Parts 3 & 8 — head-room, light and ventilation", "IS 3792 / ECBC 2017 — thermal transmittance (U-value)", "IS 2762 / IS 6132 — slings and shackles"];
     return C.DesignResult({ module: "mine_gumti", title: "Portable shelter / gumti for mines", inputs: inp, calc: c, summary: summary, drawings: [sheet], quantities: q, bbs: [], tables: {}, references: refs });
   }
@@ -188,7 +190,7 @@
     var p = new D_.View("Plan");
     p.rect(0, 0, Lm, Wm, "OUTLINE"); p.rect(t, t, Lm - 2 * t, Wm - 2 * t, "THIN");
     if (pyr) { p.rect(-ovm, -ovm, Lm + 2 * ovm, Wm + 2 * ovm, "HIDDEN"); p.line(-ovm, -ovm, Lm + ovm, Wm + ovm, "HIDDEN"); p.line(Lm + ovm, -ovm, -ovm, Wm + ovm, "HIDDEN"); }
-    var dx = Lm - 150 - dW * 1000; p.line(dx, 0, dx + dW * 1000, 0, "OUTLINE"); p.line(dx, t, dx, t + dW * 1000, "THIN"); p.line(dx, t + dW * 1000, dx + dW * 1000, t, "THIN"); p.text(dx + dW * 500, -300, "DOOR " + G(dW * 1000) + " × 2000", 1.8, { anchor: "middle" });
+    var dx = Lm - 150 - dW * 1000; p.line(dx, 0, dx + dW * 1000, 0, "OUTLINE"); p.line(dx, t, dx, t + dW * 1000, "THIN"); p.line(dx, t + dW * 1000, dx + dW * 1000, t, "THIN"); p.text(dx + dW * 500, -300, "DOOR " + G(dW * 1000) + " × " + G(Math.round(dH * 1000)), 1.8, { anchor: "middle" });
     var wins = [["back", Lm / 2 - wwm / 2, Wm - t, wwm, t], ["left", 0, Wm / 2 - wwm / 2, t, wwm], ["right", Lm - t, Wm / 2 - wwm / 2, t, wwm], ["front", 150, 0, wwm, t]].slice(0, nWin);
     wins.forEach(function (w) { p.rect(w[1], w[2], w[3], w[4], "STEEL", "steel"); });
     if (benchL) { p.rect(t, Wm - t - 400, Lm - 2 * t, 400, "THIN"); if (benchL > Math.max(L, W)) p.rect(t, t + 300, 400, Wm - 2 * t - 700, "THIN"); p.text(Lm / 2, Wm - t - 250, "BENCH 450 H", 1.6, { anchor: "middle" }); }
@@ -205,7 +207,7 @@
     if (inp.x_canopy) e.line(dx - 200, skm + 60 + dH * 1000 + 150, dx + dW * 1000 + 200, skm + 60 + dH * 1000 + 150, "STEEL");
     if (apex && pyr) { e.circle(Lm / 2, zt + rm + 110, 60, "STEEL"); e.text(Lm / 2 + 150, zt + rm + 150, "LIFTING EYE " + G(tL) + " mm AT THE APEX", 1.6); }
     else { [0, Lm].forEach(function (x) { e.circle(x + (x ? 120 : -120), zt + 80, 40, "STEEL"); }); e.text(-ovm, zt + rm + 300, "LIFTING LUG " + G(tL) + " mm AT EACH WALL-TOP CORNER", 1.6); }
-    e.line(-500, 0, Lm + 500, 0, "SOIL"); e.dim(-400 - ovm, 0, -400 - ovm, Hm, 6, G(Hm)); if (pyr) e.dim(-400 - ovm, Hm, -400 - ovm, Hm + rm, 6, G(rm)); e.dim(0, -500, Lm, -500, 6, G(Lm));
+    e.line(-500, 0, Lm + 500, 0, "SOIL"); e.dim(-400 - ovm, 0, -400 - ovm, Hm, 6, G(Hm)); e.dim(Lm + 400 + ovm, 0, Lm + 400 + ovm, Hm + rm + (pyr ? 0 : 60), -6, "TOTAL " + G(Math.round(Hm + rm + (pyr ? 0 : Hr * 1000)))); if (pyr) e.dim(-400 - ovm, Hm, -400 - ovm, Hm + rm, 6, G(rm)); e.dim(0, -500, Lm, -500, 6, G(Lm));
     /* side elevation with the window */
     var sv = new D_.View("Side elevation");
     [0.1, 0.5, 0.9].forEach(function (f) { sv.rect(Wm * f - 40, 0, 80, skm, "STEEL", "steel"); }); sv.rect(0, skm, Wm, Hm - skm, "OUTLINE");
@@ -228,7 +230,7 @@
   var PARAMS = [
     P("L", "Length (outside)", 2.0, "m", { min: 1.5, max: 6.0, step: 0.1, group: "Size" }),
     P("W", "Width (outside)", 2.0, "m", { min: 1.5, max: 3.0, step: 0.1, group: "Size" }),
-    P("H", "Wall height (bottom of skid to the eave)", 2.8, "m", { min: 2.4, max: 3.3, step: 0.05, group: "Size" }),
+    P("H", "Total height (bottom of the skid to the top of the roof)", 2.8, "m", { min: 2.4, max: 4.0, step: 0.05, group: "Size", help: "walls = total height − roof rise" }),
     P("rise", "Pyramid roof rise", 0.8, "m", { min: 0.3, max: 1.2, step: 0.05, group: "Size", help: "only for the pyramid roof" }),
     P("nos", "How many gumtis", 1, "nos", { min: 1, max: 50, step: 1, group: "Size" }),
     P("persons", "Persons resting inside at a time", 4, "nos", { min: 1, max: 10, step: 1, group: "Size" }),
@@ -264,7 +266,7 @@
   ];
   M.PARAMS = PARAMS;
   C.register({ id: "mine_gumti", phase: 2, category: "Steel structures", name: "Portable shelter / gumti for mines (heat-proof, liftable)", icon: "🏠",
-    description: "Small heat-proof rest cabin (typ. 2 × 2 m, 2.8 m walls, 0.8 m pyramid roof) shifted round the mine by crane / Hydra on its hooks (four at the wall-top corners or one at the roof apex): MS tube frame on a channel skid, MS / PPGI sheet with EPS thermocol or PUF and plywood lining, pyramid roof in PUF panels (or a flat roof with a second ventilated roof), plywood floor, insulated door, windows, LED lights, fan, sockets and plywood bench. " +
+    description: "Small heat-proof rest cabin (typ. 2 × 2 m, 2.8 m total height with a 0.8 m pyramid roof) shifted round the mine by crane / Hydra on its hooks (four at the wall-top corners or one at the roof apex): MS tube frame on a channel skid, MS / PPGI sheet with EPS thermocol or PUF and plywood lining, pyramid roof in PUF panels (or a flat roof with a second ventilated roof), plywood floor, insulated door, windows, LED lights, fan, sockets and plywood bench. " +
       "Heat gain and AC size from the wall / roof U-values, weight, lifting lugs, sling and post checks, wind overturning (IS 875-3), head-room and ventilation (NBC); options — AC, water cooler, first aid, extinguisher, sunshades, solar, earthing, pedestals, signs; full material list with rates and drawing.",
     params: PARAMS, run: run_gumti, references: ["DGMS (Tech) Circular (SOMA)/02 of 2026", "IS 875-3:2015", "IS 800:2007", "NBC 2016", "IS 3792"], modes: ["design"] });
 })();

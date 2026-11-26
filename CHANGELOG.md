@@ -3,6 +3,12 @@
 This file is for the people maintaining the app. It is not published with the site (see `.assetsignore`).
 The text users see is `EP_NOTES` in `js/version.js`.
 
+## 2026.11.21-z109
+Design Studio — Portable shelter / gumti for mines:
+• Height is now the TOTAL height (bottom of the skid to the top of the roof), 2.8 m by default: walls 2.0 m + pyramid roof 0.8 m.
+• The door height follows the wall (1750 mm for 2.8 m total with a 0.8 m roof); the drawing shows the total height; head-room under 2.1 m is shown as a note (fine for sitting) instead of a failure.
+• Plywood bench on two sides (6 seats) by default; 3 sliding windows 1200 × 600; lifting on 4 corner hooks or 1 apex hook.
+
 ## 2026.11.21-z108
 Design Studio — new: Portable shelter / gumti for mines (Steel structures):
 • Heat-proof cabin, 2 × 2 m, 2.8 m walls, 0.8 m pyramid roof (all sizes can be changed). Walls: MS sheet + thermocol + plywood, or PUF panel, or GI + glass wool + plywood. Roof: pyramid PUF roof, or flat with a second ventilated roof. Plywood floor on chequered plate.
