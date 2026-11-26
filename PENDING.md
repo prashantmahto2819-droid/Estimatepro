@@ -1,6 +1,6 @@
 # Estimate Pro — pending work (kept with the code; not published)
 
-Last updated at version 2026.11.21-z86
+Last updated at version 2026.11.21-z87
 
 ## A. Waiting for the owner
 1. Server work: (-z21) module switches and a shared library of blocks and hatch patterns are built — the owner has to run `server/shared.sql` once in Supabase, then check that a switched-off module disappears for a normal user. Still open: shared 3D models / cut-outs / material pictures (large files — need Supabase Storage), WhatsApp update messages with real pictures attached (needs a sending gateway; links to the pictures are already added).
@@ -79,7 +79,7 @@ Last updated at version 2026.11.21-z86
 2. Sloped roofs (hip / gable) only on rectangular buildings; L / U plans get a flat roof.
 3. Porch needs a front setback of 2 m or more; car ramp needs about 3.3 m in front of the porch.
 4. Large buildings: MEP drawing gets dense.
-5. (-z86: done — flats fitted to the plot.) Still open: small plots get one flat per floor; a stacked stair + lift core would free width for two.
+5. (-z86: done — flats fitted to the plot.) (-z87: two per floor on small plots via shallower flats and no lift up to 3 storeys.)
 6. Not yet checked by the owner on a real phone.
 
 ## D. Other

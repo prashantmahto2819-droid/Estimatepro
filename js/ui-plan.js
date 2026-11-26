@@ -28,9 +28,17 @@
     factory: [{ id: "f1", n: "Small unit", hi: "400 m² hall", plot: [30, 40], v: { hall: 400, godown: 100, workers: 25 }, fl: 1 }, { id: "f2", n: "Godown", hi: "1000 m² store", plot: [40, 60], v: { hall: 200, godown: 1000, workers: 10 }, fl: 1 }],
     hotel: [{ id: "gh", n: "Guest house 10 rooms", hi: "1-star size", plot: [18, 30], v: { rooms: 10, star: 1, suites: 0, covers: 20, banq: 0 }, fl: 0 }] };
   function T() { var t = PL.TYPES[P.type] || PL.TYPES.house; t.id = P.type in PL.TYPES ? P.type : "house"; return t; }
+  /* the plot's estimate is checked with the real layout engine: step the count down until the layout keeps FAR, height and
+     coverage (a few tries, remembered per plot / rules / choices) */
+  var fitCache = {};
+  function fitNow(t, v) { var R = rulesNow(), f = t.fit(v, P.plot, R); if (!f || !f.n) return f; var vk = Object.assign({}, v); delete vk[f.k]; var key = JSON.stringify([t.id, P.plot, R, vk, P.set]); if (fitCache[key]) return fitCache[key];
+    var ok = function (n) { try { var v2 = Object.assign({}, v); v2[f.k] = n; var its = t.program(v2, 2).filter(function (x) { return !x.off; }); var r = PL.generate({ type: t.id, items: its, plot: { w: +P.plot.w, d: +P.plot.d }, rules: R, floors: 0, facing: P.facing || "E", vastu: false, rate: 0 });
+      return r && !r.err && !(r.warn || []).some(function (w) { return /^(FAR|Height|Ground coverage)/.test(w); }); } catch (e) { return true; } };
+    var n = f.n, up = n; for (var k = 0; k < 6 && n > 1 && !ok(n); k++) n--; if (n === up) { for (var k2 = 0; k2 < 3 && ok(up + 1); k2++) up++; n = up; }
+    var g = Object.assign({}, f); if (n !== f.n) { g.n = n; g.msg = f.msg.replace(/about \d+ flats/, "about " + n + " flats"); g.hi = f.hi.replace(/\d+/, n); } return (fitCache[key] = g); }
   function vals() { var t = T(), v = {}, cur = P.inp[t.id] || {}; t.inputs.forEach(function (i) { v[i.k] = cur[i.k] != null ? cur[i.k] : i.def; });
     /* a count nobody has typed yet starts at what the plot can take */
-    if (t.fit) { var f = t.fit(v, P.plot, rulesNow()); if (f && cur[f.k] == null && f.n > 0 && f.n < v[f.k]) v[f.k] = f.n; } return v; }
+    if (t.fit) { var f = fitNow(t, v); if (f && cur[f.k] == null && f.n > 0 && f.n < v[f.k]) v[f.k] = f.n; } return v; }
   function rulesNow() { if (!P.rules || !P.rulesEdited) P.rules = PL.rulesFor(P.set, T().rules, P.plot.w * P.plot.d); return P.rules; }
   function regen() { var t = T(), it = t.program(vals(), P.floors > 0 ? P.floors : 2); P.items = it.map(function (x) { return Object.assign({}, x, { on: !x.off, size: "M" }); }); P.res = null; P.sel = {}; save(); }
   function items() { if (!P.items || P.itemsType !== P.type) { P.itemsType = P.type; regen(); } return P.items; }
@@ -69,7 +77,7 @@
     h += '<section class="panel" style="padding:12px 14px"><h3 style="margin:0 0 8px">3. What is needed <span class="muted" style="font-weight:500">ज़रूरतें</span></h3><div class="row" style="gap:12px;flex-wrap:wrap;align-items:flex-end">' +
       t.inputs.map(function (i) { return i.bool ? '<label class="row" style="gap:6px;align-items:center"><input type="checkbox" data-plin="' + i.k + '"' + (v[i.k] ? " checked" : "") + "> " + esc(i.n) + ' <span class="muted small">' + esc(i.hi) + "</span></label>" :
         '<label style="display:flex;flex-direction:column;gap:2px;min-width:120px"><span class="muted small">' + esc(i.n) + " / " + esc(i.hi) + '</span><input class="in small" style="width:110px" type="number" min="' + (i.min || 0) + '" max="' + (i.max || 9999) + '" data-plin="' + i.k + '" value="' + v[i.k] + '"></label>'; }).join("") + "</div>" +
-      (function () { if (!t.fit) return ""; var f = t.fit(v, P.plot, rulesNow()); if (!f) return ""; var over = v[f.k] > f.n;
+      (function () { if (!t.fit) return ""; var f = fitNow(t, v); if (!f) return ""; var over = v[f.k] > f.n;
         return '<p class="small" style="margin:8px 0 0;' + (over ? "color:var(--bad,#b42318)" : "") + '">' + esc(f.msg) + ' <span class="muted">' + esc(f.hi) + "</span>" + (v[f.k] !== f.n && f.n > 0 ? ' <button type="button" class="btn sec small" data-plfit="' + f.k + '" data-n="' + f.n + '">Use ' + f.n + "</button>" : "") + "</p>"; })() + "</section>";
     /* 4. rooms list */
     var on = L.filter(function (x) { return x.on !== false && x.n > 0; }), carpet = on.reduce(function (s, x) { return s + areaOf(x) * x.n * (x.fl === "all" || sp(x.key).fl === "all" ? Math.max(1, +P.floors || 1) : 1); }, 0);

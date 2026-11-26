@@ -366,7 +366,7 @@
   PL.flatTpl = function (ins, w, d) {
     var by = function (k) { return ins.filter(function (x) { return x.key === k; }); }, liv = by("living")[0], din = by("dining")[0], kit = by("kitchen")[0], mas = by("master")[0], tl = by("toilet")[0], ut = by("utility")[0], beds = by("bed");
     if (!liv || !kit || !mas || !tl) return null;
-    var c = Math.min(4.5, Math.max(3.3, d * 0.45)), e = r2(d - c); if (e < 3.0) return null;
+    var c = Math.min(4.5, Math.max(3.3, d * 0.45)), e = r2(d - c); c = r2(d - e); if (e < 3.0) return null;
     /* widths: start from the least that still works, then give the spare width to the living room, the master bed room, the other bed rooms */
     var bw = beds.map(function () { return 2.55; }), mw = 2.85, lw = 2.8, spare = w - mw - lw - 2.55 * beds.length; if (spare < -0.01) return null;
     var give = function (cur, max) { var g = Math.max(0, Math.min(spare, max - cur)); spare -= g; return cur + g; };
@@ -390,7 +390,7 @@
   PL.flatTplN = function (ins, w, d) {
     var by = function (k) { return ins.filter(function (x) { return x.key === k; }); }, liv = by("living")[0], din = by("dining")[0], kit = by("kitchen")[0], mas = by("master")[0], tl = by("toilet")[0], beds = by("bed");
     if (!liv || !kit || !mas || !tl || beds.length > 1) return null;
-    var c = Math.min(4.2, Math.max(3.3, d * 0.42)), e = r2(d - c); if (e < 4.2) return null;
+    var c = Math.min(4.2, Math.max(3.3, d * 0.42)), e = r2(d - c); c = r2(d - e); if (e < 4.2) return null;
     var mw = beds.length ? Math.max(2.85, Math.min(4.2, w * 0.54)) : w, bw = r2(w - mw); if (beds.length && bw < 2.55) return null;
     var tcw = 1.6, kw = 2.4, lw = r2(w - kw - tcw); if (lw < 2.8) return null;
     var rooms = [], uid = 0, R = function (inst, x, y, ww, dd, o) { var r = Object.assign({ uid: "n" + (++uid), inst: inst, key: inst.key, name: inst.name, x: r2(x), y: r2(y), w: r2(ww), d: r2(dd), cut: null, z: inst.z }, o || {}); rooms.push(r); return r; };
@@ -516,7 +516,14 @@
 
   /* ---------------- the whole job ---------------- */
   PL.generate = function (cfg) {
-    var T = PL.TYPES[cfg.type]; T.id = cfg.type; var R = cfg.rules, plotA = cfg.plot.w * cfg.plot.d, warn = [];
+    /* apartments: also try shallower flats (8.25 / 7.5 m) so that two rows fit on a shallow plot, and deeper ones (10.5 m)
+       so that more fit along a narrow one; keep the one with the fewest floors, then the fewest warnings, then the best score */
+    if (cfg.type === "apartment" && cfg._band == null) {
+      var best = null; [9.0, 8.25, 7.5, 10.5].forEach(function (b) { var r = PL.generate(Object.assign({}, cfg, { _band: b })); if (!r || r.err || !r.opts || !r.opts.length) { if (!best) best = r; return; }
+        var k = [r.warn.length, r.info.nF, -(r.opts[0].sc.score || 0)]; if (!best || best.err || !best.k || k[0] < best.k[0] || (k[0] === best.k[0] && (k[1] < best.k[1] || (k[1] === best.k[1] && k[2] < best.k[2] - 5)))) { r.k = k; best = r; } });
+      return best;
+    }
+    var T = PL.TYPES[cfg.type]; T.id = cfg.type; if (cfg._band) { T = Object.assign({}, T, { band: cfg._band }); } var R = cfg.rules, plotA = cfg.plot.w * cfg.plot.d, warn = [];
     var bw = r2(cfg.plot.w - R.l - R.rt), bd = r2(cfg.plot.d - R.f - R.r), maxFoot = Math.min(bw * bd, R.cov / 100 * plotA);
     if (!(bw > 3 && bd > 3)) return { err: "With these setbacks there is no room left to build on the plot (" + bw + " × " + bd + " m)." };
     var gf = T.mode === "corr" ? 1.06 : 1.24, opts = [], nF, F, W, D, info = {};

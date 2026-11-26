@@ -3,6 +3,9 @@
 This file is for the people maintaining the app. It is not published with the site (see `.assetsignore`).
 The text users see is `EP_NOTES` in `js/version.js`.
 
+## 2026.11.21-z87
+- Planner: apartments try flat depths 9 / 8.25 / 7.5 / 10.5 m (PL.generate _band) and keep the fewest warnings → floors → score; fit() counts core 3 m without lift (≤ 3 storeys) / 5.2 m with; UI checks the estimate with the real generator (fitNow, cached). Flat template rounding fix.
+
 ## 2026.11.21-z86
 - Planner: T.fit for apartments (flats the plot can take from FAR, coverage, height and width across), auto default + Use N button; stilt floor excluded from FAR; guard / electrical rooms only for 12 / 8+ flats.
 

@@ -386,13 +386,17 @@
     fit: function (v, plot, R) {
       var bhk = Math.max(1, Math.min(4, v.bhk | 0)), gross = [0, 48, 72, 98, 125][bhk] * 1.3, A = plot.w * plot.d;
       var bw = Math.max(0, plot.w - (R.l || 0) - (R.rt || 0)), bd = Math.max(0, plot.d - (R.f || 0) - (R.r || 0)), foot = Math.min(bw * bd, A * (R.cov || 100) / 100);
-      /* flats sit side by side along a corridor, 9 m deep; the stair + lift core takes about 5.2 m; two rows when the plot is deep enough */
-      var fw = [0, 48, 72, 98, 125][bhk] / 9, rows = bd >= 2 * 9 + 1.8 ? 2 : 1, perF = Math.max(0, rows * Math.floor((bw - 5.2) / fw + 0.05));
-      if (perF * fw * 9 > foot) perF = Math.floor(foot / (fw * 9));
-      var floors = Math.max(1, Math.floor((R.h || 15) / 3.0) - (v.stilt ? 1 : 0)), byFar = Math.floor(A * (R.far || 1.5) / gross);
-      var n = Math.max(0, Math.min(byFar, perF * floors));
-      if (!n) return { k: "flats", n: 0, msg: "A " + bhk + " BHK flat (about " + fw.toFixed(1) + " m wide) and the stair + lift core do not fit in the " + bw.toFixed(1) + " m left across this plot" + (bhk > 1 ? " — try " + (bhk - 1) + " BHK" : "") + ".", hi: "यह फ़्लैट इस प्लॉट की चौड़ाई में नहीं आता" + (bhk > 1 ? " — छोटा BHK चुनें" : "") };
-      return { k: "flats", n: n, msg: "This plot can take about " + n + " flats of " + bhk + " BHK — FAR " + (R.far || 1.5) + " allows " + Math.round(A * (R.far || 1.5)) + " m², " + perF + " per floor on up to " + floors + " floors" + (v.stilt ? " above the stilt" : "") + ".", hi: "इस प्लॉट पर लगभग " + n + " फ़्लैट बन सकते हैं" };
+      /* flats per floor for each flat depth: two rows (the stair + lift core of about 5.2 m sits in one of them) when the plot is deep
+         enough; the block must stay inside the width across the plot and the allowed ground coverage */
+      var perOf = function (core) { var best = 0; [9.0, 8.25, 7.5, 10.5].forEach(function (db) { var f2 = [0, 48, 72, 98, 125][bhk] / db, rows = bd >= 2 * db + 1.8 ? 2 : bd >= db + 1.8 ? 1 : 0; if (!rows) return;
+        var Wof = function (n) { return rows === 2 ? Math.max(Math.ceil(n / 2) * f2, core + Math.floor(n / 2) * f2) : core + n * f2; }, n2 = 0;
+        while (Wof(n2 + 1) <= bw + 0.05 && Wof(n2 + 1) * (rows * db + 1.8) <= foot + 0.5) n2++; if (n2 > best) best = n2; }); return best; };
+      /* up to 3 storeys in all there is no lift (core = stair only, about 3 m); from 4 storeys the lift is added (about 5.2 m) */
+      var floors = Math.max(1, Math.floor((R.h || 15) / 3.0) - (v.stilt ? 1 : 0)), byFar = Math.floor(A * (R.far || 1.5) / gross), fw = [0, 48, 72, 98, 125][bhk] / 9;
+      var lowF = Math.max(1, Math.min(floors, 3 - (v.stilt ? 1 : 0))), pLow = perOf(3.0), pHigh = perOf(5.2), nLow = Math.min(byFar, pLow * lowF), nHigh = Math.min(byFar, pHigh * floors);
+      var n = Math.max(0, nLow, nHigh), useLow = nLow >= nHigh, perF = useLow ? pLow : pHigh; floors = useLow ? lowF : floors;
+      if (!n) return { k: "flats", n: 0, msg: "A " + bhk + " BHK flat (about " + fw.toFixed(1) + " m wide) and the stair do not fit in the " + bw.toFixed(1) + " m left across this plot" + (bhk > 1 ? " — try " + (bhk - 1) + " BHK" : "") + ".", hi: "यह फ़्लैट इस प्लॉट की चौड़ाई में नहीं आता" + (bhk > 1 ? " — छोटा BHK चुनें" : "") };
+      return { k: "flats", n: n, msg: "This plot can take about " + n + " flats of " + bhk + " BHK — FAR " + (R.far || 1.5) + " allows " + Math.round(A * (R.far || 1.5)) + " m², " + perF + " per floor on up to " + floors + " floors" + (v.stilt ? " above the stilt" : "") + (useLow ? " (no lift needed up to 3 storeys)" : " (with a lift)") + ".", hi: "इस प्लॉट पर लगभग " + n + " फ़्लैट बन सकते हैं" };
     } };
   T.shops = { plot: [20, 25], n: "Shops / commercial complex", hi: "दुकानें / कॉम्प्लेक्स", icon: "🏪", mode: "band", h: 3600, occ: 3, stairW: 1.5, grp: "C", rate: 22000, rules: "com", fixk: "office",
     inputs: [
