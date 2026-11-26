@@ -8,8 +8,8 @@
   var EP = window.EP, S = EP.S, U = EP.ui, esc = U.esc, PL = EP.plan;
   var KEY = "ep_planner_v1";
   var P = S.pl = { type: "house", inp: {}, plot: { w: 12, d: 18 }, facing: "E", set: "mbbl", rules: null, rulesEdited: false, floors: 2, frame: "rcc", vastu: true, furn: true, mep: true, views: true, rate: {}, sanc: {}, sbc: 150, des: {}, items: null, res: null, sel: {}, busy: false, open: {} };
-  try { var sv = JSON.parse(localStorage.getItem(KEY) || "{}"); ["type", "inp", "plot", "facing", "set", "rules", "rulesEdited", "floors", "frame", "vastu", "furn", "mep", "views", "rate", "sanc", "sbc", "des", "items", "itemsType", "phase", "budL"].forEach(function (k) { if (sv[k] != null) P[k] = sv[k]; }); } catch (e) {}
-  function save() { try { localStorage.setItem(KEY, JSON.stringify({ phase: P.phase, budL: P.budL, type: P.type, inp: P.inp, plot: P.plot, facing: P.facing, set: P.set, rules: P.rules, rulesEdited: P.rulesEdited, floors: P.floors, frame: P.frame, vastu: P.vastu, furn: P.furn, mep: P.mep, views: P.views, rate: P.rate, sanc: P.sanc, sbc: P.sbc, des: P.des, items: P.items, itemsType: P.itemsType })); } catch (e) {} }
+  try { var sv = JSON.parse(localStorage.getItem(KEY) || "{}"); ["type", "inp", "plot", "facing", "set", "rules", "rulesEdited", "floors", "frame", "vastu", "furn", "mep", "views", "rate", "sanc", "sbc", "des", "items", "itemsType", "phase", "budL", "mode"].forEach(function (k) { if (sv[k] != null) P[k] = sv[k]; }); } catch (e) {}
+  function save() { try { localStorage.setItem(KEY, JSON.stringify({ mode: P.mode, phase: P.phase, budL: P.budL, type: P.type, inp: P.inp, plot: P.plot, facing: P.facing, set: P.set, rules: P.rules, rulesEdited: P.rulesEdited, floors: P.floors, frame: P.frame, vastu: P.vastu, furn: P.furn, mep: P.mep, views: P.views, rate: P.rate, sanc: P.sanc, sbc: P.sbc, des: P.des, items: P.items, itemsType: P.itemsType })); } catch (e) {} }
   /* ready patterns: one tap sets the plot, the needs and the floors (house) */
   var PRESETS = { house: [
     { id: "1bhk", size: "S", n: "1BHK", hi: "25×40 ft", plot: [7.62, 12.19], v: { beds: 1, attached: 0, persons: 3, cars: 0, kitchenOpen: 0 }, fl: 1 },
@@ -48,9 +48,14 @@
   function n1(v, k) { return (Math.round(v * Math.pow(10, k || 0)) / Math.pow(10, k || 0)).toLocaleString("en-IN"); }
   function inr(v) { return "₹ " + Math.round(v).toLocaleString("en-IN"); }
 
+  /* other planners (road & drain, colony layout, interior, renovation) plug in here: PL.MODES[id] = { n, hi, icon, render() } */
+  PL.MODES = PL.MODES || {};
+  function modeBar() { var ms = [["building", "Building", "भवन", "🏠"]].concat(Object.keys(PL.MODES).map(function (k) { var m = PL.MODES[k]; return [k, m.n, m.hi, m.icon]; }));
+    return '<div class="row" role="tablist" aria-label="What to plan" style="gap:6px;flex-wrap:wrap">' + ms.map(function (m) { var on = (P.mode || "building") === m[0]; return '<button type="button" role="tab" aria-selected="' + on + '" class="btn ' + (on ? "pri" : "sec") + ' small" data-plmode="' + m[0] + '">' + m[3] + " " + esc(m[1]) + ' <span style="opacity:.75">' + esc(m[2]) + "</span></button>"; }).join("") + "</div>"; }
   U.views.planner = function () {
+    if (P.mode && P.mode !== "building" && PL.MODES[P.mode]) return '<div class="pl" style="display:flex;flex-direction:column;gap:14px;max-width:1200px">' + modeBar() + "</div>" + PL.MODES[P.mode].render();
     var t = T(), v = vals(), R = rulesNow(), L = items(), A = P.plot.w * P.plot.d;
-    var h = '<div class="pl" style="display:flex;flex-direction:column;gap:14px;max-width:1200px">';
+    var h = '<div class="pl" style="display:flex;flex-direction:column;gap:14px;max-width:1200px">' + modeBar();
     h += '<div class="row" style="gap:10px;align-items:flex-end;flex-wrap:wrap"><div class="grow"><h1 style="margin:0">Building Planner <span class="muted" style="font-size:.55em;font-weight:500">भवन प्लानर — नक्शा, 2D, 3D, एस्टीमेट</span></h1>' +
       '<p class="muted" style="margin:4px 0 0">Choose the building, give the plot and what you need — get 3–4 scored layouts by NBC 2016 and the standards for that building, then build the chosen one in CAD Studio with walls, doors, windows, stairs, frame, furniture, MEP, 3D and quantities for the estimate.</p></div></div>';
     /* 1. type */
@@ -286,6 +291,7 @@
   });
   document.addEventListener("click", function (e) {
     var b = e.target.closest && e.target.closest("button"); if (!b || !b.closest(".pl")) return; var ds = b.dataset;
+    if (ds.plmode) { P.mode = ds.plmode; save(); U.render(); window.scrollTo(0, 0); return; }
     if (ds.pltype) { if (P.type !== ds.pltype) { P.type = ds.pltype; P.rulesEdited = false; P.rules = null; var t = T(); if (t.plot) P.plot = { w: t.plot[0], d: t.plot[1] }; P.floors = t.single ? 1 : ds.pltype === "house" ? 2 : 0; P.itemsType = null; regen(); } U.render(); return; }
     if (ds.plbudgo != null) { var inp = document.querySelector(".pl [data-plbudin]"), L0 = +(inp && inp.value) || 0; if (!(L0 > 0)) { U.toast("Type the budget in lakh first"); return; } P.budL = L0; var t3 = T(); U.toast("Trying the usual sizes…");
       setTimeout(function () { var dz = P.des[t3.id] || PL.desDefault(t3.id); P.bud = Object.assign({ type: t3.id }, PL.budgetPlan({ type: t3.id, plot: { w: +P.plot.w, d: +P.plot.d }, rules: rulesNow(), rate: P.rate[t3.id] || t3.rate, factor: PL.styleFactor(dz), budget: L0 * 1e5, facing: P.facing })); save(); U.render(); }, 30); return; }

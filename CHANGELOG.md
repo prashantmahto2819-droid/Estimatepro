@@ -3,6 +3,9 @@
 This file is for the people maintaining the app. It is not published with the site (see `.assetsignore`).
 The text users see is `EP_NOTES` in `js/version.js`.
 
+## 2026.11.21-z94
+- Planner modes (PL.MODES, mode bar); js/plan/p_road.js — road & drain planner (sections, BOQ with indicative rates, CAD build: road + culverts + drain walls / beds).
+
 ## 2026.11.21-z93
 - Planner: PL.walkPath (gate → main door → rooms via doors / open connections) saved on A-CAMPATH after Build; entrance room gets an opening to dining / lobby / passage.
 
