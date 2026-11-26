@@ -3,6 +3,9 @@
 This file is for the people maintaining the app. It is not published with the site (see `.assetsignore`).
 The text users see is `EP_NOTES` in `js/version.js`.
 
+## 2026.11.21-z91
+- Planner: js/plan/budget.js — PL.budgetPlan (budget → options via the generator, compact variants), PL.STYLE_RATE, PL.schedule (programme + payment stages), report sections, one-page client proposal (data-plprop).
+
 ## 2026.11.21-z90
 - Planner build: MEPSHEETS after MEPAUTO (per-floor E / P sheets with legends), main plans set to MEP view “Building”.
 

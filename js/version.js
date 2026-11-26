@@ -1,5 +1,5 @@
 /* App version + "what's new" — the super admin is offered to send this on WhatsApp after each upload. Change both with every release. */
-window.EP_VER = "2026.11.21-z90";
-window.EP_NOTES = "• Building Planner: electrical and plumbing now come on their own sheets — one electrical and one plumbing sheet per floor, each with its legend and sheet number (E-01, P-01 …)\n• The architectural plans and the main print sheet show the building only, as drawing sets are normally issued — large buildings no longer look crowded\n• To see everything together again: CAD → MEP view → All";
+window.EP_VER = "2026.11.21-z91";
+window.EP_NOTES = "• Building Planner — Budget plan: type your budget in lakh and see what can be built on the plot (e.g. ₹30 lakh → 2 BHK, or a compact 4 BHK), with built-up area and cost; “Use this” fills in the rooms and floors\n• Construction programme: week-by-week chart from excavation to handover with each stage's share of the cost, in the planning report\n• Payment stages: agreement, plinth, each roof slab, walls, plaster, flooring, handover — with week and amount\n• Client proposal: one A4 page with the 3D picture (after Build), plans, cost per sq ft, time in months and the payment stages — print or save as PDF\n• The design style now changes the rough rate (Economical −15 %, Kerala / Contemporary / Domed +10–15 %)";
 /* pictures of this update: [file in /updates, caption]. Shown to the owner with the WhatsApp "what's new" message. */
 window.EP_PICS = [];

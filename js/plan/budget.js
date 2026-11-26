@@ -35,3 +35,41 @@
   function fmt(n) { n = Math.round(n); if (n >= 1e7) return (n / 1e7).toFixed(2).replace(/\.?0+$/, "") + " crore"; if (n >= 1e5) return (n / 1e5).toFixed(2).replace(/\.?0+$/, "") + " lakh"; return n.toLocaleString("en-IN"); }
   PL.fmtRs = fmt;
 })();
+
+/* construction programme (weeks) and payment stages for a planned building — typical Indian RCC-frame practice:
+   a floor's frame (columns, beams, slab with 14 days' curing) takes about 3–4 weeks; walls follow each slab; finishes run floor by floor.
+   Durations grow with the floor area (√ of footprint / 100 m²). */
+(function () {
+  var PL = window.EP.plan;
+  PL.schedule = function (o, cost) {
+    var nF = o.floors.length, foot = PL.footArea(o), k = Math.max(0.8, Math.min(2.5, Math.sqrt(foot / 100))), fin = Math.pow(nF, 0.7), st = [], r1 = function (v) { return Math.max(1, Math.round(v)); };
+    var add = function (n, hi, start, wk, share, grp) { var s = { n: n, hi: hi, start: Math.round(start), wk: r1(wk), share: share, grp: grp }; st.push(s); return s.start + s.wk; };
+    var t = add("Site set-out and excavation", "लेआउट और खुदाई", 0, 1 * k, 3, "found");
+    t = add("Foundation and plinth (PCC, footings, plinth beam, DPC, filling)", "नींव और प्लिंथ", t, 4 * k, 14, "found");
+    var plinth = t, slabEnd = [], wallsEnd = 0;
+    for (var f = 0; f < nF; f++) { var fe = add((f === 0 ? "Ground" : "Floor " + f) + " — columns, beams, slab + curing", (f === 0 ? "ग्राउंड" : f + "वीं मंज़िल") + " — कॉलम, बीम, छत", t, 4 * k, 24 / nF, "frame"); slabEnd.push(fe);
+      wallsEnd = add((f === 0 ? "Ground" : "Floor " + f) + " — brick walls, lintels", (f === 0 ? "ग्राउंड" : f + "वीं मंज़िल") + " — ईंट की दीवार, लिंटल", fe, 3 * k, 12 / nF, "walls"); t = fe; }
+    var wp = add("Terrace waterproofing and parapet", "छत वॉटरप्रूफ़िंग और मुंडेर", t, 1, 2, "frame");
+    var mep = add("Electrical and plumbing pipes (in walls and floors)", "बिजली और प्लंबिंग की पाइपें", Math.max(slabEnd[0] + 1, wallsEnd - 2 * k), 2 * k * Math.sqrt(nF), 10, "mep");
+    var pl = add("Plaster — inside and outside", "प्लास्टर — अंदर और बाहर", Math.max(wallsEnd, mep - 1), 4 * k * fin, 8, "finish");
+    var dw = add("Doors, windows and grills", "दरवाज़े, खिड़कियाँ, ग्रिल", pl - 2 * k, 2 * k, 8, "finish");
+    var fl = add("Flooring, tiling and dado", "फ़र्श और टाइल", pl, 4 * k * fin, 11, "finish");
+    var pt = add("Painting (putty, primer, two coats)", "पुताई / पेंट", Math.max(fl, dw), 3 * k * fin, 5, "finish");
+    var end = add("Fittings, outside works, cleaning and handover", "फ़िटिंग, बाहरी काम, हैंडओवर", pt, 2 * k, 3, "finish");
+    /* client's payments, each due when its stage is done */
+    var pay = [["Agreement / start of work", "अनुबंध / काम शुरू", 0, 10], ["Plinth complete", "प्लिंथ पूरा", plinth, 15]];
+    slabEnd.forEach(function (w, i) { pay.push([(i === nF - 1 ? "Top" : i === 0 ? "Ground floor" : "Floor " + i) + " roof slab cast", (i === 0 ? "ग्राउंड" : i + "वीं मंज़िल") + " की छत ढलाई", w, 30 / nF]); });
+    pay.push(["Brick walls complete", "दीवारें पूरी", wallsEnd, 10], ["Plaster complete", "प्लास्टर पूरा", pl, 10], ["Flooring, doors and windows complete", "फ़र्श, दरवाज़े, खिड़कियाँ पूरी", Math.max(fl, dw), 15], ["Handover", "हैंडओवर", end, 10]);
+    pay = pay.map(function (p) { return { n: p[0], hi: p[1], wk: Math.round(p[2]), pct: p[3], amt: cost * p[3] / 100 }; });
+    return { stages: st, weeks: end, months: Math.round(end / 4.33 * 10) / 10, pay: pay };
+  };
+  /* the programme as HTML (bars by week) for the report and the proposal */
+  PL.scheduleHTML = function (S, cost, opts) {
+    opts = opts || {}; var W = S.weeks, col = { found: "#8d6e63", frame: "#1565c0", walls: "#ef6c00", mep: "#6a1b9a", finish: "#2e7d32" };
+    var rows = S.stages.map(function (s) { return "<tr><td class='l'>" + s.n + (opts.hi ? "<br><small>" + s.hi + "</small>" : "") + "</td><td>" + (s.start + 1) + "–" + (s.start + s.wk) + "</td><td style='width:45%'><div style='position:relative;height:10px;background:#eee'><div style='position:absolute;left:" + (s.start / W * 100).toFixed(1) + "%;width:" + Math.max(1, s.wk / W * 100).toFixed(1) + "%;top:0;bottom:0;background:" + col[s.grp] + "'></div></div></td>" + (opts.money ? "<td>" + Math.round(s.share) + " %</td>" : "") + "</tr>"; }).join("");
+    return "<table><tr><th>Work</th><th>Weeks</th><th>Programme — " + W + " weeks ≈ " + S.months + " months</th>" + (opts.money ? "<th>Share</th>" : "") + "</tr>" + rows + "</table>";
+  };
+  PL.payHTML = function (S, opts) {
+    opts = opts || {}; return "<table><tr><th>#</th><th>Stage</th><th>Due about week</th><th>%</th><th>Amount ₹</th></tr>" + S.pay.map(function (p, i) { return "<tr><td>" + (i + 1) + "</td><td class='l'>" + p.n + (opts.hi ? " <small>(" + p.hi + ")</small>" : "") + "</td><td>" + p.wk + "</td><td>" + (Math.round(p.pct * 10) / 10) + "</td><td>" + Math.round(p.amt).toLocaleString("en-IN") + "</td></tr>"; }).join("") + "</table>";
+  };
+})();
