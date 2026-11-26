@@ -1,5 +1,5 @@
 /* Planner — colony / layout: a piece of land cut into plots with internal roads, a spine road from the entrance, a park and the
-   services (drains along the roads, street lights). Rectangular land; plots face the roads, two rows back to back between roads.
+   services (drains along the roads, street lights). Rectangular land or any outline (points); plots face the roads, two rows back to back between roads.
    Typical layout rules (check the town's T&CP rules): roads 9 m spine / 7.5–6 m internal, open space at least 10 %, amenity 5 %. */
 (function () {
   "use strict";
@@ -8,7 +8,14 @@
   try { Object.assign(S, JSON.parse(localStorage.getItem(KEY) || "{}")); } catch (e) {}
   var save = function () { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) {} };
   var SIZES = [["6.10x9.14", "20 × 30 ft"], ["9.14x12.19", "30 × 40 ft"], ["9.14x15.24", "30 × 50 ft"], ["12.19x15.24", "40 × 50 ft"], ["12.19x18.29", "40 × 60 ft"], ["15.24x24.38", "50 × 80 ft"]];
+  /* the land outline: points "x,y; x,y; …" in metres, the road side first (normalised: road side along the bottom) */
+  function landPoly() { if (S.shape !== "poly" || !PL.normPoly) return null; var pts = String(S.pts || "").split(/[;\n]+/).map(function (t) { var m = t.trim().split(/[ ,]+/).map(Number); return m.length >= 2 && isFinite(m[0]) && isFinite(m[1]) ? [m[0], m[1]] : null; }).filter(Boolean); return pts.length >= 3 ? PL.normPoly(pts, Math.max(0, (+S.fno || 1) - 1)) : null; }
+  /* the part of the land inside a rectangle (any land outline; the rectangle is the convex clipper) */
+  var clipRect = function (poly, x0, y0, x1, y1) { var out = poly, C = [[x0, y0], [x1, y0], [x1, y1], [x0, y1]]; for (var i = 0; i < 4 && out.length; i++) { var A = C[i], Bc = C[(i + 1) % 4], inp = out; out = []; var side = function (p) { return (Bc[0] - A[0]) * (p[1] - A[1]) - (Bc[1] - A[1]) * (p[0] - A[0]) >= -1e-9; }, cut = function (p, q) { var a1 = Bc[1] - A[1], b1 = A[0] - Bc[0], c1 = a1 * A[0] + b1 * A[1], a2 = q[1] - p[1], b2 = p[0] - q[0], c2 = a2 * p[0] + b2 * p[1], dd = a1 * b2 - a2 * b1; return [(c1 * b2 - c2 * b1) / dd, (a1 * c2 - a2 * c1) / dd]; };
+      for (var j = 0; j < inp.length; j++) { var p = inp[j], q = inp[(j + 1) % inp.length]; if (side(q)) { if (!side(p)) out.push(cut(p, q)); out.push(q); } else if (side(p)) out.push(cut(p, q)); } } return out; };
+  var pArea = function (P) { return P.length < 3 ? 0 : PL.polyArea(P); };
   function layout() {
+    var LP = landPoly(); if (LP) { S.W = Math.round(Math.max.apply(null, LP.map(function (q) { return q[0]; })) * 100) / 100; S.D = Math.round(Math.max.apply(null, LP.map(function (q) { return q[1]; })) * 100) / 100; }
     var W = +S.W, D = +S.D, pw = +S.pw, pd = +S.pd, ws = +S.ws, wr = +S.wr, roads = [], blocks = [], y = 0;
     /* rows from the front: plots facing the outside road first (if chosen), then road + two rows, road + two rows … */
     if (S.front) { blocks.push({ y: 0, d: pd, rows: [{ y: 0, face: "front" }] }); y = pd; }
@@ -23,25 +30,30 @@
     blocks.forEach(function (b, bi) { b.rows.forEach(function (r) {
       /* the back row of a double block faces the next road (behind it) */
       var faceRoad = r.face === "back" ? "road behind" : (bi === 0 && S.front ? "outside road" : "road in front");
-      [[0, sx], [sx + ws, W]].forEach(function (seg, si) { var len = seg[1] - seg[0], k = Math.floor(len / pw + 1e-6); if (k < 1) { green.push({ x: seg[0], y: r.y, w: len, d: pd }); return; }
+      [[0, sx], [sx + ws, W]].forEach(function (seg, si) { if (LP) { var lo = seg[0], hi = seg[1]; for (var t = 0; t <= 8; t++) { var yy = r.y + 0.01 + t * (pd - 0.02) / 8, sp = PL.polySpan(LP, yy); if (!sp) { lo = hi; break; } lo = Math.max(lo, sp[0]); hi = Math.min(hi, sp[1]); } LP.forEach(function (q) { if (q[1] > r.y && q[1] < r.y + pd) { if (q[0] > (seg[0] + seg[1]) / 2) hi = Math.min(hi, q[0]); else lo = Math.max(lo, q[0]); } }); if (hi - lo < pw - 1e-6) return; seg = si === 0 ? [lo, Math.min(seg[1], hi)] : [Math.max(seg[0], lo), hi]; }
+        var len = seg[1] - seg[0], k = Math.floor(len / pw + 1e-6); if (k < 1) { green.push({ x: seg[0], y: r.y, w: len, d: pd }); return; }
         var extra = len - k * pw; for (var i = 0; i < k; i++) { var x0 = seg[0] + i * pw + (si === 0 ? 0 : 0), w = pw + (i === (si === 0 ? 0 : k - 1) ? extra : 0); if (si === 0 && i > 0) x0 += extra; plots.push({ no: 0, x: x0, y: r.y, w: w, d: pd, face: faceRoad, blk: String.fromCharCode(65 + bi) }); } }); }); });
-    if (D - y > 0.5) green.push({ x: 0, y: y, w: W, d: D - y, strip: 1 });
+    if (D - y > 0.5 && !LP) green.push({ x: 0, y: y, w: W, d: D - y, strip: 1 });
+    /* odd land: keep only plots wholly on the land (an inward corner may cut one); roads cut to the outline */
+    if (LP) { plots = plots.filter(function (p) { return [[p.x + 0.01, p.y + 0.01], [p.x + p.w - 0.01, p.y + 0.01], [p.x + p.w - 0.01, p.y + p.d - 0.01], [p.x + 0.01, p.y + p.d - 0.01]].every(function (q) { return PL.inPoly(q, LP); }); });
+      roads.forEach(function (r) { r.poly = clipRect(LP, r.x, r.y, r.x + r.w, r.y + r.d); r.area = pArea(r.poly); }); roads = roads.filter(function (r) { return r.area > 1; }); }
     /* park and amenity: whole plots near the middle of the back blocks until the share is reached */
-    var A = W * D, need = A * (+S.park || 0) / 100, needAm = A * (+S.amen || 0) / 100, have = green.reduce(function (a, g) { return a + g.w * g.d; }, 0);
+    var A = LP ? PL.polyArea(LP) : W * D, need = A * (+S.park || 0) / 100, needAm = A * (+S.amen || 0) / 100, have = green.reduce(function (a, g) { return a + g.w * g.d; }, 0);
     var cand = plots.slice().sort(function (a, b) { return (b.y - a.y) || (Math.abs(a.x + a.w / 2 - W / 2) - Math.abs(b.x + b.w / 2 - W / 2)); });
     cand.forEach(function (p) { if (have < need) { p.use = "park"; have += p.w * p.d; } });
     var am = 0; cand.forEach(function (p) { if (!p.use && am < needAm) { p.use = "amenity"; am += p.w * p.d; } });
     plots.filter(function (p) { return !p.use; }).sort(function (a, b) { return a.blk < b.blk ? -1 : a.blk > b.blk ? 1 : a.y - b.y || a.x - b.x; }).forEach(function (p) { p.no = ++n; });
-    var sale = plots.filter(function (p) { return !p.use; }), rA = roads.reduce(function (a, r) { return a + r.w * r.d; }, 0) - (roads.length > 1 ? (roads.length - 1) * ws * wr : 0);
-    var parkA = have, amA = am, saleA = sale.reduce(function (a, p) { return a + p.w * p.d; }, 0), roadLen = roads.reduce(function (a, r) { return a + (r.spine ? r.d : r.w); }, 0);
-    return { W: W, D: D, A: A, roads: roads, plots: plots, green: green, sale: sale, saleA: saleA, roadA: rA, parkA: parkA, amA: amA, roadLen: roadLen, drains: 2 * roadLen, lights: Math.ceil(roadLen / 30) };
+    var sale = plots.filter(function (p) { return !p.use; }), sp0 = roads.filter(function (r) { return r.spine; })[0], rA = LP ? roads.reduce(function (a, r) { return a + r.area - (sp0 && !r.spine && r.poly ? pArea(clipRect(r.poly, sp0.x, sp0.y, sp0.x + sp0.w, sp0.y + sp0.d)) : 0); }, 0) : roads.reduce(function (a, r) { return a + r.w * r.d; }, 0) - (roads.length > 1 ? (roads.length - 1) * ws * wr : 0);
+    var parkA = have, amA = am, saleA = sale.reduce(function (a, p) { return a + p.w * p.d; }, 0), roadLen = roads.reduce(function (a, r) { return a + (LP ? r.area / (r.spine ? r.w : r.d) : (r.spine ? r.d : r.w)); }, 0);
+    return { LP: LP, W: W, D: D, A: A, roads: roads, plots: plots, green: green, sale: sale, saleA: saleA, roadA: rA, parkA: parkA, amA: amA, roadLen: roadLen, drains: 2 * roadLen, lights: Math.ceil(roadLen / 30) };
   }
   function svg(L, big) {
     var sc = Math.min((big ? 900 : 620) / L.W, (big ? 1100 : 760) / L.D), o = [], X = function (v) { return (v * sc).toFixed(1); }, Y = function (v) { return ((L.D - v) * sc).toFixed(1); };
     var rect = function (x, y, w, d, f, s) { return "<rect x='" + X(x) + "' y='" + Y(y + d) + "' width='" + X(w) + "' height='" + (d * sc).toFixed(1) + "' fill='" + f + "' stroke='" + (s || "#555") + "' stroke-width='.6'/>"; };
-    o.push(rect(0, 0, L.W, L.D, "#f1f8e9", "#222"));
+    var poly = function (P, f, st) { return "<polygon points='" + P.map(function (q) { return X(q[0]) + "," + Y(q[1]); }).join(" ") + "' fill='" + f + "' stroke='" + st + "' stroke-width='.8'/>"; };
+    if (L.LP) o.push(poly(L.LP, "#c5e1a5", "#222")); else o.push(rect(0, 0, L.W, L.D, "#f1f8e9", "#222"));
     L.green.forEach(function (g) { o.push(rect(g.x, g.y, g.w, g.d, "#c5e1a5")); });
-    L.roads.forEach(function (r) { o.push(rect(r.x, r.y, r.w, r.d, "#cfd8dc", "#90a4ae")); });
+    L.roads.forEach(function (r) { o.push(r.poly ? poly(r.poly, "#cfd8dc", "#90a4ae") : rect(r.x, r.y, r.w, r.d, "#cfd8dc", "#90a4ae")); });
     L.plots.forEach(function (p) { o.push(rect(p.x, p.y, p.w, p.d, p.use === "park" ? "#a5d6a7" : p.use === "amenity" ? "#ffe0b2" : "#fff")); if (p.w * sc > 14) o.push("<text x='" + X(p.x + p.w / 2) + "' y='" + Y(p.y + p.d / 2 - 0.8) + "' font-size='" + Math.min(10, p.w * sc / 3).toFixed(1) + "' text-anchor='middle'>" + (p.use === "park" ? "P" : p.use === "amenity" ? "A" : p.no) + "</text>"); });
     o.push("<text x='" + X(L.W / 2) + "' y='" + (L.D * sc + 14).toFixed(1) + "' font-size='11' text-anchor='middle'>▲ entrance / outside road</text>");
     return "<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 " + (L.W * sc).toFixed(0) + " " + (L.D * sc + 20).toFixed(0) + "' style='width:100%;max-width:" + (big ? 900 : 620) + "px;height:auto'>" + o.join("") + "</svg>";
@@ -52,8 +64,10 @@
     var cost = L.roadA * R.road + L.drains * R.drain + L.lights * R.light + L.sale.length * 4 * R.pillar + L.parkA * R.park;
     var h = '<div class="plm" data-plmode-root="colony" style="display:flex;flex-direction:column;gap:14px;max-width:1200px">';
     h += '<div><h1 style="margin:0">Colony / layout planner <span class="muted" style="font-size:.55em;font-weight:500">ज़मीन को प्लॉट, सड़क, पार्क में बाँटें</span></h1><p class="muted" style="margin:4px 0 0">Give the land and the plot size — get the plots, roads, park and services with the area statement, the plot list for sale and the development cost; build it in CAD for the drawing.</p></div>';
-    h += '<section class="panel" style="padding:12px 14px"><h3 style="margin:0 0 8px">1. Land and plots</h3><div class="row" style="gap:10px;flex-wrap:wrap;align-items:flex-end">' + fld("name", "Name", S.name, 0, 170) + fld("W", "Land width (along the entrance road) m", S.W, 1, 120) + fld("D", "Land depth m", S.D, 1) +
+    h += '<section class="panel" style="padding:12px 14px"><h3 style="margin:0 0 8px">1. Land and plots</h3><div class="row" style="gap:10px;flex-wrap:wrap;align-items:flex-end">' + fld("name", "Name", S.name, 0, 170) + (S.shape === "poly" ? "" : fld("W", "Land width (along the entrance road) m", S.W, 1, 120) + fld("D", "Land depth m", S.D, 1)) +
       '<label style="display:flex;flex-direction:column;gap:2px"><span class="muted small">Plot size</span><select class="in small" data-pcf="size">' + SIZES.map(function (z) { var on = z[0] === (+S.pw).toFixed(2) + "x" + (+S.pd).toFixed(2); return '<option value="' + z[0] + '"' + (on ? " selected" : "") + ">" + z[1] + " (" + z[0].replace("x", " × ") + " m)</option>"; }).join("") + '<option value="">Other — type below</option></select></label>' + fld("pw", "Plot front m", S.pw, 0.01, 80) + fld("pd", "Plot depth m", S.pd, 0.01, 80) + "</div>" +
+      '<div class="row" style="gap:10px;flex-wrap:wrap;align-items:flex-end;margin-top:8px"><label style="display:flex;flex-direction:column;gap:2px"><span class="muted small">Land shape / ज़मीन का आकार</span><select class="in small" data-pcf="shape"><option value="">Rectangle (width × depth)</option><option value="poly"' + (S.shape === "poly" ? " selected" : "") + ">Odd shape — corner points</option></select></label>" +
+      (S.shape === "poly" ? '<label style="display:flex;flex-direction:column;gap:2px;flex:1;min-width:240px"><span class="muted small">Corner points x,y in m, in order round the land (e.g. 0,0; 140,0; 120,160; 0,130)</span><input class="in small" style="width:min(420px,90vw)" data-pcf="pts" value="' + esc(String(S.pts || "")) + '"></label>' + fld("fno", "Entrance road on side no.", +S.fno || 1, 1, 70) + (L.LP ? "" : '<span class="small" style="color:var(--bad,#b42318)">Give at least 3 points.</span>') : "") + "</div>" +
       '<div class="row" style="gap:10px;flex-wrap:wrap;align-items:flex-end;margin-top:8px">' + fld("ws", "Spine road width m", S.ws, 0.5, 90) + fld("wr", "Internal road width m", S.wr, 0.5, 90) + fld("park", "Open space / park %", S.park, 1, 80) + fld("amen", "Amenity (school, shops, temple) %", S.amen, 1, 110) +
       '<label class="row" style="gap:6px;align-items:center"><input type="checkbox" data-pcf="front"' + (S.front ? " checked" : "") + "> First row of plots faces the outside road</label></div></section>";
     h += '<section class="panel" style="padding:12px 14px"><h3 style="margin:0 0 8px">2. Layout and area statement</h3><div class="row" style="gap:14px;align-items:flex-start;flex-wrap:wrap"><div style="flex:1.4;min-width:260px">' + svg(L) + '<div class="small muted">White = plots for sale (numbered) · green = park · orange = amenity · grey = roads</div></div><div style="flex:1;min-width:240px"><table class="tbl" style="width:100%;font-size:13px;border-collapse:collapse"><tr><th style="text-align:left">Use</th><th>Area m²</th><th>%</th></tr>' +
@@ -75,12 +89,13 @@
     var CAD = EP.cad, B = EP.bim, d = CAD.newDoc(S.name || "Colony", "mm"); B.ensure(d); var ents = d.ents, add = function (o) { o.id = CAD.uid(); ents.push(o); return o; }, M = function (v) { return Math.round(v * 1000); };
     [["C-PLOT", 7], ["C-ROAD", 8], ["C-PARK", 82], ["C-TXT", 2], ["E-POINT", 1]].forEach(function (l) { if (!d.layers[l[0]]) d.layers[l[0]] = { color: l[1], lw: 0.25, lt: "CONTINUOUS", on: true, lock: false, frz: false }; });
     var box = function (x, y, w, dd, lay) { return add({ t: "pline", pts: [[M(x), M(y), 0], [M(x + w), M(y), 0], [M(x + w), M(y + dd), 0], [M(x), M(y + dd), 0]], closed: true, layer: lay }); };
-    box(0, 0, L.W, L.D, "C-PLOT");
-    L.roads.forEach(function (r) { box(r.x, r.y, r.w, r.d, "C-ROAD"); add({ t: "text", p: [M(r.x + r.w / 2), M(r.y + r.d / 2)], s: r.n + " " + (r.spine ? r.w : r.d) + " m wide", h: 900, rot: r.spine ? 90 : 0, al: "c", layer: "C-TXT" }); });
+    var pl = function (P, lay) { return add({ t: "pline", pts: P.map(function (q) { return [M(q[0]), M(q[1]), 0]; }), closed: true, layer: lay }); };
+    if (L.LP) pl(L.LP, "C-PLOT"); else box(0, 0, L.W, L.D, "C-PLOT");
+    L.roads.forEach(function (r) { if (r.poly) pl(r.poly, "C-ROAD"); else box(r.x, r.y, r.w, r.d, "C-ROAD"); add({ t: "text", p: [M(r.x + r.w / 2), M(r.y + r.d / 2)], s: r.n + " " + (r.spine ? r.w : r.d) + " m wide", h: 900, rot: r.spine ? 90 : 0, al: "c", layer: "C-TXT" }); });
     L.plots.forEach(function (p) { box(p.x, p.y, p.w, p.d, p.use === "park" ? "C-PARK" : "C-PLOT"); add({ t: "text", p: [M(p.x + p.w / 2), M(p.y + p.d / 2)], s: p.use === "park" ? "PARK" : p.use === "amenity" ? "AMENITY" : String(p.no), h: 1200, rot: 0, al: "c", layer: "C-TXT" }); if (!p.use) add({ t: "text", p: [M(p.x + p.w / 2), M(p.y + p.d / 2) - 1500], s: (p.w * p.d).toFixed(1) + " m²", h: 600, rot: 0, al: "c", layer: "C-TXT" }); });
     L.green.forEach(function (g) { box(g.x, g.y, g.w, g.d, "C-PARK"); });
     /* street lights every 30 m on alternate sides */
-    if (B.ASSET_LIB && B.ASSET_LIB.street_light) L.roads.forEach(function (r) { var len = r.spine ? r.d : r.w, n = Math.max(1, Math.floor(len / 30)); for (var i = 0; i < n; i++) { var s2 = (i + 0.5) * len / n, sd = i % 2 ? 1 : -1; add({ t: "asset", kind: "street_light", p: r.spine ? [M(r.x + r.w / 2 + sd * (r.w / 2 - 0.5)), M(r.y + s2)] : [M(r.x + s2), M(r.y + r.d / 2 + sd * (r.d / 2 - 0.5))], rot: 0, lvl: "L0", layer: "E-POINT" }); } });
+    if (B.ASSET_LIB && B.ASSET_LIB.street_light) L.roads.forEach(function (r) { var len = r.spine ? r.d : r.w, n = Math.max(1, Math.floor(len / 30)); for (var i = 0; i < n; i++) { var s2 = (i + 0.5) * len / n, sd = i % 2 ? 1 : -1, lp = r.spine ? [r.x + r.w / 2 + sd * (r.w / 2 - 0.5), r.y + s2] : [r.x + s2, r.y + r.d / 2 + sd * (r.d / 2 - 0.5)]; if (L.LP && !PL.inPoly(lp, L.LP)) continue; add({ t: "asset", kind: "street_light", p: r.spine ? [M(r.x + r.w / 2 + sd * (r.w / 2 - 0.5)), M(r.y + s2)] : [M(r.x + s2), M(r.y + r.d / 2 + sd * (r.d / 2 - 0.5))], rot: 0, lvl: "L0", layer: "E-POINT" }); } });
     add({ t: "text", p: [0, -M(6)], s: S.name + " — " + L.sale.length + " plots, " + Math.round(L.A) + " m² (" + (L.A / 4046.86).toFixed(2) + " acre); roads " + (L.roadA / L.A * 100).toFixed(1) + " %, park " + (L.parkA / L.A * 100).toFixed(1) + " %", h: 1500, rot: 0, al: "l", layer: "C-TXT" });
     U.toast("Making the layout drawing…"); await CAD.newDrawing(d.name, "mm", d); window.scrollTo(0, 0); U.toast("Layout built in CAD Studio");
   });

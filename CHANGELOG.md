@@ -3,6 +3,12 @@
 This file is for the people maintaining the app. It is not published with the site (see `.assetsignore`).
 The text users see is `EP_NOTES` in `js/version.js`.
 
+## 2026.11.21-z103
+Colony layout planner:
+• Odd-shaped land: choose "Odd shape — corner points", type the corners of the land and the side with the entrance road.
+• Each row of plots is fitted inside the land (slanted sides, inward corners); roads are cut to the land outline and street lights stay on the land.
+• The area statement, development cost, plot list and the CAD drawing use the real land shape.
+
 ## 2026.11.21-z102
 Building Planner:
 • Building square to a slanted side: on an odd plot choose "Building square to" the left or right side — the building lines up with that side and the road side becomes the slanted one.
