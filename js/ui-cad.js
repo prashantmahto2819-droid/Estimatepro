@@ -103,6 +103,10 @@
     await saveLocal(meta, d); await openDrawing(id, { meta: meta, data: d }); changed(); saveCloud(true);
     return id;
   }
+  /* for the planners: the user's drawings (this device + cloud) and one drawing's data */
+  CAD.loadDoc = loadDoc;
+  CAD.drawingList = async function () { var loc = await localIdx(), map = {}; try { var r = await db().from("cad_drawings").select("id,name,updated_at").eq("owner", me()).order("updated_at", { ascending: false }); (r.data || []).forEach(function (x) { map[x.id] = { id: x.id, name: x.name, at: Date.parse(x.updated_at) }; }); } catch (e) {}
+    loc.forEach(function (x) { if (!map[x.id]) map[x.id] = { id: x.id, name: x.name, at: x.updated }; }); return Object.keys(map).map(function (k) { return map[k]; }).sort(function (a, b) { return b.at - a.at; }); };
   CAD.newDrawing = newDrawing; CAD.ui = { renderPanels: function () { renderPanels(); }, dialog: function (h, f) { return dialog(h, f); }, closeDialog: function () { closeDialog(); }, dl: dl, fname: fname, unitLabel: function (u) { return unitLabel(u); }, saveCloud: function (t) { return saveCloud(t); }, assetBlob: function (id) { return assetBlob(id); }, applyProp: function (k, v) { applyProp(k, v); } };
 
   /* ================= settings remembered per user ================= */

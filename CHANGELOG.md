@@ -3,6 +3,12 @@
 This file is for the people maintaining the app. It is not published with the site (see `.assetsignore`).
 The text users see is `EP_NOTES` in `js/version.js`.
 
+## 2026.11.21-z105
+Renovation planner — from your own drawing:
+• New step "Start from": pick your CAD drawing of the house. The planner reads its floors, the top floor's size, the plot (compound wall), the toilets and the structure (RCC frame if it has columns) — no typing.
+• Rules check, demolition list and cost use those figures.
+• Build in CAD keeps your whole old drawing (floors marked existing, the old terrace removed as it is broken for the new work) and puts the new floor exactly on top, as a new drawing — the original stays as it was.
+
 ## 2026.11.21-z104
 Interior planner — two new rooms:
 • Modular kitchen: straight, L, parallel or U shape (auto fits the room). Sink unit under the window, hob with chimney on the side counter, fridge at the end nearest the door, base units in 900/600 modules, wall units above (not over the hob or the window), dishwasher at premium level. Cost with dado tiles, plumbing and electrical points.
