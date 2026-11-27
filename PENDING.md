@@ -1,6 +1,6 @@
 # Estimate Pro — pending work (kept with the code; not published)
 
-Last updated at version 2026.11.21-z112
+Last updated at version 2026.11.21-z113
 
 ## A. Waiting for the owner
 1. Server work: (-z21) module switches and a shared library of blocks and hatch patterns are built — the owner has to run `server/shared.sql` once in Supabase, then check that a switched-off module disappears for a normal user. Still open: shared 3D models / cut-outs / material pictures (large files — need Supabase Storage), WhatsApp update messages with real pictures attached (needs a sending gateway; links to the pictures are already added).
@@ -89,3 +89,5 @@ Last updated at version 2026.11.21-z112
 1. Design Studio sheets: (-z20: scales 1:15 / 30 / 40 / 60 added so views are larger.) Still open: labels that overlap — needs the owner to point at a sheet where it happens.
 2. (-t: 37 furniture / appliance / garden keys take Non-SOR items.) (-v: 25 more — partitions, grills, railing, curtains, site fittings.) (-z9: fountain, DG set, transformer, main panel as budget Non-SOR items.) Still open: temple pieces, boundary-wall bays and grand gates (composite works — need item-wise estimates), rain-water pipes as library pieces. (Floor lamps, rugs, recliner, table sets: already in the library.)
 3. Deeper testing of screens that need a signed-in server session.
+
+- Owner: run server/consent.sql in Supabase (consent log, record_consent, consent columns; stops WhatsApp updates to accounts that have not agreed yet).

@@ -1,5 +1,5 @@
 /* App version + "what's new" — the super admin is offered to send this on WhatsApp after each upload. Change both with every release. */
-window.EP_VER = "2026.11.21-z112";
-window.EP_NOTES = "Gumti (portable shelter for mines) — SOR first now follows the way it is actually built:\n• Roof: MS sheet 2 mm welded on the frame with EPS thermocol 50 mm under it — no GI sheet, no false ceiling. Cool-roof (high-albedo) paint stays.\n• Door and windows: MS sheet door (DSR 10.5.1); MS sheet window shutters in angle frames as DSR steel work, with MS grill (DSR 9.48.1). Sunshades in MS sheet as steel work.\n• Plywood: good BWP / marine plywood for the wall lining, floor and bench (kept as Non-SOR — the DSR particle-board items do not last in a gumti).\n• Electrical work (wiring, DB, lights, fan, sockets) is now an option under Inside, off by default.\n• With the defaults about 80 % of the value is SOR (steel work, thermocol, door, grill, paint, earthing) and 20 % Non-SOR (plywood, water cooler, first aid, extinguisher, signs).";
+window.EP_VER = "2026.11.21-z113";
+window.EP_NOTES = "Consent before an account: sign up, OTP (WhatsApp / email) and Google now first ask you to agree to the Privacy Policy and Terms \u2014 no agreement, no account. WhatsApp notifications are a separate optional choice. Existing users are asked once at their next sign-in. Privacy Policy updated for mobile / WhatsApp.";
 /* pictures of this update: [file in /updates, caption]. Shown to the owner with the WhatsApp "what's new" message. */
 window.EP_PICS = [];

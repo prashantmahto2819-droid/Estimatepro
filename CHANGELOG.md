@@ -3,6 +3,13 @@
 This file is for the people maintaining the app. It is not published with the site (see `.assetsignore`).
 The text users see is `EP_NOTES` in `js/version.js`.
 
+## 2026.11.21-z113
+- Consent before an account is created (js/ui-consent.js): email sign-up, OTP on WhatsApp / email, Google sign-in and OTP server functions are held until both required boxes (Privacy Policy + Terms; processing and OTP / account messages on WhatsApp / email) are ticked; cancelling sends nothing, so no account is made.
+- WhatsApp update notifications: separate optional box, off by default; the choice sets profiles.wa_optout.
+- Accounts without consent for this version (older ones, admin-made ones) are asked once after sign-in; declining signs out.
+- Consent kept in user_metadata (consent_ver, consent_at, wa_optin) and, after server/consent.sql is run, in consent_log + profiles.
+- Privacy Policy: new section 3 (consent and WhatsApp messages), mobile number and consent record in the data table, WhatsApp (Meta) / Vivid Relay as a provider. Terms: consent first.
+
 ## 2026.11.21-z112
 Gumti (portable shelter for mines) — SOR first now follows the way it is actually built:
 • Roof: MS sheet 2 mm welded on the frame with EPS thermocol 50 mm under it — no GI sheet, no false ceiling. Cool-roof (high-albedo) paint stays.
