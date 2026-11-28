@@ -3,6 +3,9 @@
 This file is for the people maintaining the app. It is not published with the site (see `.assetsignore`).
 The text users see is `EP_NOTES` in `js/version.js`.
 
+## 2026.11.21-z115
+- BIM quantity take-off SOR mapping fixes (found while preparing the Barpali estimate): rolling shutters (door kind shutter) → new key door_rolling, CPWD 10.6.1, and no door frame for them; steel doors → 10.5.1 (text search used to pick 9.52, a deduct item); Kota floors → 11.26.1 (was a wall-lining item); skirting → 11.41.2 (was marble veneer 8.11.1); exhaust fans → EM 1.50.1 installation (was louvre extra 1.51).
+
 ## 2026.11.21-z114
 - Consent dialog cut to the minimum: title, one required tick (Privacy Policy & Terms, with links), one optional tick (WhatsApp updates), Cancel / Agree (Agree stays off until the required tick).
 

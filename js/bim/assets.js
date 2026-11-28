@@ -213,7 +213,7 @@
     kitchen_counter: { q: /kitchen platform|granite counter/i }, stove: null, refrigerator: null, chimney: null, microwave: null,
     bathtub: { q: /bath tub/i }, shower: { q: /shower enclosure|cubicle/i }, urinal: { c: [["cpwd23", "17.4.1"]], q: /urinal/i }, geyser: { q: /geyser|water heater/i }, wash_area: null,
     flower_pot: null, hedge: { c: [["hort", "2.13"]], q: /hedging/i, books: ["hort"] }, fountain: null, bollard: null, dustbin: null, gate: { q: /gate/i }, pergola: null,
-    ac_split: { q: /split.*air.*conditioner|split.*AC/i }, ac_outdoor: null, exhaust_fan: { c: [["em22", "1.51"]], q: /exhaust fan/i, books: ["em22"] }, cctv: null,
+    ac_split: { q: /split.*air.*conditioner|split.*AC/i }, ac_outdoor: null, exhaust_fan: { c: [["em22", "1.50.1"]], q: /exhaust fan/i, books: ["em22"] }, cctv: null,
     acp_panel: { q: /ACP.*panel|aluminium composite/i }, wall_panel: { q: /wall panel|WPC panel|HPL/i }, stone_veneer: { q: /stone.*veneer|stone.*cladding/i },
     mirror: { q: /mirror/i }, towel_rack: { q: /towel/i }, ramp: { q: /ramp/i }, flag_pole: null
   });
