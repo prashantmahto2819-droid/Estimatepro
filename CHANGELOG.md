@@ -3,6 +3,9 @@
 This file is for the people maintaining the app. It is not published with the site (see `.assetsignore`).
 The text users see is `EP_NOTES` in `js/version.js`.
 
+## 2026.11.21-z118
+- Complete steel shed: the 'Open sides' select is replaced by four ticks (left / right long side, front / back gable end); girts, cladding area, Cpi (dominant opening) and 3D follow each side. 3D now opens the same long side as the design (previously the select opened opposite sides in design and 3D).
+
 ## 2026.11.21-z117
 - Sections: new double channel (2-ISMC xxx box / b/b) with parallel-axis Iy, closed-box It, two webs in shear, overall width for base plate; classification uses one channel's outstand (bo).
 - Portal shed (steel_portal) check / free design: column & rafter lists now ISMB + ISHB + ISMC + 2-ISMC box/b/b + BU; new 'Secondary members' group (girt, eave strut, bracing angle or rod) used in quantities and 3D.

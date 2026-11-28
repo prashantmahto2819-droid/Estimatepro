@@ -294,7 +294,7 @@
       purlin: purlin, pSp: pm ? +pm[1] * 1000 : posn(mm(v.purlin_spacing), 600, 3000, 1500), sag: v.sag_rods !== false, sagD: num(v.sag_d, 12), eaveStrut: esS, girt: girt, gSp: gm2 ? +gm2[1] * 1000 : posn(mm(v.girt_spacing), 800, 3000, 1800),
       rodD: rd ? +rd[1] : num(v.brace_rod, 20), braceS: /X-angle|K-bracing/.test(String(v.bracing || "")) ? sec(v.brace_sec) : null,
       gableCols: gableCols, gc: sec(v.gc_sec) || sec("ISMB 250"), er: sec(v.er_sec) || sec("ISMB 200"), gcSp: posn(mm(v.gable_col_sp), 2000, 12000, 5000),
-      walls: v.clad_walls !== false, open: /Both/.test(String(v.open_sides)) ? 2 : /One/.test(String(v.open_sides)) ? 1 : 0, openSides: { L: /Both/.test(String(v.open_sides)), R: /Both|One/.test(String(v.open_sides)), F: !!v.open_F, B: !!v.open_B }, crane: !!v.crane, craneSpan: mm(v.crane_span), railH: mm(v.rail_h), gantry: null,
+      walls: v.clad_walls !== false, open: 0, openSides: { L: !!v.open_L, R: !!v.open_R, F: !!v.open_F, B: !!v.open_B }, crane: !!v.crane, craneSpan: mm(v.crane_span), railH: mm(v.rail_h), gantry: null,
       top: kind === "truss" ? pickAfter(tr, "Top chord", v.top_sec) : null, bot: kind === "truss" ? pickAfter(tr, "Bottom chord", v.bot_sec) : null,
       vert: kind === "truss" ? (pickAfter(tr, "Verticals", null) || pickAfter(tr, "Web struts", v.web_sec)) : null, diag: kind === "truss" ? (pickAfter(tr, "Diagonals", null) || pickAfter(tr, "Web ties", v.web_sec)) : null };
     var gt = String(sm(res, "Crane")).match(/gantry\s*(IS\w+\s*\d+)/); if (gt) c.gantry = sec(gt[1]);

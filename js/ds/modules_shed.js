@@ -185,21 +185,21 @@
     }
     n_purl = Math.max(n_purl, 2);
     ps = c.calc("Purlin spacing adopted (on slope)", "sp", "Lr/(n - 1)", "m", "", (kind === "mono" ? "" : "per slope ") + C.pystr(n_purl) + " purlin lines incl. eave & ridge purlins", { Lr: raf_len, n: n_purl });
-    var clad = !!inp.clad_walls, open = inp.open_sides;
+    var clad = !!inp.clad_walls, openL = !!inp.open_L, openR = !!inp.open_R, openF = !!inp.open_F, openB = !!inp.open_B, open = openL || openR || openF || openB;
     var gs_in = ovr.gs || num(inp.girt_spacing), rowsL = 0, rowsR = 0, gsp = 0;
     if (clad) {
-      rowsL = open === OPEN[2] || open === OPEN[1] ? 0 : Math.max(1, Math.ceil((eave - 0.3) / gs_in - 1e-9));
-      rowsR = open === OPEN[2] ? 0 : Math.max(1, Math.ceil((h2 - 0.3) / gs_in - 1e-9));
+      rowsL = openL ? 0 : Math.max(1, Math.ceil((eave - 0.3) / gs_in - 1e-9));
+      rowsR = openR ? 0 : Math.max(1, Math.ceil((h2 - 0.3) / gs_in - 1e-9));
       var sL_ = rowsL ? (eave - 0.3) / rowsL : 0, sR_ = rowsR ? (h2 - 0.3) / rowsR : 0;
       var hg = sL_ >= sR_ ? eave : h2, ng = sL_ >= sR_ ? rowsL : rowsR;
       if (ng > 0) gsp = c.calc("Girt spacing adopted (side walls)", "sg", "(h - 0.3)/n", "m", "", "bottom runner at +0.30 m (plinth / dado); eave strut takes the top edge", { h: hg, n: ng });
-      else gsp = c.calc("Girt spacing adopted (gable walls only – both long sides open)", "sg", "(h - 0.3)/n", "m", "", "n = rows at ≤ the input girt spacing " + g(gs_in) + " m", { h: eave, n: Math.max(1, Math.ceil((eave - 0.3) / gs_in - 1e-9)) });
+      else gsp = c.calc("Girt spacing adopted (gable walls only – long sides open)", "sg", "(h - 0.3)/n", "m", "", "n = rows at ≤ the input girt spacing " + g(gs_in) + " m", { h: eave, n: Math.max(1, Math.ceil((eave - 0.3) / gs_in - 1e-9)) });
     }
     var G = { style: style, kind: kind, span: span, bay: bay, n_bays: nb, n_frames: nb + 1, length: length, eave: eave, h2: h2, slope: slope,
       rise: rise, ridge: ridge, raf_len: raf_len, ps: ps, n_purl: n_purl, nh: nh, n_pan: n_pan, off_node: off_node, clad: clad, open: open,
       rowsL: rowsL, rowsR: rowsR, gsp: gsp || gs_in, fixed: inp.base === "Fixed", gable_cols: inp.gable === GABLE[1], area: span * length };
-    G.walls_open_L = !clad || open !== OPEN[0];
-    G.walls_open_R = !clad || open === OPEN[2];
+    G.walls_open_L = !clad || openL;
+    G.walls_open_R = !clad || openR;
     c.let("Plan area", "A", R(G.area, 2), "m²");
     if (length > 120) c.warn("Expansion joint", "Length " + f0(length) + " m > 120 m along purlins – provide a temperature (expansion) joint / slotted purlin connection", "IS 800 cl 3 (expansion joints)");
     else c.info("Temperature effects", "Length ≤ 120 m along purlins and span ≤ 150 m – no expansion joint required; temperature range per IS 875-5 not separately analysed", "IS 800 cl 3.5 / IS 875-5");
@@ -247,7 +247,7 @@
     var hw = G.eave / G.span, lw = G.length / G.span;
     var walls = LD.wall_cpe(hw, lw);
     var roof = LD.roof_cpe(G.slope, hw);
-    var cpi = LD.CPI[inp.perm], openish = G.walls_open_L || G.walls_open_R || (G.clad && (!!inp.open_F || !!inp.open_B));
+    var cpi = LD.CPI[inp.perm], openish = G.clad && G.open;
     if (openish) {
       cpi = Math.max(cpi, 0.7);
       c.info("Open sides / unclad walls", "large openings → Cpi = ±0.7 (dominant opening); no wall pressure on open faces (columns only)", "IS 875-3 cl 7.3.2.2");
@@ -1485,7 +1485,7 @@
     var WB = M.brace_member(c, "wall bracing", Dw, Lw, style, fy, fu, given);
     WB.ntier = ntier; WB.L = Lw; WB.D = Dw;
     if (WB.kind === "angle") WB.gus = M.gusset_t(c, "wall bracing", WB.Du, WB.nb, WB.bd, WB.sec.t + 2, fy);
-    if (G.open !== OPEN[0]) c.info("Open side", "wall bracing in open bays may be replaced by portal (knee) bracing for access – design separately", "IS 800 cl 4.4");
+    if (G.clad && G.open) c.info("Open side", "wall bracing in open bays may be replaced by portal (knee) bracing for access – design separately", "IS 800 cl 4.4");
     var fwd = fu / (Math.sqrt(3) * GMW_S);
     c.calc("Gusset-to-frame weld length required (6 mm, field 1.5)", "Lw", "Du*1e3/(0.7*6*fu/(sqrt(3)*1.5)) + 12", "mm", "IS 800 cl 10.5.7", { Du: R(Math.max(RB.Du, WB.Du), 3), fu: fu });
     return { RB: RB, WB: WB, Fend: Fend, Ag: Ag, es: esn, Pe: Pe, nbr: nbr, fwd: fwd };
@@ -2548,7 +2548,7 @@
     c.miss("Fire protection, lightning protection (IS/IEC 62305) and earthing of the steel frame", "NBC Part 4 / IS 3043", "Advisory");
     if (G.kind === "mono") c.miss("Mono-slope roof Cpe values are a simplified envelope of IS 875-3 Table 7 – verify zone-wise values", "IS 875-3 Table 7", "Important");
     if (PUR.P1.sec.family === "CFZ") c.miss("Cold-formed Z purlins: effective-section, distortional buckling and lap capacity per IS 801 / supplier's tables", "IS 801 / IS 811", "Important");
-    if (G.open !== OPEN[0]) c.miss("Open sides: check free-standing roof / canopy coefficients and dominant opening Cpi for the actual opening ratio", "IS 875-3 cl 7.3.2 / Tables 13-14", "Important");
+    if (G.clad && G.open) c.miss("Open sides: check free-standing roof / canopy coefficients and dominant opening Cpi for the actual opening ratio", "IS 875-3 cl 7.3.2 / Tables 13-14", "Important");
     c.miss("Connections are designed for the envelope forces; HS bolts gr 8.8 snug-tight – if slip-critical is required (crane / vibration) use pre-tensioned HSFG (IS 800 cl 10.4)", "IS 800 cl 10.4", CR ? "Important" : "Advisory");
     // ---------------- summary & tables
     var dash = "—";
@@ -2644,7 +2644,8 @@
     P("k4", "Importance (cyclonic) factor k4", 1.0, { min: 1.0, max: 1.3, step: 0.05, group: "Wind", help: "IS 875-3 cl 6.3.4: 1.0 non-cyclonic; 1.15 industrial in cyclone regions" }),
     P("perm", "Wall openings (internal pressure)", "Medium (5–20 %)", { kind: "select", options: Object.keys(LD.CPI), group: "Wind" }),
     P("clad_walls", "Side & gable walls clad with sheeting", true, { kind: "bool", group: "Cladding" }),
-    P("open_sides", "Open sides", OPEN[0], { kind: "select", options: OPEN, group: "Cladding" }),
+    P("open_L", "Left long side open (no sheeting)", false, { kind: "bool", group: "Cladding" }),
+    P("open_R", "Right long side open (no sheeting)", false, { kind: "bool", group: "Cladding" }),
     P("open_F", "Front gable end open (no sheeting)", false, { kind: "bool", group: "Cladding" }),
     P("open_B", "Back gable end open (no sheeting)", false, { kind: "bool", group: "Cladding" }),
     P("roof_sheet_t", "Roof sheet thickness (TCT)", "0.50", "mm", { kind: "select", options: ["0.45", "0.50", "0.60"], group: "Cladding" }),
