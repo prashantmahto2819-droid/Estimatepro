@@ -27,24 +27,22 @@
       box.id = "ep-consent";
       box.setAttribute("role", "dialog"); box.setAttribute("aria-modal", "true"); box.setAttribute("aria-labelledby", "epc-h");
       box.style.cssText = "position:fixed;inset:0;z-index:99999;background:rgba(15,23,42,.55);display:flex;align-items:center;justify-content:center;padding:14px;overflow:auto";
+      var lab = "display:flex;gap:10px;align-items:flex-start;margin:0 0 10px;cursor:pointer", cb = "margin-top:2px;width:18px;height:18px;flex:0 0 auto";
       box.innerHTML =
-        "<div style='background:#fff;color:#0f172a;max-width:520px;width:100%;border-radius:12px;padding:20px 20px 16px;box-shadow:0 12px 40px rgba(0,0,0,.25);font-size:14px;line-height:1.5;max-height:94vh;overflow:auto'>" +
-        "<h2 id='epc-h' style='margin:0 0 4px;font-size:18px'>" + esc(opts.title || "Your consent / आपकी सहमति") + "</h2>" +
-        "<p style='margin:0 0 12px;color:#475569'>" + esc(opts.lead || "Before an account is created we need your agreement. खाता बनाने से पहले आपकी सहमति ज़रूरी है।") + "</p>" +
-        "<label style='display:flex;gap:10px;align-items:flex-start;margin:0 0 10px;cursor:pointer'><input type='checkbox' id='epc-1' style='margin-top:3px;width:18px;height:18px;flex:0 0 auto'><span><b>Required · ज़रूरी:</b> I have read and agree to the <a href='privacy.html' target='_blank' rel='noopener'>Privacy Policy</a> and <a href='terms.html' target='_blank' rel='noopener'>Terms of Service</a>. मैंने प्राइवेसी पॉलिसी और शर्तें पढ़ ली हैं और मैं सहमत हूँ।</span></label>" +
-        "<label style='display:flex;gap:10px;align-items:flex-start;margin:0 0 10px;cursor:pointer'><input type='checkbox' id='epc-2' style='margin-top:3px;width:18px;height:18px;flex:0 0 auto'><span><b>Required · ज़रूरी:</b> I agree that my name, email, mobile (WhatsApp) number and my work are stored and used to run my account, and that sign-in codes (OTP) and account messages are sent to me on WhatsApp / email. मेरा नाम, ईमेल, मोबाइल (WhatsApp) नंबर और मेरा काम खाता चलाने के लिए रखा जाए, और OTP व खाते के संदेश WhatsApp / ईमेल पर भेजे जाएँ।</span></label>" +
-        "<label style='display:flex;gap:10px;align-items:flex-start;margin:0 0 12px;cursor:pointer'><input type='checkbox' id='epc-3' style='margin-top:3px;width:18px;height:18px;flex:0 0 auto'" + (prev.wa ? " checked" : "") + "><span><b>Optional · वैकल्पिक:</b> Send me WhatsApp notifications — new features, licence / trial reminders and tips. You can turn this off any time in the app. नए फ़ीचर, लाइसेंस / ट्रायल रिमाइंडर के WhatsApp संदेश भेजें — इसे ऐप में कभी भी बंद कर सकते हैं।</span></label>" +
-        "<p style='margin:0 0 12px;font-size:12.5px;color:#64748b'>You can withdraw consent or ask for your data to be deleted by writing to <a href='mailto:presidentsri@live.com'>presidentsri@live.com</a>. सहमति वापस लेने या डेटा हटवाने के लिए इस ईमेल पर लिखें।</p>" +
-        "<div id='epc-err' style='display:none;color:#b91c1c;margin:0 0 8px;font-size:13px'>Please tick both required boxes. दोनों ज़रूरी बॉक्स पर टिक करें।</div>" +
-        "<div style='display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap'><button type='button' class='btn sec' id='epc-no'>" + esc(opts.no || "Cancel / रद्द करें") + "</button><button type='button' class='btn pri' id='epc-ok'>Agree &amp; continue / सहमत हूँ</button></div></div>";
+        "<div style='background:#fff;color:#0f172a;max-width:380px;width:100%;border-radius:12px;padding:18px 18px 14px;box-shadow:0 12px 40px rgba(0,0,0,.25);font-size:14px;line-height:1.45'>" +
+        "<h2 id='epc-h' style='margin:0 0 12px;font-size:17px'>" + esc(opts.title || "Consent / सहमति") + "</h2>" +
+        "<label style='" + lab + "'><input type='checkbox' id='epc-1' style='" + cb + "'><span>I agree to the <a href='privacy.html' target='_blank' rel='noopener'>Privacy Policy</a> &amp; <a href='terms.html' target='_blank' rel='noopener'>Terms</a></span></label>" +
+        "<label style='" + lab + ";margin-bottom:14px'><input type='checkbox' id='epc-3' style='" + cb + "'" + (prev.wa ? " checked" : "") + "><span>Send me updates on WhatsApp <span style='color:#64748b'>(optional)</span></span></label>" +
+        "<div style='display:flex;gap:8px;justify-content:flex-end'><button type='button' class='btn sec sm' id='epc-no'>" + esc(opts.no || "Cancel") + "</button><button type='button' class='btn pri sm' id='epc-ok' disabled>Agree</button></div></div>";
       document.body.appendChild(box);
-      var b1 = box.querySelector("#epc-1"), b2 = box.querySelector("#epc-2"), b3 = box.querySelector("#epc-3"), err = box.querySelector("#epc-err");
+      var b1 = box.querySelector("#epc-1"), b3 = box.querySelector("#epc-3"), ok = box.querySelector("#epc-ok");
+      b1.onchange = function () { ok.disabled = !b1.checked; };
       function done(v) { box.remove(); document.removeEventListener("keydown", onKey, true); open = null; resolve(v); }
       function onKey(e) { if (e.key === "Escape") { e.preventDefault(); done(null); } }
       document.addEventListener("keydown", onKey, true);
       box.querySelector("#epc-no").onclick = function () { done(null); };
       box.querySelector("#epc-ok").onclick = function () {
-        if (!b1.checked || !b2.checked) { err.style.display = "block"; (b1.checked ? b2 : b1).focus(); return; }
+        if (!b1.checked) { b1.focus(); return; }
         var c = { v: VER, at: new Date().toISOString(), wa: !!b3.checked }; keep(c); done(c);
       };
       setTimeout(function () { b1.focus(); }, 30);
@@ -54,7 +52,7 @@
   window.EP_askConsent = ask;
 
   function refused() {
-    var e = { name: "ConsentRequired", status: 400, message: "Consent is required to create an account — please tick both required boxes. खाता बनाने के लिए सहमति ज़रूरी है।" };
+    var e = { name: "ConsentRequired", status: 400, message: "Please agree to the Privacy Policy & Terms to continue." };
     return { data: { user: null, session: null }, error: e };
   }
   /* consent for this version on this device, or ask now */
@@ -75,8 +73,8 @@
     checking = true;
     try {
       var c = local();
-      if (!c) c = await ask({ title: "Please confirm your consent / कृपया सहमति दें", lead: "Our Privacy Policy now covers WhatsApp sign-in and notifications. To keep using Estimate Pro, please agree. ऐप इस्तेमाल करते रहने के लिए सहमति दें।", no: "No, sign me out / नहीं, साइन आउट करें" });
-      if (!c) { try { await client.auth.signOut(); } catch (e) {} try { localStorage.removeItem(KEY); } catch (e) {} alert("You were signed out because consent was not given. सहमति न देने पर आपको साइन आउट किया गया।"); location.reload(); return; }
+      if (!c) c = await ask({ no: "Sign out" });
+      if (!c) { try { await client.auth.signOut(); } catch (e) {} try { localStorage.removeItem(KEY); } catch (e) {} location.reload(); return; }
       try { await client.auth.updateUser({ data: meta(c) }); } catch (e) {}
       try { await client.rpc("record_consent", { ver_: c.v, wa_: !!c.wa, ua_: String(navigator.userAgent || "").slice(0, 300) }); } catch (e) {}
       try { await client.rpc("set_wa_optout", { off_: !c.wa }); } catch (e) {}

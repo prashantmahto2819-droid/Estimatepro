@@ -3,6 +3,9 @@
 This file is for the people maintaining the app. It is not published with the site (see `.assetsignore`).
 The text users see is `EP_NOTES` in `js/version.js`.
 
+## 2026.11.21-z114
+- Consent dialog cut to the minimum: title, one required tick (Privacy Policy & Terms, with links), one optional tick (WhatsApp updates), Cancel / Agree (Agree stays off until the required tick).
+
 ## 2026.11.21-z113
 - Consent before an account is created (js/ui-consent.js): email sign-up, OTP on WhatsApp / email, Google sign-in and OTP server functions are held until both required boxes (Privacy Policy + Terms; processing and OTP / account messages on WhatsApp / email) are ticked; cancelling sends nothing, so no account is made.
 - WhatsApp update notifications: separate optional box, off by default; the choice sets profiles.wa_optout.
