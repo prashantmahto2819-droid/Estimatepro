@@ -13,12 +13,13 @@
     if ((m = name.match(/BU\s*(\d+)(?:\s*→\s*(\d+))?\s*x\s*(\d+)\s*x\s*(\d+)\s*x\s*(\d+)/))) return { k: "I", D: +m[1], D2: m[2] ? +m[2] : +m[1], B: +m[3], tf: +m[4], tw: +m[5], name: name };
     if ((m = name.match(/ISA\s*(\d+)\s*x\s*(\d+)\s*x\s*(\d+)/))) return { k: "A", a: +m[1], b: +m[2], t: +m[3], dbl: /(^|\s)2\s*-?\s*ISA/.test(name), name: name };
     if ((m = name.match(/(ISMB|ISHB|ISLB|ISWB|ISJB)\s*(\d+)/))) { var key = m[1] + " " + m[2]; t = (S.ISMB && S.ISMB[key]) || (S.ISHB && S.ISHB[key]); n = +m[2]; if (t) return { k: "I", D: t[2], D2: t[2], B: t[3], tf: t[4], tw: t[5], name: key }; return { k: "I", D: n, D2: n, B: Math.max(60, n * 0.4), tf: n * 0.03 + 4, tw: n * 0.018 + 2, name: key }; }
+    if ((m = name.match(/2\s*-\s*ISMC\s*(\d+)\s*(box|b\/b)?/))) { var k2 = "ISMC " + m[1]; t = S.ISMC && S.ISMC[k2]; if (t) return { k: "2C", box: m[2] !== "b/b", D: t[2], B: t[3], tf: t[4], tw: t[5], name: name }; }
     if ((m = name.match(/ISMC\s*(\d+)/))) { var kc = "ISMC " + m[1]; t = S.ISMC && S.ISMC[kc]; n = +m[1]; if (t) return { k: "C", D: t[2], B: t[3], tf: t[4], tw: t[5], name: kc }; return { k: "C", D: n, B: Math.max(40, n * 0.45), tf: n * 0.06 + 3, tw: n * 0.04 + 2, name: kc }; }
     return null;
   }
   /* find the first section token in a summary text (after an optional label) */
   function pick(text, fb) {
-    var s = String(text == null ? "" : text), m = s.match(/(BU\s*\d+(?:\s*→\s*\d+)?\s*x\s*\d+\s*x\s*\d+\s*x\s*\d+|(?:2\s*-\s*)?ISA\s*\d+\s*x\s*\d+\s*x\s*\d+|IS(?:MB|HB|MC|LB|WB)\s*\d+)/);
+    var s = String(text == null ? "" : text), m = s.match(/(2\s*-\s*ISMC\s*\d+\s*(?:box|b\/b)?|BU\s*\d+(?:\s*→\s*\d+)?\s*x\s*\d+\s*x\s*\d+\s*x\s*\d+|(?:2\s*-\s*)?ISA\s*\d+\s*x\s*\d+\s*x\s*\d+|IS(?:MB|HB|MC|LB|WB)\s*\d+)/);
     return sec(m ? m[1] : null) || sec(fb);
   }
   function pickAfter(text, label, fb) { var s = String(text || ""), i = s.indexOf(label); return pick(i >= 0 ? s.slice(i + label.length) : null, fb); }
@@ -58,6 +59,16 @@
         var wa = add(a, mul(f.s, sg * (bf / 2 - tw / 2))), wb = add(b, mul(f.s, sg * (bf / 2 - tw / 2)));
         put(H.member(wa, wb, tw, h, STEEL, roll));
         [1, -1].forEach(function (uu) { var o = mul(f.u, uu * (h / 2 - tf / 2)); put(H.member(add(a, o), add(b, o), bf, tf, STEEL, roll)); });
+      },
+      /* two channels: box = toes together (webs outside), else back to back with a 10 mm gap */
+      chan2: function (a, b, s, roll, box) {
+        if (!s || len3(a, b) < 5) return; var f = frame(a, b, roll);
+        [-1, 1].forEach(function (sg) { var o = mul(f.s, box ? sg * s.B / 2 : sg * (s.B / 2 + 5)); B.chan(add(a, o), add(b, o), s, roll, box ? sg : -sg); });
+      },
+      /* any member section: I (taper allowed), single channel, double channel */
+      mem: function (a, b, s, roll, steps, side) {
+        if (!s) return; if (s.k === "C") return B.chan(a, b, s, roll, side || -1); if (s.k === "2C") return B.chan2(a, b, s, roll, s.box);
+        B.ibeam(a, b, { B: s.B, tf: s.tf, tw: s.tw, D: s.D, D2: s.D2 || s.D }, roll, steps);
       },
       /* angle: two legs; `off` shifts the heel in s; sg = side the horizontal leg points to; bottom = horizontal leg at the bottom */
       angle: function (a, b, s, roll, sOff, sg, uTop, bottom) {
@@ -143,6 +154,7 @@
       if (gableCols && endFrame) return;
       colX.forEach(function (x) {
         var top = isTruss ? eave : colTop(x); var s1 = Object.assign({}, colS);
+        if (s1.k === "C" || s1.k === "2C") Bd.mem([x, y, zb], [x, y, top], s1, 90, 0, x < 0 ? -1 : 1); else
         Bd.ibeam([x, y, zb], [x, y, top], { B: s1.B, tf: s1.tf, tw: s1.tw, D: s1.D2 || s1.D, D2: s1.D }, 90, (s1.D2 && Math.abs(s1.D2 - s1.D) > 2) ? 3 : 0);
       });
       if (isTruss) { truss(Bd, { y: y, S: span, z0: eave, rise: c.rise, n: c.panels, type: c.trussType, top: c.top, bot: c.bot, vert: c.vert, diag: c.diag }); return; }
@@ -153,6 +165,7 @@
         [-1, 1].forEach(function (sg) {
           var a1 = [sg * Lh, y, eave], b1 = [0, y, ridge], rs = { B: rafS.B, tf: rafS.tf, tw: rafS.tw, D: rafS.D, D2: rafS.D2 || rafS.D };
           /* tapered rafter runs knee depth → apex depth; direction from knee to apex */
+          if (rafS.k === "C" || rafS.k === "2C") Bd.mem(a1, b1, rafS, 0, 0, -1); else
           Bd.ibeam(a1, b1, rs, sg > 0 ? 0 : 0, (rs.D2 && Math.abs(rs.D2 - rs.D) > 2) ? 4 : 0);
           if (c.haunch) { var hl = c.haunchLen, dirv = nrm(sub(b1, a1)); for (var st = 0; st < 3; st++) { var f0 = st / 3, f1 = (st + 1) / 3, ea = add(a1, mul(dirv, hl * f0)), eb = add(a1, mul(dirv, hl * f1)), ex = rafS.D * (1.2 - 0.9 * (f0 + f1) / 2) * 0.9, fr = frame(ea, eb, 0), sh = mul(fr.u, -ex / 2); P.push(H.ibeam(add(ea, sh), add(eb, sh), rafS.B, rafS.D + ex, rafS.tf, rafS.tw, STEEL, 0)); } }
         });
@@ -301,7 +314,7 @@
     var bpL = bp.L, bpB = bp.B; var pL = ft.pL || bpL + 200, pB = ft.pB || bpB + 200;
     var c = { style: "portal", span: span, bay: bsp, nb: nb, eave: eave, slope: slope, rise: 0, panels: 8, trussType: "Pratt", col: colS, raf: rafS, haunch: true, haunchLen: span / 10,
       plinth: 300, df: posn(mm(v.df), 500, 6000, 1500), footL: ft.L, footB: ft.B, footD: ft.D, pedL: pL, pedB: pB, bpL: bpL, bpB: bpB, bpt: bp.t, nAnchor: bm ? +bm[1] : num(v.n_bolts, 4), anchorD: bm ? +bm[2] : num(v.bolt_d, 24), anchorLen: 950, tie: true,
-      purlin: purlin, pSp: pm ? +pm[1] * 1000 : posn(mm(v.purlin_spacing), 600, 3000, 1400), sag: v.sag_rods !== false, sagD: 12, eaveStrut: purlin, girt: sec("ISMC 100"), gSp: 1800, rodD: 20, braceS: null,
+      purlin: purlin, pSp: pm ? +pm[1] * 1000 : posn(mm(v.purlin_spacing), 600, 3000, 1400), sag: v.sag_rods !== false, sagD: 12, eaveStrut: sec(v.es_sec, "ISMC 125") || purlin, girt: sec(v.girt_sec, "ISMC 100"), gSp: 1800, rodD: /^Rod/.test(String(v.brace_sec || "")) ? +String(v.brace_sec).match(/\d+/)[0] : 20, braceS: /^ISA/.test(String(v.brace_sec || "")) ? sec(v.brace_sec) : null,
       gableCols: false, walls: v.clad_walls !== false, open: 0, openSides: { L: !!v.open_L, R: !!v.open_R, F: !!v.open_F, B: !!v.open_B }, crane: false };
     return { name: "Portal frame shed " + span / 1000 + " m span", parts: building(v, res, H, c) };
   });

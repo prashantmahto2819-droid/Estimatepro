@@ -1993,6 +1993,12 @@
     q.push(Q("Eave gutter – colour-coated / GI 0.6 mm, 600 mm girth, with brackets", "metre", [row("Gutters", 1, B.gut)], null, 950));
     q.push(Q("Downpipe 110 mm uPVC with clamps & shoe", "metre", [row("Downpipes", B.ndp, B.Ldp)], null, 450));
     q.push(Q("Self-drilling screws 12-14 with EPDM washers", "each", [row("Roof & wall fasteners", B.screws)], null, 8));
+    // floor inside the shed (optional)
+    var fpcc = num(D.inp.floor_pcc) || 0;
+    if (fpcc > 0) {
+      q.push(Q("Earth filling / consolidation under floor (avg 150 mm)", "cum", [row("Shed floor area", 1, G.span, G.length, 0.15)], [CPWD, "2.25"]));
+      q.push(Q("PCC 1:2:4 floor " + g(fpcc) + " mm thick", "cum", [row("Shed floor (span × length)", 1, G.span, G.length, fpcc / 1000)], [CPWD, "4.1.3"]));
+    }
     // foundations
     [D.FD1, D.FD2].forEach(function (F) {
       if (!F) return;
@@ -2607,7 +2613,9 @@
     return C.Param(Object.assign({ key: key, label: label, "default": def, unit: unit || "" }, o || {}));
   }
   var CITIES = Object.keys(LD.BASIC_WIND_SPEED).sort();
-  var MAINS = M.ROLLED.slice();
+  var DBLC = ["ISMC 150", "ISMC 175", "ISMC 200", "ISMC 225", "ISMC 250", "ISMC 300"];
+  /* small sheds (switch rooms, stores, cycle stands) are often framed in channels: single ISMC and two ISMC (box / back to back) */
+  var MAINS = M.ROLLED.slice().concat(SC.by_weight(SC.ISMC), DBLC.map(function (n) { return "2-" + n + " box"; }), DBLC.map(function (n) { return "2-" + n + " b/b"; }));
   var PURL_ALL = SC.by_weight(SC.ISMC).concat(M.ZNAMES, SC.by_weight(SC.ISA));
   var ANG_ALL = SC.by_weight(SC.ISA);
   var CHK = ["check"];
@@ -2619,7 +2627,7 @@
     P("haunch", "Haunch at knee (rolled portal / mono)", true, { kind: "bool", group: "Style" }),
     P("truss_rise", "Truss span / rise ratio (truss styles)", 5.0, { min: 3, max: 8, step: 0.5, group: "Style" }),
     P("span", "Span (c/c of columns)", 20.0, "m", { min: 3, max: 40, step: 0.5, group: "Geometry" }),
-    P("bay", "Bay spacing (frame c/c)", 6.0, "m", { min: 3, max: 10, step: 0.5, group: "Geometry" }),
+    P("bay", "Bay spacing (frame c/c)", 6.0, "m", { min: 1.5, max: 10, step: 0.25, group: "Geometry" }),
     P("n_bays", "Number of bays", 8, { kind: "int", min: 1, max: 40, step: 1, group: "Geometry" }),
     P("eave", "Eave height (low eave for mono-slope)", 7.0, "m", { min: 2.4, max: 15, step: 0.25, group: "Geometry" }),
     P("slope", "Roof slope (portal / PEB / mono)", 10.0, "°", { min: 3, max: 30, step: 0.5, group: "Geometry" }),
@@ -2659,6 +2667,7 @@
     P("plinth_h", "Pedestal top above GL (plinth)", 0.3, "m", { min: 0, max: 1.0, step: 0.05, group: "Foundation" }),
     P("soil_gamma", "Unit weight of soil", 18.0, "kN/m³", { min: 14, max: 21, group: "Foundation" }),
     P("mu_soil", "Base friction coefficient (concrete–soil)", 0.5, { min: 0.3, max: 0.6, step: 0.05, group: "Foundation" }),
+    P("floor_pcc", "Floor inside: PCC 1:2:4 thickness (0 = no floor)", 0, "mm", { min: 0, max: 200, step: 25, group: "Foundation" }),
     P("tie_beam", "Plinth / tie beams between columns", true, { kind: "bool", group: "Foundation" }),
     P("zone", "Seismic zone (IS 1893)", "II", { kind: "select", options: ZONES, group: "Site", help: "Korba / Gevra: zone II" }),
     // ---------- check mode

@@ -45,7 +45,7 @@
   S.classify_i = function (sec, fy, axial) {
     var e = S.eps(fy);
     var fam = sec.family;
-    var b_out = (fam === "ISMB" || fam === "ISHB" || fam === "BUILT") ? sec.b / 2 : sec.b;
+    var b_out = sec.bo != null ? sec.bo : (fam === "ISMB" || fam === "ISHB" || fam === "BUILT") ? sec.b / 2 : sec.b;
     var fl = b_out / sec.tf;
     var web = (sec.h - 2 * sec.tf) / sec.tw;
     var lim = fam === "BUILT" ? [8.4, 9.4, 13.6] : [9.4, 10.5, 15.7];   // welded vs rolled outstand
@@ -166,7 +166,7 @@
   S.shear_strength = function () {
     var p = kw(arguments, ["c", "V", "sec", "fy", "tag"], { tag: "" }, 4);
     var c = p.c, sec = p.sec, t = tg(p.tag);
-    var Av = sec.h * sec.tw;
+    var Av = sec.h * sec.tw * (sec.nw || 1);
     var Vd = c.calc("Design shear strength" + t, "Vd", "Av*fy/(sqrt(3)*gm0*1000)", "kN", "IS 800 cl 8.4.1",
       { Av: R(Av), fy: p.fy, gm0: MT.GAMMA_M0 });
     var ok = c.check("Shear" + t, Math.abs(p.V), Vd, { unit: "kN", clause: "IS 800 cl 8.4" });

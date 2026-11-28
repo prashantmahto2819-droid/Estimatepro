@@ -542,9 +542,9 @@
     var n_purl_side = Math.ceil(raf_len / num(inp.purlin_spacing)) + 1;
     var girt_rows = inp.clad_walls ? Math.ceil(eave / 1.8) : 0;
     var longClad = inp.clad_walls ? (inp.open_L ? 0 : 1) + (inp.open_R ? 0 : 1) : 0, gabClad = inp.clad_walls ? (inp.open_F ? 0 : 1) + (inp.open_B ? 0 : 1) : 0;
-    var girt = section("ISMC 100");
-    var eave_strut = section("ISMC 125");
-    var brace_w = ISA["ISA 50x50x6"][0];
+    var girt = section(inp.girt_sec || "ISMC 100");
+    var eave_strut = section(inp.es_sec || "ISMC 125");
+    var brace_nm = inp.brace_sec || "ISA 50x50x6", brace_rod = /^Rod/.test(brace_nm), brace_w = brace_rod ? Math.pow(+brace_nm.match(/\d+/)[0], 2) / 162 : ISA[brace_nm][0];
     var diag = Math.hypot(bay, raf_len);
     var q = [];
     q.push(Q("Structural steel in portal frames – rolled sections, fabrication & erection incl. " +
@@ -556,11 +556,11 @@
       null, RATE.steel_struct));
     q.push(Q("Secondary steel – purlins, girts, eave struts, bracing", "kg",
       [kg_row("Purlins " + pur.name, 2 * n_purl_side, length, pur.w),
-        girt_rows && longClad ? kg_row("Side girts ISMC 100", longClad * girt_rows, length, girt.w) :
+        girt_rows && longClad ? kg_row("Side girts " + girt.name, longClad * girt_rows, length, girt.w) :
           kg_row("Side girts – none", 0, 0, 0),
-        kg_row("Eave struts ISMC 125", 2, length, eave_strut.w),
-        kg_row("Roof X-bracing ISA 50x50x6 (end bays, both slopes)", 8, diag, brace_w),
-        kg_row("Wall X-bracing ISA 50x50x6 (end bays, both long walls)", 8, Math.hypot(bay, eave), brace_w)],
+        kg_row("Eave struts " + eave_strut.name, 2, length, eave_strut.w),
+        kg_row("Roof X-bracing " + brace_nm + " (end bays, both slopes)", 8, diag, brace_w),
+        kg_row("Wall X-bracing " + brace_nm + " (end bays, both long walls)", 8, Math.hypot(bay, eave), brace_w)],
       null, RATE.steel_light));
     q.push(Q("Colour-coated profiled roofing sheet 0.50 mm TCT with fixings", "sqm",
       [row("Roof (both slopes)", 2, raf_len + 0.3, length + 0.6)], null, RATE.roof_sheet));
@@ -731,6 +731,9 @@
   };
 
   var ISMB_BU = by_weight(ISMB).concat(builtup_series());
+  /* column / rafter choices for check & free design: I-sections, H-sections, single channels, double channels, welded built-up */
+  var DBL_C = ["ISMC 150", "ISMC 175", "ISMC 200", "ISMC 225", "ISMC 250", "ISMC 300", "ISMC 350", "ISMC 400"];
+  var MEMBER_SECS = by_weight(ISMB).concat(by_weight(ISHB), by_weight(ISMC), DBL_C.map(function (n) { return "2-" + n + " box"; }), DBL_C.map(function (n) { return "2-" + n + " b/b"; }), builtup_series());
   M.PORTAL_PARAMS = [
     P("span", "Span (c/c of columns)", 20.0, "m", { min: 6, max: 45, step: 0.5, group: "Geometry" }),
     P("length", "Length of shed", 48.0, "m", { min: 6, max: 300, step: 1, group: "Geometry" }),
@@ -768,12 +771,15 @@
     P("mu_soil", "Base friction coefficient (concrete on soil)", 0.5, { min: 0.3, max: 0.7, step: 0.05, group: "Base plate & foundation",
       help: "IS 456 cl 20.2 sliding check; 0.45–0.55 typical" }),
     P("allow_builtup", "Allow welded built-up sections (BU h×b×tf×tw)", true, { kind: "bool", group: "Restraints" }),
-    P("col_sec", "Column section (check mode)", "ISMB 500", { kind: "select", options: ISMB_BU.slice(),
+    P("col_sec", "Column section (check mode)", "ISMB 500", { kind: "select", options: MEMBER_SECS.slice(),
       group: "My sections", modes: ["check"] }),
-    P("raf_sec", "Rafter section (check mode)", "ISMB 500", { kind: "select", options: ISMB_BU.slice(),
+    P("raf_sec", "Rafter section (check mode)", "ISMB 500", { kind: "select", options: MEMBER_SECS.slice(),
       group: "My sections", modes: ["check"] }),
     P("purlin_sec", "Purlin section (check mode)", "ISMC 125", { kind: "select", options: by_weight(ISMC),
-      group: "My sections", modes: ["check"] })
+      group: "My sections", modes: ["check"] }),
+    P("girt_sec", "Side girt section", "ISMC 100", { kind: "select", options: by_weight(ISMC).concat(by_weight(ISA)), group: "Secondary members" }),
+    P("es_sec", "Eave strut section", "ISMC 125", { kind: "select", options: by_weight(ISMC).concat(by_weight(ISMB).slice(0, 6)), group: "Secondary members" }),
+    P("brace_sec", "Roof & wall X-bracing", "ISA 50x50x6", { kind: "select", options: ["Rod 16 mm", "Rod 20 mm", "Rod 25 mm"].concat(by_weight(ISA)), group: "Secondary members" })
   ]);
 
   C.register({ id: "steel_portal", phase: 2, category: "Steel structures", name: "Industrial shed – portal frame (PEB type)", icon: "🏭",

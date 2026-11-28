@@ -3,6 +3,12 @@
 This file is for the people maintaining the app. It is not published with the site (see `.assetsignore`).
 The text users see is `EP_NOTES` in `js/version.js`.
 
+## 2026.11.21-z117
+- Sections: new double channel (2-ISMC xxx box / b/b) with parallel-axis Iy, closed-box It, two webs in shear, overall width for base plate; classification uses one channel's outstand (bo).
+- Portal shed (steel_portal) check / free design: column & rafter lists now ISMB + ISHB + ISMC + 2-ISMC box/b/b + BU; new 'Secondary members' group (girt, eave strut, bracing angle or rod) used in quantities and 3D.
+- Complete steel shed (steel_shed): ISMC and 2-ISMC in column / rafter lists; bay spacing from 1.5 m; optional PCC 1:2:4 floor (with 150 mm filling) in quantities.
+- 3D: channel and double-channel columns / rafters drawn as channels.
+
 ## 2026.11.21-z116
 - Industrial shed – portal frame (PEB): new group "Cladding & open sides" (walls clad + left long side, right long side, front gable, back gable open). Open sides drop their sheeting and girts in the quantities and 3D; any open side → Cpi ±0.7 (IS 875-3 cl 7.3.2.2).
 - Complete steel shed: front / back gable end open options (sheeting area, Cpi, 3D).

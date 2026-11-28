@@ -142,6 +142,22 @@
     return out.map(function (d) { return d.name; });
   };
 
+  /* double_channel(name, box) - two ISMC: box = toes facing (closed box, webs outside), else back to back (webs together,
+     10 mm gap). Major axis z about the web depth (one channel x 2); minor axis y by the parallel-axis rule.
+     b = overall width (base plate, pedestal); bo = flange outstand of one channel and tw = one web (classification); nw = 2 webs for shear. */
+  S.double_channel = function (name, box) {
+    var ch = S.section(name), g = box ? 0 : 10;
+    var A = 2 * ch.A, d = box ? ch.b - ch.Cy : ch.Cy + g / 2;
+    var Iy = 2 * (ch.Iy + ch.A * d * d), half = box ? ch.b : ch.b + g / 2;
+    var It, Iw;
+    if (box) { var bm = 2 * ch.b - ch.tw, hm = ch.h - ch.tf, Am = bm * hm; It = 4 * Am * Am / (2 * bm / ch.tf + 2 * hm / ch.tw); Iw = 0; }
+    else { It = 2 * ch.It; Iw = 2 * ch.Iw; }
+    return { name: "2-" + name + (box ? " box" : " b/b"), family: box ? "2ISMC_BOX" : "2ISMC", single: name, box: !!box, nw: 2,
+      w: 2 * ch.w, A: A, h: ch.h, b: 2 * half, bo: ch.b, tf: ch.tf, tw: ch.tw,
+      Iz: 2 * ch.Iz, Iy: Iy, rz: ch.rz, ry: Math.sqrt(Iy / A), Zez: 2 * ch.Zez, Zey: Iy / half,
+      Zpz: 2 * ch.Zpz, Zpy: 2 * ch.A * d, It: It, Iw: Iw, Cy: ch.Cy };
+  };
+
   /* section(name) → property dict (cached: the same object is returned for a name, as lru_cache) */
   var _cache = {};
   S.section = function (name) {
@@ -151,7 +167,8 @@
       var v = name.slice(3).split("x").map(function (x) { var n = Number(x.trim()); if (x.trim() === "" || isNaN(n)) throw new Error("ValueError: " + name); return n; });
       if (v.length !== 4) throw new Error("ValueError: " + name);
       r = S.builtup_i(v[0], v[1], v[2], v[3]);
-    } else if (Object.prototype.hasOwnProperty.call(S.ISMB, name)) r = S._ibeam(name, S.ISMB[name], "ISMB");
+    } else if (/^2-ISMC \d+ (box|b\/b)$/.test(name)) r = S.double_channel(name.slice(2, name.lastIndexOf(" ")), / box$/.test(name));
+    else if (Object.prototype.hasOwnProperty.call(S.ISMB, name)) r = S._ibeam(name, S.ISMB[name], "ISMB");
     else if (Object.prototype.hasOwnProperty.call(S.ISHB, name)) r = S._ibeam(name, S.ISHB[name], "ISHB");
     else if (Object.prototype.hasOwnProperty.call(S.ISMC, name)) r = S._channel(name, S.ISMC[name]);
     else if (Object.prototype.hasOwnProperty.call(S.ISA, name)) r = S._angle(name, S.ISA[name]);
