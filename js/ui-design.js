@@ -15,6 +15,18 @@
   D.people = D.people || { designed_by: "", checked_by: "", approved_by: "" };
   function persist() { try { localStorage.setItem("ep_ds", JSON.stringify({ inputs: D.inputs, modes: D.modes, mid: D.mid, people: D.people, ctx: D.ctx, siteCfg: D.siteCfg, bbsCfg: D.bbsCfg, bbsEdits: D.bbsEdits })); } catch (e) {} }
 
+  /* designs saved by name on this device (like files): every module, with its inputs, mode and site / estimate basis */
+  function savedList() { try { return JSON.parse(localStorage.getItem("ep_ds_saved") || "[]"); } catch (e) { return []; } }
+  function savedPut(L) { try { localStorage.setItem("ep_ds_saved", JSON.stringify(L)); return true; } catch (e) { U.toast("Could not save on this device (storage full)"); return false; } }
+  function savedBar() {
+    var L = savedList().sort(function (a, b) { return (b.at || "").localeCompare(a.at || ""); }), cur = D.curSaved && L.filter(function (x) { return x.id === D.curSaved; })[0];
+    var h = '<div class="row" style="gap:8px;flex-wrap:wrap;align-items:center;margin-top:8px;padding-top:8px;border-top:1px solid var(--line)"><b style="font-size:13px">📁 My designs</b>';
+    h += '<select class="in small" id="ds-saved" style="max-width:320px"><option value="">' + (L.length ? "Open a saved design… (" + L.length + ")" : "No saved designs yet") + "</option>" + L.map(function (x) { var m = MODS()[x.mid]; return '<option value="' + esc(x.id) + '"' + (cur && cur.id === x.id ? " selected" : "") + ">" + esc(x.name) + " — " + esc(m ? m.name : x.mid) + "</option>"; }).join("") + "</select>";
+    if (cur) h += '<button type="button" class="btn pri sm" id="ds-savecur">💾 Save “' + esc(cur.name) + '”</button>';
+    h += '<button type="button" class="btn ' + (cur ? "sec" : "pri") + ' sm" id="ds-saveas">💾 Save as…</button>';
+    if (cur) h += '<button type="button" class="btn ghost sm" id="ds-delsaved" title="Delete this saved design">🗑 Delete</button>';
+    return h + "</div>";
+  }
   function load() {
     if (D.loaded || D.loading) return; D.loading = true;
     var i = 0;
@@ -101,7 +113,7 @@
       });
       h += "</div></details>";
     });
-    h += '<div class="row" style="gap:8px;flex-wrap:wrap;margin-top:6px"><button type="button" class="btn ghost sm" id="ds-reset">↺ Reset inputs</button>' + ((spec().presets || []).map(function (pz, i) { return '<button type="button" class="btn sec sm" data-dspreset="' + i + '" title="' + esc(pz.help || "") + '">' + esc(pz.name) + '</button>'; }).join("")) + '<button type="button" class="btn ghost sm" id="ds-save">💾 Save inputs (.json)</button><label class="btn ghost sm" style="cursor:pointer">📂 Load inputs<input type="file" id="ds-load" accept=".json" hidden></label></div></div>';
+    h += '<div class="row" style="gap:8px;flex-wrap:wrap;margin-top:6px"><button type="button" class="btn ghost sm" id="ds-reset">↺ Reset inputs</button>' + ((spec().presets || []).map(function (pz, i) { return '<button type="button" class="btn sec sm" data-dspreset="' + i + '" title="' + esc(pz.help || "") + '">' + esc(pz.name) + '</button>'; }).join("")) + '<button type="button" class="btn ghost sm" id="ds-save">💾 Save inputs (.json)</button><label class="btn ghost sm" style="cursor:pointer">📂 Load inputs<input type="file" id="ds-load" accept=".json" hidden></label></div>' + savedBar() + '</div>';
 
     var res = run();
     if (!res) return h + '<div class="panel" style="padding:14px;border-left:4px solid var(--danger)"><strong>Design could not be completed with these inputs:</strong> ' + esc(D.runErr) + "</div>";
@@ -513,6 +525,24 @@
     if (ds.dsfc) { D.fc = +ds.dsfc; D.sub = "fc"; U.render(); return; }
     var res = D.res, mid = D.mid;
     if (t.id === "ds-reset") { delete D.inputs[mid]; persist(); U.render(); return; }
+    if (t.id === "ds-saveas" || t.id === "ds-savecur") {
+      var SL = savedList(), cs = t.id === "ds-savecur" ? SL.filter(function (x) { return x.id === D.curSaved; })[0] : null;
+      if (!cs) {
+        var nm0 = window.prompt("Name of this design (e.g. Switch room shed 5 × 3 – Gevra)", ((D.res && D.res.title) || (MODS()[mid] || {}).name || "Design") + (project() ? " – " + project() : ""));
+        if (nm0 == null || !nm0.trim()) return;
+        var same = SL.filter(function (x) { return x.name.toLowerCase() === nm0.trim().toLowerCase(); })[0];
+        if (same && !window.confirm("“" + same.name + "” is already saved. Replace it?")) return;
+        cs = same || { id: EP.uid(), name: nm0.trim() }; if (!same) SL.push(cs);
+      }
+      cs.mid = mid; cs.mode = mode(); cs.inputs = JSON.parse(JSON.stringify(values())); cs.ctx = JSON.parse(JSON.stringify(D.ctx || {})); cs.at = new Date().toISOString();
+      if (savedPut(SL)) { D.curSaved = cs.id; U.render(); U.toast("Design saved: " + cs.name); }
+      return;
+    }
+    if (t.id === "ds-delsaved") {
+      var DL = savedList(), dx = DL.filter(function (x) { return x.id === D.curSaved; })[0]; if (!dx) return;
+      if (t.dataset.confirm !== "1") { t.dataset.confirm = "1"; t.textContent = "Click again to delete “" + dx.name + "”"; return; }
+      savedPut(DL.filter(function (x) { return x.id !== dx.id; })); D.curSaved = null; U.render(); U.toast("Saved design deleted"); return;
+    }
     if (t.dataset.dspreset != null) { var pz = (spec().presets || [])[+t.dataset.dspreset]; if (pz) { D.inputs[mid] = Object.assign({}, D.inputs[mid] || {}, pz.set); if (pz.mode) D.modes[mid] = pz.mode; persist(); U.render(); U.toast(pz.name + " applied — the changed inputs are in Style / Cladding / Connections / My sections"); } return; }
     if (t.id === "ds-save") { dl(JSON.stringify({ module: mid, mode: mode(), inputs: values() }, null, 1), mid + "_inputs.json", "application/json"); return; }
     if (!res) return;
@@ -564,6 +594,12 @@
     if (t.id === "lg-q") { D.lgq = t.value; U.render(); return; }
     if (t.id === "ds-cpwd") { D.cpwd = t.value; U.render(); return; }
     if (t.dataset.dsppl) { D.people[t.dataset.dsppl] = t.value; persist(); D.key = ""; U.render(); return; }
+    if (t.id === "ds-saved") {
+      var sv = savedList().filter(function (x) { return x.id === t.value; })[0]; if (!sv) { D.curSaved = null; return; }
+      if (!MODS()[sv.mid]) { U.toast("This design's module is not available"); return; }
+      D.mid = sv.mid; D.inputs[sv.mid] = JSON.parse(JSON.stringify(sv.inputs || {})); if (sv.mode) D.modes[sv.mid] = sv.mode; if (sv.ctx) D.ctx = Object.assign({}, D.ctx || {}, sv.ctx);
+      D.curSaved = sv.id; persist(); U.render(); U.toast("Opened: " + sv.name); return;
+    }
     if (t.id === "ds-load" && t.files && t.files[0]) {
       t.files[0].text().then(function (txt) { try { var j = JSON.parse(txt); if (!j.module || !MODS()[j.module]) throw new Error("not a Design Studio inputs file"); D.mid = j.module; D.inputs[j.module] = j.inputs || {}; if (j.mode) D.modes[j.module] = j.mode; persist(); U.render(); U.toast("Inputs loaded"); } catch (er) { U.toast("Invalid inputs file: " + er.message); } });
       return;

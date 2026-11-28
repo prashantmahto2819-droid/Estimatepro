@@ -3,6 +3,9 @@
 This file is for the people maintaining the app. It is not published with the site (see `.assetsignore`).
 The text users see is `EP_NOTES` in `js/version.js`.
 
+## 2026.11.21-z127
+- Design Studio: 'My designs' bar under the inputs — Save as… (name), open from a list (all modules), Save (overwrite the open one), Delete. Kept on this device (localStorage ep_ds_saved) with module, mode, inputs and site / basis.
+
 ## 2026.11.21-z126
 - Design Studio: modules can carry presets (spec.presets: name, help, mode, set) shown as buttons beside Reset inputs. Complete steel shed: Light PEB, Light small shed (ISMC + angles, free design), Standard.
 
