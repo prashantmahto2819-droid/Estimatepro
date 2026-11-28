@@ -3,6 +3,9 @@
 This file is for the people maintaining the app. It is not published with the site (see `.assetsignore`).
 The text users see is `EP_NOTES` in `js/version.js`.
 
+## 2026.11.21-z122
+- Complete steel shed: group 'Inside: racks & seating' — storage racks (n, L, D, H, shelves, side) and seating benches (n, L, seat MS sheet / BWP ply, side). Quantities: MS angle frames + sheet in kg (CPWD 10.25.2), ply seat Non-SOR, painting 13.61.1. 3D places them in a row along the chosen side.
+
 ## 2026.11.21-z121
 - Complete steel shed: group 'Floor & sides' — fill type (CPWD 2.25 / 2.25(a) / 2.27) and thickness, PCC 1:2:4 floor, finish (13.18 punning / 11.3.1 CC 40 mm), 230 brick dado below the sheeting on clad sides (brick 6.4.2 + plaster 13.4.2 both faces + DPC 4.10; sheeting area reduced), PCC 1:4:8 apron (4.1.8). 3D shows fill, floor, dado (sheeting starts above it) and apron.
 

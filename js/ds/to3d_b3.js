@@ -270,6 +270,29 @@
       colX.forEach(function (x) { var side = x < 0 ? -1 : 1; if (openLong(side)) return; for (var bj = 0; bj < nb; bj++) { if (!bayClad(side, bj)) continue; P.push(H.box(x + side * 140, ys[bj] + bay / 2, 230, bay, -150, c.dado, "brick")); } });
       [ys[0], ys[nb]].forEach(function (y, ei) { if (openGable(ei)) return; P.push(H.box(0, y + (ei === 0 ? -1 : 1) * 140, span, 230, -150, c.dado, "brick")); });
     }
+    /* racks and benches inside, in a row along the chosen side (they wrap to a second row only by reducing the gap) */
+    (function () {
+      var fz = c.floor > 0 ? 100 : 0, I = c.inside; if (!I) return;
+      function along(sideName, n, Lm, Dm, each) {
+        if (!(n > 0)) return; var lng = /long/.test(sideName), run = (lng ? Ltot : span) - 600, gap = Math.max(50, (run - n * Lm) / (n + 1)), stp = Lm + gap;
+        if (n * Lm > run) { stp = run / n; gap = 0; }
+        for (var i2 = 0; i2 < n; i2++) {
+          var u = -run / 2 + gap + Lm / 2 + i2 * stp, cx, cy, w, d;
+          if (lng) { cx = (/Left/.test(sideName) ? -1 : 1) * (Lh - 350 - Dm / 2); cy = y0 + Ltot / 2 + u; w = Dm; d = Lm; }
+          else { cx = u; cy = /Front/.test(sideName) ? y0 + 350 + Dm / 2 : y0 + Ltot - 350 - Dm / 2; w = Lm; d = Dm; }
+          each(cx, cy, w, d);
+        }
+      }
+      along(I.rackSide, I.rackN, I.rackL, I.rackD, function (cx, cy, w, d) {
+        [[-1, -1], [1, -1], [-1, 1], [1, 1]].forEach(function (k2) { P.push(H.box(cx + k2[0] * (w / 2 - 20), cy + k2[1] * (d / 2 - 20), 40, 40, fz, fz + I.rackH, "steel")); });
+        for (var sI = 0; sI < I.rackSh; sI++) { var z = fz + 150 + sI * (I.rackH - 170) / Math.max(1, I.rackSh - 1); P.push(H.box(cx, cy, w, d, z - 20, z, "steel")); }
+      });
+      along(I.benchSide, I.benchN, I.benchL, 400, function (cx, cy, w, d) {
+        P.push(H.box(cx, cy, w, d, fz + 420, fz + 450, I.benchPly ? "wood_light" : "steel"));
+        var lg = w > d, n2 = Math.max(2, Math.ceil(Math.max(w, d) / 1200) + 1);
+        for (var j2 = 0; j2 < n2; j2++) [-1, 1].forEach(function (sg) { var a = -Math.max(w, d) / 2 + 30 + j2 * (Math.max(w, d) - 60) / (n2 - 1), b = sg * (Math.min(w, d) / 2 - 30); P.push(H.box(cx + (lg ? a : b), cy + (lg ? b : a), 40, 40, fz, fz + 420, "steel")); });
+      });
+    })();
     if (c.apron > 0) { var aw = c.apron; [[0, y0 - 300 - aw / 2, span + 600 + 2 * aw, aw], [0, y0 + Ltot + 300 + aw / 2, span + 600 + 2 * aw, aw], [-Lh - 300 - aw / 2, y0 + Ltot / 2, aw, Ltot + 600], [Lh + 300 + aw / 2, y0 + Ltot / 2, aw, Ltot + 600]].forEach(function (b) { P.push(H.box(b[0], b[1], b[2], b[3], -25, 50, "concrete")); }); }
     return P;
   }
@@ -306,7 +329,7 @@
       purlin: purlin, pSp: pm ? +pm[1] * 1000 : posn(mm(v.purlin_spacing), 600, 3000, 1500), sag: v.sag_rods !== false, sagD: num(v.sag_d, 12), eaveStrut: esS, girt: girt, gSp: gm2 ? +gm2[1] * 1000 : posn(mm(v.girt_spacing), 800, 3000, 1800),
       rodD: rd ? +rd[1] : num(v.brace_rod, 20), braceS: /X-angle|K-bracing/.test(String(v.bracing || "")) ? sec(v.brace_sec) : null,
       gableCols: gableCols, gc: sec(v.gc_sec) || sec("ISMB 250"), er: sec(v.er_sec) || sec("ISMB 200"), gcSp: posn(mm(v.gable_col_sp), 2000, 12000, 5000),
-      walls: v.clad_walls !== false, open: 0, openSides: { L: !!v.open_L, R: !!v.open_R, F: !!v.open_F, B: !!v.open_B }, cladBaysL: v.clad_bays_L, cladBaysR: v.clad_bays_R, floor: Math.max(0, num(v.floor_pcc, 0)), fillT: Math.max(0, num(v.fill_t, 150)), dado: Math.max(0, num(v.dado_h, 0) * 1000), apron: Math.max(0, num(v.apron_w, 0) * 1000), crane: !!v.crane, craneSpan: mm(v.crane_span), railH: mm(v.rail_h), gantry: null,
+      walls: v.clad_walls !== false, open: 0, openSides: { L: !!v.open_L, R: !!v.open_R, F: !!v.open_F, B: !!v.open_B }, cladBaysL: v.clad_bays_L, cladBaysR: v.clad_bays_R, inside: { rackN: Math.trunc(num(v.rack_n, 0)), rackL: num(v.rack_L, 1.8) * 1000, rackD: num(v.rack_D, 0.45) * 1000, rackH: num(v.rack_H, 1.8) * 1000, rackSh: Math.max(2, Math.trunc(num(v.rack_sh, 4))), rackSide: String(v.rack_side || "Back gable end"), benchN: Math.trunc(num(v.bench_n, 0)), benchL: num(v.bench_L, 1.5) * 1000, benchPly: /ply/i.test(String(v.bench_seat || "")), benchSide: String(v.bench_side || "Right long side") }, floor: Math.max(0, num(v.floor_pcc, 0)), fillT: Math.max(0, num(v.fill_t, 150)), dado: Math.max(0, num(v.dado_h, 0) * 1000), apron: Math.max(0, num(v.apron_w, 0) * 1000), crane: !!v.crane, craneSpan: mm(v.crane_span), railH: mm(v.rail_h), gantry: null,
       top: kind === "truss" ? pickAfter(tr, "Top chord", v.top_sec) : null, bot: kind === "truss" ? pickAfter(tr, "Bottom chord", v.bot_sec) : null,
       vert: kind === "truss" ? (pickAfter(tr, "Verticals", null) || pickAfter(tr, "Web struts", v.web_sec)) : null, diag: kind === "truss" ? (pickAfter(tr, "Diagonals", null) || pickAfter(tr, "Web ties", v.web_sec)) : null };
     var gt = String(sm(res, "Crane")).match(/gantry\s*(IS\w+\s*\d+)/); if (gt) c.gantry = sec(gt[1]);

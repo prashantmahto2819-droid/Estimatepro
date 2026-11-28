@@ -2027,6 +2027,24 @@
         q.push(Q("DPC 40 mm under dado wall", "sqm", [row("Clad sides", 1, Lc, 0.23)], [CPWD, "4.10"]));
       }
     }
+    // inside the shed: storage racks and seating benches (MS angle frames, welded; painted)
+    var rkN = Math.trunc(num(D.inp.rack_n) || 0), bnN = Math.trunc(num(D.inp.bench_n) || 0), paintA = 0;
+    if (rkN > 0) {
+      var rL = num(D.inp.rack_L), rD = num(D.inp.rack_D), rH = num(D.inp.rack_H), rS = Math.max(2, Math.trunc(num(D.inp.rack_sh)));
+      q.push(Q("Storage rack " + g(rL) + " × " + g(rD) + " × " + g(rH) + " m, " + g(rS) + " shelves – MS angle frame with 1.6 mm MS sheet shelves, welded, incl. fixing", "kg",
+        [row("Posts ISA 40x40x5 (3.0 kg/m), 4 per rack", 4 * rkN, rH, null, 3.0), row("Shelf frames ISA 35x35x5 (2.6 kg/m), all round each shelf", rkN * rS, 2 * (rL + rD), null, 2.6),
+          row("Shelves MS sheet 1.6 mm (12.56 kg/sqm)", rkN * rS, rL, rD, 12.56)], [CPWD, "10.25.2"]));
+      paintA += rkN * (4 * rH * 0.16 + rS * (2 * (rL + rD) * 0.14 + 2 * rL * rD));
+    }
+    if (bnN > 0) {
+      var bL = num(D.inp.bench_L), bW = 0.4, ply = /ply/i.test(String(D.inp.bench_seat || "")), nleg = 2 * Math.max(2, Math.ceil(bL / 1.2) + 1);
+      var brow = [row("Legs ISA 40x40x5 (3.0 kg/m), 0.45 m", bnN * nleg, 0.45, null, 3.0), row("Seat frame ISA 40x40x5, all round + cross members", bnN, 2 * (bL + bW) + (nleg / 2) * bW, null, 3.0)];
+      if (!ply) brow.push(row("Seat MS sheet 3 mm (23.55 kg/sqm)", bnN, bL, bW, 23.55));
+      q.push(Q("Seating bench " + g(bL) + " × 0.40 m, 0.45 m high – MS angle frame, welded" + (ply ? "" : ", 3 mm MS sheet seat"), "kg", brow, [CPWD, "10.25.2"]));
+      if (ply) q.push(Q("19 mm BWP plywood seat (IS 710) with laminate top, fixed on the bench frame", "sqm", [row("Bench seats", bnN, bL, bW)], null, 2400));
+      paintA += bnN * (nleg * 0.45 * 0.16 + (2 * (bL + bW)) * 0.16 + (ply ? 0 : 2 * bL * bW));
+    }
+    if (paintA > 0) q.push(Q("Painting racks / benches – primer + 2 coats synthetic enamel", "sqm", [row("Racks & benches (surface area)", 1, R(paintA, 2))], [CPWD, "13.61.1"]));
     var apw = num(D.inp.apron_w) || 0;
     if (apw > 0) q.push(Q("PCC 1:4:8 apron " + g(apw) + " m wide, 75 mm, around the shed", "cum", [row("Perimeter " + f2(2 * (G.span + G.length) + 4 * apw) + " m", 1, 2 * (G.span + G.length) + 4 * apw, apw, 0.075)], [CPWD, "4.1.8"]));
     // foundations
@@ -2706,6 +2724,16 @@
     P("floor_finish", "Floor finish", "None (PCC only)", { kind: "select", options: ["None (PCC only)", "Neat cement punning", "CC flooring 1:2:4, 40 mm with neat cement finish"], group: "Floor & sides" }),
     P("dado_h", "Brick wall below sheeting on clad sides (0 = none)", 0, "m", { min: 0, max: 3, step: 0.15, group: "Floor & sides", help: "230 mm brick dado, plastered both faces; the sheeting starts above it" }),
     P("apron_w", "PCC apron around the shed (0 = none)", 0, "m", { min: 0, max: 2, step: 0.15, group: "Floor & sides" }),
+    P("rack_n", "Storage racks (0 = none)", 0, "nos", { kind: "int", min: 0, max: 40, group: "Inside: racks & seating" }),
+    P("rack_L", "Rack length", 1.8, "m", { min: 0.6, max: 3, step: 0.1, group: "Inside: racks & seating" }),
+    P("rack_D", "Rack depth", 0.45, "m", { min: 0.3, max: 0.9, step: 0.05, group: "Inside: racks & seating" }),
+    P("rack_H", "Rack height", 1.8, "m", { min: 0.9, max: 3, step: 0.1, group: "Inside: racks & seating" }),
+    P("rack_sh", "Shelves per rack", 4, { kind: "int", min: 2, max: 8, group: "Inside: racks & seating" }),
+    P("rack_side", "Racks placed along", "Back gable end", { kind: "select", options: ["Left long side", "Right long side", "Front gable end", "Back gable end"], group: "Inside: racks & seating" }),
+    P("bench_n", "Seating benches (0 = none)", 0, "nos", { kind: "int", min: 0, max: 40, group: "Inside: racks & seating" }),
+    P("bench_L", "Bench length (≈ 0.5 m per person)", 1.5, "m", { min: 0.9, max: 4, step: 0.1, group: "Inside: racks & seating" }),
+    P("bench_seat", "Bench seat", "MS sheet 3 mm", { kind: "select", options: ["MS sheet 3 mm", "BWP plywood 19 mm (Non-SOR)"], group: "Inside: racks & seating" }),
+    P("bench_side", "Benches placed along", "Right long side", { kind: "select", options: ["Left long side", "Right long side", "Front gable end", "Back gable end"], group: "Inside: racks & seating" }),
     P("tie_beam", "Plinth / tie beams between columns", true, { kind: "bool", group: "Foundation" }),
     P("zone", "Seismic zone (IS 1893)", "II", { kind: "select", options: ZONES, group: "Site", help: "Korba / Gevra: zone II" }),
     // ---------- check mode
