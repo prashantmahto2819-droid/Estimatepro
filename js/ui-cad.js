@@ -22,6 +22,24 @@
     var L = await localIdx(), i = L.findIndex(function (x) { return x.id === meta.id; }), row = { id: meta.id, name: meta.name, units: data.units.disp, ents: data.ents.length, updated: Date.now(), synced: !!meta.synced };
     if (i >= 0) L[i] = Object.assign(L[i], row); else L.unshift(row); await setLocalIdx(L);
   }
+  async function setThumb(id, url) { if (!url) return; var L = await localIdx(), r = L.filter(function (x) { return x.id === id; })[0]; if (r) { r.thumb = url; await setLocalIdx(L); } }
+  function thumbOf(ed) { try { return CAD.plotPng(ed, null, 320); } catch (e) { return null; } }
+  /* drawings with no picture yet: draw one quietly from the saved copy (a hidden editor), a few at a time */
+  var thumbBusy = false;
+  async function fillThumbs() {
+    if (thumbBusy || !kv() || !C.list) return; thumbBusy = true;
+    try {
+      var todo = C.list.filter(function (x) { return !x.thumb && x.local; }).slice(0, 12), done = 0;
+      for (var i = 0; i < todo.length; i++) {
+        var rec = await kv().get("cad:" + todo[i].id); if (!rec || !rec.data) continue;
+        var host = document.createElement("div"); host.style.cssText = "position:fixed;left:-10000px;top:0;width:480px;height:360px;overflow:hidden"; document.body.appendChild(host);
+        var ed = null; try { ed = new CAD.Editor(host, new CAD.Doc(rec.data), { settings: loadSettings() }); var url = thumbOf(ed); if (url) { todo[i].thumb = url; await setThumb(todo[i].id, url); done++; } } catch (e) {}
+        try { if (ed) ed.destroy(); } catch (e) {} host.remove();
+        await new Promise(function (r) { setTimeout(r, 30); });
+      }
+      if (done && !C.cur) U.render();
+    } finally { thumbBusy = false; }
+  }
   async function loadList() {
     C.list = C.list || []; var loc = await localIdx(), cloud = [];
     try {
@@ -29,9 +47,9 @@
       if (r.error) { if (!(U.off && U.off.isNet(r.error))) { C.cloudOk = false; C.cloudErr = r.error.message; } } else { C.cloudOk = true; cloud = r.data || []; }
     } catch (e) { /* offline */ }
     var map = {}; cloud.forEach(function (x) { map[x.id] = { id: x.id, name: x.name, units: x.units, ents: x.ents, thumb: x.thumb, updated: Date.parse(x.updated_at), cloud: true }; });
-    loc.forEach(function (x) { var m = map[x.id]; if (m) { m.local = true; if (x.updated > m.updated + 3000 && !x.synced) m.unsynced = true; } else map[x.id] = Object.assign({ local: true, unsynced: !x.synced }, x); });
+    loc.forEach(function (x) { var m = map[x.id]; if (m) { m.local = true; if (!m.thumb && x.thumb) m.thumb = x.thumb; if (x.updated > m.updated + 3000 && !x.synced) m.unsynced = true; } else map[x.id] = Object.assign({ local: true, unsynced: !x.synced }, x); });
     C.list = Object.keys(map).map(function (k) { return map[k]; }).sort(function (a, b) { return b.updated - a.updated; });
-    U.render();
+    U.render(); setTimeout(fillThumbs, 300);
   }
   async function loadDoc(id) {
     var loc = kv() ? await kv().get("cad:" + id) : null, cloud = null;
@@ -93,7 +111,7 @@
     U.render(); setTimeout(function () { C.ed.resize(); C.ed.zoomExtents(); var cv = C.root.querySelector(".cad-cv"); if (cv) cv.focus({ preventScroll: true }); }, 50);
   }
   function closeEditor() {
-    if (C.ed) { if (tLocal) { clearTimeout(tLocal); tLocal = 0; saveLocal(C.cur, C.ed.doc.d); } if (C.cur && !C.cur.synced && !C.cur.ro) saveCloud(true); C.ed.destroy(); }
+    if (C.ed) { if (tLocal) { clearTimeout(tLocal); tLocal = 0; saveLocal(C.cur, C.ed.doc.d); } if (C.cur && !C.cur.ro) { var th = thumbOf(C.ed), id0 = C.cur.id; if (th) setTimeout(function () { setThumb(id0, th); }, 400); } if (C.cur && !C.cur.synced && !C.cur.ro) saveCloud(true); C.ed.destroy(); }
     clearTimeout(tCloud); C.ed = null; C.root = null; C.cur = null;
   }
   async function newDrawing(name, unit, data) {
@@ -649,7 +667,7 @@
       "<p class='muted' style='margin:0'>Draw and edit plans, sections and details like AutoCAD: lines, polylines, arcs, hatches, dimensions, blocks, layers, object snaps, ortho / polar tracking, trim / extend / offset / fillet, and typed coordinates in mm, m or feet-inches. Open DXF files (DWG: save as DXF first, e.g. with the free ODA File Converter), trace over PDF / scanned drawings, plot PDF sheets and send lengths, areas and counts straight into an estimate.</p>";
     if (!C.cloudOk) h += "<div class='ds-msg' role='note'>Drawings are saved on this device. To keep them online and on all your devices, the super admin runs <code>supabase/cad.sql</code> once in Supabase → SQL Editor. <span class='muted'>(" + esc(C.cloudErr) + ")</span></div>";
     if (!C.list.length) h += "<div class='panel empty'>No drawings yet. Start with <b>+ New drawing</b> or import a DXF.</div>";
-    else h += "<div class='cadlist'>" + C.list.map(function (x) { return "<button type='button' class='cadcard' data-cadopen='" + esc(x.id) + "'>" + (x.thumb ? "<img src='" + esc(x.thumb) + "' alt=''>" : "<div class='cadnothumb'>📐</div>") + "<b>" + esc(x.name) + "</b><span class='muted small'>" + (x.ents || 0) + " objects · " + esc(unitLabel(x.units || "mm")) + "<br>" + esc(when(x.updated)) + (x.unsynced ? " · <span style='color:var(--warn)'>on this device only</span>" : "") + "</span></button>"; }).join("") + "</div>";
+    else h += "<div class='cadlist'>" + C.list.map(function (x) { return "<div class='cadcardw'><button type='button' class='cadcard' data-cadopen='" + esc(x.id) + "'>" + (x.thumb ? "<img src='" + esc(x.thumb) + "' alt=''>" : "<div class='cadnothumb'>📐</div>") + "<b>" + esc(x.name) + "</b><span class='muted small'>" + (x.ents || 0) + " objects · " + esc(unitLabel(x.units || "mm")) + "<br>" + esc(when(x.updated)) + (x.unsynced ? " · <span style='color:var(--warn)'>on this device only</span>" : "") + "</span></button><button type='button' class='cadx' data-caddel='" + esc(x.id) + "' title='Delete this drawing' aria-label='Delete " + esc(x.name) + "'>🗑</button></div>"; }).join("") + "</div>";
     return h + "</div>";
   };
   var after0 = U.after;
@@ -666,6 +684,10 @@
   document.addEventListener("click", function (ev) {
     var t = ev.target.closest && ev.target.closest("button"); if (!t) return; var ds = t.dataset;
     if (ds.cadopen) { openDrawing(ds.cadopen); return; }
+    if (ds.caddel) {
+      if (t.dataset.confirm !== "1") { t.dataset.confirm = "1"; t.textContent = "Delete?"; t.classList.add("on"); setTimeout(function () { if (t.isConnected) { t.dataset.confirm = ""; t.textContent = "🗑"; t.classList.remove("on"); } }, 4000); return; }
+      deleteDrawing(ds.caddel); return;
+    }
     if (ds.cadh === "new") {
       dialog("<h3>New drawing</h3><label class='cad-f'><span>Name</span><input class='in small' id='nd-n' value='Drawing " + ((C.list || []).length + 1) + "'></label><label class='cad-f'><span>Work in</span><select class='in small' id='nd-u'>" + ["mm", "cm", "m", "ftin", "ft", "in"].map(function (u) { return "<option value='" + u + "'>" + unitLabel(u) + "</option>"; }).join("") + "</select></label><label class='cad-f'><span>Drawing scale 1 :</span><select class='in small' id='nd-s'>" + [1, 5, 10, 20, 50, 100, 200, 500, 1000].map(function (s) { return "<option" + (s === 100 ? " selected" : "") + ">" + s + "</option>"; }).join("") + "</select></label><p class='muted small'>The scale sets the size of text, dimensions and linetypes; the geometry is always drawn full size.</p><div class='row' style='gap:8px;justify-content:flex-end'><button type='button' class='btn ghost sm' data-dlg='close'>Cancel</button><button type='button' class='btn pri sm' data-nd='1'>Create</button></div>",
         function (b, dlg) { if (!b.dataset.nd) return; var nm = dlg.querySelector("#nd-n").value.trim() || "Drawing", u = dlg.querySelector("#nd-u").value, sc = +dlg.querySelector("#nd-s").value || 100; closeDialog(); var d = CAD.newDoc(nm, u); d.dim.sc = sc; d.sheet.scale = sc; newDrawing(nm, u, d); });

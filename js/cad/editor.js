@@ -88,7 +88,7 @@
     var c = this.ctx, W = this.W, H = this.H, dpr = this.dpr || 1, K = this.colors(), self = this, doc = this.doc; if (EP.bim) EP.bim.ctx.doc = doc;
     if (!W) return;
     c.setTransform(dpr, 0, 0, dpr, 0, 0); c.fillStyle = K.bg; c.fillRect(0, 0, W, H);
-    this.drawGrid(K);
+    if (!this._plot) this.drawGrid(K);
     var a = this.s2w(0, H), b = this.s2w(W, 0), vis = doc.idx.query(a[0], a[1], b[0], b[1]), order = {}; doc.d.ents.forEach(function (e, i) { order[e.id] = i; });
     vis.sort(function (p, q) { var ip = p.t === "image" ? 0 : p.t === "hatch" ? 1 : 2, iq = q.t === "image" ? 0 : q.t === "hatch" ? 1 : 2; return ip - iq || order[p.id] - order[q.id]; });
     vis.forEach(function (e) { if (!doc.visible(e) || (self.isolated && !self.isolated.has(e.id))) return; self.drawEnt(c, e, null); });
@@ -112,7 +112,7 @@
     // cursor
     if (this.cursorS && this.set.cross && !this.panning) { var s = this.cursorS, L = this.prompt && (this.prompt.kind === "point" || this.prompt.kind === "dist") ? 40 : 0; c.strokeStyle = K.cross; c.lineWidth = 1; c.beginPath(); if (L) { c.moveTo(s[0] - L, s[1] + 0.5); c.lineTo(s[0] + L, s[1] + 0.5); c.moveTo(s[0] + 0.5, s[1] - L); c.lineTo(s[0] + 0.5, s[1] + L); } c.rect(s[0] - 4.5, s[1] - 4.5, 9, 9); c.stroke(); }
     // compass / viewcube
-    this.drawCompass(c, K);
+    if (!this._plot) this.drawCompass(c, K);
   };
   P.drawGrid = function (K) {
     var c = this.ctx, s = this.view.s, self = this, u = UN.get(this.du() === "ftin" ? "ft" : this.du()) || UN.get("mm"), base = u.f, step = base;

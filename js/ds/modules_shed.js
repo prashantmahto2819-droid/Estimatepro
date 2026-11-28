@@ -200,6 +200,13 @@
       rowsL: rowsL, rowsR: rowsR, gsp: gsp || gs_in, fixed: inp.base === "Fixed", gable_cols: inp.gable === GABLE[1], area: span * length };
     G.walls_open_L = !clad || openL;
     G.walls_open_R = !clad || openR;
+    /* sheeting only between some posts of a long side: bays numbered 1… from the front gable */
+    G.baysL = G.walls_open_L ? [] : C.bayList(inp.clad_bays_L, nb); G.baysR = G.walls_open_R ? [] : C.bayList(inp.clad_bays_R, nb);
+    G.fL = G.walls_open_L ? 0 : G.baysL ? G.baysL.length / nb : 1; G.fR = G.walls_open_R ? 0 : G.baysR ? G.baysR.length / nb : 1;
+    if (G.baysL && !G.baysL.length && !G.walls_open_L) { G.walls_open_L = true; G.rowsL = 0; }
+    if (G.baysR && !G.baysR.length && !G.walls_open_R) { G.walls_open_R = true; G.rowsR = 0; }
+    G.partial = (G.fL > 0 && G.fL < 1) || (G.fR > 0 && G.fR < 1);
+    if (G.partial) G.open = true;
     c.let("Plan area", "A", R(G.area, 2), "m²");
     if (length > 120) c.warn("Expansion joint", "Length " + f0(length) + " m > 120 m along purlins – provide a temperature (expansion) joint / slotted purlin connection", "IS 800 cl 3 (expansion joints)");
     else c.info("Temperature effects", "Length ≤ 120 m along purlins and span ≤ 150 m – no expansion joint required; temperature range per IS 875-5 not separately analysed", "IS 800 cl 3.5 / IS 875-5");
@@ -1493,8 +1500,10 @@
 
   /* =========================================================================== gable end */
   M.gable = function (c, inp, G, L, W, PUR, fy, fu, mode) {
-    var need = G.gable_cols || G.clad;
-    if (!need) return null;
+    /* wind posts on a main-frame gable only where the gable sheeting spans more than the max. post spacing
+       (a small shed, e.g. 3 m span, needs none – the girts span corner column to corner column); none if both gables are open */
+    var need = G.gable_cols || (G.clad && G.span > num(inp.gable_col_sp) + 1e-9 && !(inp.open_F && inp.open_B));
+    if (!need) { if (G.clad && !G.gable_cols) c.info("Gable wind posts", "not needed – gable girts span " + f2(G.span) + " m between the corner columns (≤ max. post spacing " + f2(num(inp.gable_col_sp)) + " m)", "Practice"); return null; }
     c.section("Gable end – " + (G.gable_cols ? "gable columns + end rafter" : "wind posts at gable (roof on main frame)"));
     var smax = num(inp.gable_col_sp), nint = Math.max(1, Math.ceil(G.span / smax - 1e-9) - 1), sg = G.span / (nint + 1);
     c.let("Gable columns per end × spacing", "", C.pystr(nint) + " × " + f2(sg) + " m", "", "Practice ≤ 6 m");
@@ -1837,8 +1846,12 @@
     }
     var rows = G.rowsL + G.rowsR;
     if (D.GI && rows) {
-      addM("G1", "Side girt", D.GI.name, G.length, rows, D.GI.w, "secondary", perim(D.GI.sec));
-      if (D.GI.nsag) addM("SR3", "Girt sag rod", "RD 12", G.gsp + 0.1, D.GI.nsag * rows * G.n_bays, 12 * 12 / 162, "secondary", perim(sec_of("RD 12")));
+      if (G.fL === G.fR) addM("G1", "Side girt", D.GI.name, G.length * G.fL, rows, D.GI.w, "secondary", perim(D.GI.sec));
+      else {
+        if (G.rowsL) addM("G1", "Side girt – left long side" + (G.fL < 1 ? " (clad bays " + G.baysL.map(function (i) { return i + 1; }).join(",") + ")" : ""), D.GI.name, G.length * G.fL, G.rowsL, D.GI.w, "secondary", perim(D.GI.sec));
+        if (G.rowsR) addM("G1R", "Side girt – right long side" + (G.fR < 1 ? " (clad bays " + G.baysR.map(function (i) { return i + 1; }).join(",") + ")" : ""), D.GI.name, G.length * G.fR, G.rowsR, D.GI.w, "secondary", perim(D.GI.sec));
+      }
+      if (D.GI.nsag) addM("SR3", "Girt sag rod", "RD 12", G.gsp + 0.1, Math.round(D.GI.nsag * (G.rowsL * G.fL + G.rowsR * G.fR) * G.n_bays), 12 * 12 / 162, "secondary", perim(sec_of("RD 12")));
     }
     if (D.GA && G.clad) {
       var gr = Math.max(1, Math.ceil((sumOf(D.GA.hs) / D.GA.hs.length) / G.gsp - 1e-9));
@@ -1945,8 +1958,8 @@
     sh.push(["Roof sheeting " + g(num(D.inp.roof_sheet_t)) + " mm TCT colour-coated profiled", "sqm", R(roofA, 2)]);
     var wallA = 0;
     if (G.clad) {
-      if (!G.walls_open_L) wallA += G.length * G.eave;
-      if (!G.walls_open_R) wallA += G.length * G.h2;
+      if (!G.walls_open_L) wallA += G.length * G.fL * G.eave;
+      if (!G.walls_open_R) wallA += G.length * G.fR * G.h2;
       var nGab = (D.inp.open_F ? 0 : 1) + (D.inp.open_B ? 0 : 1);
       wallA += nGab * (G.kind === "mono" ? G.span * (G.eave + G.h2) / 2 : G.kind === "truss" ? G.span * G.eave + G.span * G.rise / 2 : G.span * G.eave + G.span * G.rise / 2);
       sh.push(["Wall cladding " + g(num(D.inp.wall_sheet_t)) + " mm TCT colour-coated", "sqm", R(wallA, 2)]);
@@ -1956,7 +1969,7 @@
     var gut = (G.kind === "mono" ? 1 : 2) * (G.length + 0.6);
     var ndp = (G.kind === "mono" ? 1 : 2) * Math.max(2, Math.ceil(G.raf_len * G.length / 50 - 1e-9));
     var Ldp = G.eave + 0.3;
-    var pg = D.SH ? D.SH.pit_g : 0.4, screws = Math.ceil(((G.n_purl * slopes) * G.length / pg + roofA * 1.0 + (G.clad ? (rows * G.length + (wallA - (G.walls_open_L ? 0 : G.length * G.eave) - (G.walls_open_R ? 0 : G.length * G.h2)) / Math.max(G.gsp, 1)) / 0.4 : 0) + 3 * (ridge + flash)) * 1.05);
+    var pg = D.SH ? D.SH.pit_g : 0.4, screws = Math.ceil(((G.n_purl * slopes) * G.length / pg + roofA * 1.0 + (G.clad ? ((G.rowsL * G.fL + G.rowsR * G.fR) * G.length + (wallA - (G.walls_open_L ? 0 : G.length * G.fL * G.eave) - (G.walls_open_R ? 0 : G.length * G.fR * G.h2)) / Math.max(G.gsp, 1)) / 0.4 : 0) + 3 * (ridge + flash)) * 1.05);
     sh.push(["Ridge cap (colour-coated, 600 mm girth)", "metre", R(ridge, 2)]);
     sh.push(["Flashings – verge / barge, corner, apron (450 mm girth)", "metre", R(flash, 2)]);
     sh.push(["Eave gutter 0.6 mm colour-coated / GI, 600 mm girth", "metre", R(gut, 2)]);
@@ -2646,6 +2659,8 @@
     P("clad_walls", "Side & gable walls clad with sheeting", true, { kind: "bool", group: "Cladding" }),
     P("open_L", "Left long side open (no sheeting)", false, { kind: "bool", group: "Cladding" }),
     P("open_R", "Right long side open (no sheeting)", false, { kind: "bool", group: "Cladding" }),
+    P("clad_bays_L", "Left long side – sheet only these bays (1 = front; e.g. 1 or 1,3 or 1-2; blank = all)", "", { kind: "text", group: "Cladding" }),
+    P("clad_bays_R", "Right long side – sheet only these bays (blank = all)", "", { kind: "text", group: "Cladding" }),
     P("open_F", "Front gable end open (no sheeting)", false, { kind: "bool", group: "Cladding" }),
     P("open_B", "Back gable end open (no sheeting)", false, { kind: "bool", group: "Cladding" }),
     P("roof_sheet_t", "Roof sheet thickness (TCT)", "0.50", "mm", { kind: "select", options: ["0.45", "0.50", "0.60"], group: "Cladding" }),

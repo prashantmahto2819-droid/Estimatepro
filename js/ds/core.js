@@ -281,6 +281,19 @@
     return Object.assign({ unit: "", kind: "float", options: null, min: null, max: null, step: null, help: "", group: "Inputs", modes: ["design", "check", "thumb"] }, o);
   };
   C.MODULES = {};
+  /* bayList("1,3" | "1-2" | "2 to 4" | "", nBays) → sorted 0-based bay indices, or null for "all bays" (blank / "all") */
+  C.bayList = function (txt, nb) {
+    var t = String(txt == null ? "" : txt).trim().toLowerCase();
+    if (!t || t === "all") return null;
+    var out = {};
+    t.replace(/to/g, "-").split(/[,;\s]+/).forEach(function (tok) {
+      var m = tok.match(/^(\d+)(?:-(\d+))?$/); if (!m) return;
+      var a = +m[1], b = m[2] ? +m[2] : a; if (a > b) { var x = a; a = b; b = x; }
+      for (var i = a; i <= b; i++) if (i >= 1 && i <= nb) out[i - 1] = true;
+    });
+    return Object.keys(out).map(Number).sort(function (a, b) { return a - b; });
+  };
+
   C.register = function (spec) {
     spec = Object.assign({ references: [], modes: ["design", "check", "thumb"] }, spec);
     /* "free" design: the user's own dimensions (check-mode inputs), bars / sections sized by the app, other checks as suggestions */

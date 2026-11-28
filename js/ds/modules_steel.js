@@ -153,7 +153,7 @@
     var walls = LD.wall_cpe(hw, lw);
     var roof = LD.roof_cpe(slope, hw);
     var cpi = LD.CPI[inp.perm];
-    var openN = inp.clad_walls ? ["open_L", "open_R", "open_F", "open_B"].filter(function (k) { return !!inp[k]; }).length : 0;
+    var openN = inp.clad_walls ? ["open_L", "open_R", "open_F", "open_B"].filter(function (k) { return !!inp[k]; }).length + (String(inp.clad_bays_L || "").trim() || String(inp.clad_bays_R || "").trim() ? 1 : 0) : 0;
     if (openN && cpi < 0.7) { cpi = 0.7; c.info("Open side(s)", openN + " side(s) left without sheeting → large opening, Cpi = ±0.7 used (dominant opening)", "IS 875-3 cl 7.3.2.2"); }
     c.info("External pressure coefficients",
       "walls A " + F(walls.A, "+.2f") + ", B " + F(walls.B, "+.2f") + ", C " + F(walls.C, "+.2f") + "; roof (θ=0°) windward " +
@@ -541,7 +541,9 @@
     var n_cols = 2 * n_frames;
     var n_purl_side = Math.ceil(raf_len / num(inp.purlin_spacing)) + 1;
     var girt_rows = inp.clad_walls ? Math.ceil(eave / 1.8) : 0;
-    var longClad = inp.clad_walls ? (inp.open_L ? 0 : 1) + (inp.open_R ? 0 : 1) : 0, gabClad = inp.clad_walls ? (inp.open_F ? 0 : 1) + (inp.open_B ? 0 : 1) : 0;
+    var bL = inp.clad_walls && !inp.open_L ? C.bayList(inp.clad_bays_L, n_bays) : [], bR = inp.clad_walls && !inp.open_R ? C.bayList(inp.clad_bays_R, n_bays) : [];
+    var fL = !inp.clad_walls || inp.open_L ? 0 : bL ? bL.length / n_bays : 1, fR = !inp.clad_walls || inp.open_R ? 0 : bR ? bR.length / n_bays : 1;
+    var longClad = fL + fR, gabClad = inp.clad_walls ? (inp.open_F ? 0 : 1) + (inp.open_B ? 0 : 1) : 0;
     var girt = section(inp.girt_sec || "ISMC 100");
     var eave_strut = section(inp.es_sec || "ISMC 125");
     var brace_nm = inp.brace_sec || "ISA 50x50x6", brace_rod = /^Rod/.test(brace_nm), brace_w = brace_rod ? Math.pow(+brace_nm.match(/\d+/)[0], 2) / 162 : ISA[brace_nm][0];
@@ -556,7 +558,7 @@
       null, RATE.steel_struct));
     q.push(Q("Secondary steel – purlins, girts, eave struts, bracing", "kg",
       [kg_row("Purlins " + pur.name, 2 * n_purl_side, length, pur.w),
-        girt_rows && longClad ? kg_row("Side girts " + girt.name, longClad * girt_rows, length, girt.w) :
+        girt_rows && longClad ? kg_row("Side girts " + girt.name, girt_rows, longClad * length, girt.w) :
           kg_row("Side girts – none", 0, 0, 0),
         kg_row("Eave struts " + eave_strut.name, 2, length, eave_strut.w),
         kg_row("Roof X-bracing " + brace_nm + " (end bays, both slopes)", 8, diag, brace_w),
@@ -566,7 +568,8 @@
       [row("Roof (both slopes)", 2, raf_len + 0.3, length + 0.6)], null, RATE.roof_sheet));
     if (longClad + gabClad) {
       var wr = [];
-      if (longClad) wr.push(row("Long walls" + (longClad < 2 ? " (" + (inp.open_L ? "right" : "left") + " side only)" : ""), longClad, length, null, eave));
+      if (fL) wr.push(row("Long wall – left side" + (fL < 1 ? " (bays " + bL.map(function (i) { return i + 1; }).join(",") + ")" : ""), 1, length * fL, null, eave));
+      if (fR) wr.push(row("Long wall – right side" + (fR < 1 ? " (bays " + bR.map(function (i) { return i + 1; }).join(",") + ")" : ""), 1, length * fR, null, eave));
       if (gabClad) { var gt = gabClad < 2 ? " (" + (inp.open_F ? "back" : "front") + " end only)" : ""; wr.push(row("Gable walls (rectangle)" + gt, gabClad, span, null, eave), row("Gable walls (triangle)" + gt, gabClad, span, null, rise / 2)); }
       q.push(Q("Colour-coated wall cladding sheet 0.45 mm TCT", "sqm", wr, null, RATE.wall_sheet));
     }
@@ -752,7 +755,9 @@
     P("open_L", "Left long side open (no sheeting)", false, { kind: "bool", group: "Cladding & open sides" }),
     P("open_R", "Right long side open (no sheeting)", false, { kind: "bool", group: "Cladding & open sides" }),
     P("open_F", "Front gable end open (no sheeting)", false, { kind: "bool", group: "Cladding & open sides" }),
-    P("open_B", "Back gable end open (no sheeting)", false, { kind: "bool", group: "Cladding & open sides" })
+    P("open_B", "Back gable end open (no sheeting)", false, { kind: "bool", group: "Cladding & open sides" }),
+    P("clad_bays_L", "Left long side – sheet only these bays (1 = front; e.g. 1 or 1,3 or 1-2; blank = all)", "", { kind: "text", group: "Cladding & open sides" }),
+    P("clad_bays_R", "Right long side – sheet only these bays (blank = all)", "", { kind: "text", group: "Cladding & open sides" })
   ].concat(M._wind_params(), [
     P("purlin_spacing", "Purlin spacing (on slope)", 1.4, "m", { min: 0.8, max: 2.0, step: 0.1, group: "Purlins" }),
     P("sag_rods", "Sag rods at purlin mid-span", true, { kind: "bool", group: "Purlins" }),

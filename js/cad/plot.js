@@ -145,7 +145,7 @@
     var keep = { view: Object.assign({}, ed.view), W: ed.W, H: ed.H, dpr: ed.dpr, cv: ed.cv, ctx: ed.ctx, bg: ed.set.bg, grid: ed.set.grid, sel: ed.sel, hover: ed.hover, cross: ed.set.cross, snap: ed.snapPt };
     var cv = document.createElement("canvas"); cv.width = W; cv.height = H;
     ed.cv = cv; ed.ctx = cv.getContext("2d"); ed.W = W; ed.H = H; ed.dpr = 1; ed.set.bg = "light"; ed.set.grid = false; ed.sel = new Set(); ed.hover = null; ed.set.cross = false; ed.snapPt = null;
-    ed.zoomBox(b, 0.03); try { ed.render(); } finally { var url = cv.toDataURL("image/png"); ed.view = keep.view; ed.W = keep.W; ed.H = keep.H; ed.dpr = keep.dpr; ed.cv = keep.cv; ed.ctx = keep.ctx; ed.set.bg = keep.bg; ed.set.grid = keep.grid; ed.sel = keep.sel; ed.hover = keep.hover; ed.set.cross = keep.cross; ed.snapPt = keep.snap; ed.dirty = true; return url; }
+    ed.zoomBox(b, 0.03); ed._plot = true; try { ed.render(); } finally { ed._plot = false; var url = cv.toDataURL("image/png"); ed.view = keep.view; ed.W = keep.W; ed.H = keep.H; ed.dpr = keep.dpr; ed.cv = keep.cv; ed.ctx = keep.ctx; ed.set.bg = keep.bg; ed.set.grid = keep.grid; ed.sel = keep.sel; ed.hover = keep.hover; ed.set.cross = keep.cross; ed.snapPt = keep.snap; ed.dirty = true; return url; }
   }
   Object.assign(CAD, { plotPdfPages: pdfPages, plotPdf: pdf, plotPng: png, jpegOf: jpegOf, PAPER: PAPER, STD_SCALES: STD, flatEnts: flatEnts });
 })();

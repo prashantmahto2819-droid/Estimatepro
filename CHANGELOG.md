@@ -3,6 +3,11 @@
 This file is for the people maintaining the app. It is not published with the site (see `.assetsignore`).
 The text users see is `EP_NOTES` in `js/version.js`.
 
+## 2026.11.21-z119
+- Complete steel shed and portal shed: 'sheet only these bays' text for each long side (1 = front bay; 1,3 / 1-2; blank = all) — cladding area, girts, sag rods, Cpi (partly open → dominant opening) and 3D follow. Core: DS.core.bayList().
+- Complete steel shed: gable wind posts (and F2 footings) only when the span exceeds the max. gable post spacing and a gable is clad (a 3 m shed had two extra posts).
+- CAD Studio list: thumbnails kept on the device (made on closing a drawing, and drawn quietly for older drawings), and a delete button on each card (click twice). PNG exports and thumbnails leave out the grid, axes and compass.
+
 ## 2026.11.21-z118
 - Complete steel shed: the 'Open sides' select is replaced by four ticks (left / right long side, front / back gable end); girts, cladding area, Cpi (dominant opening) and 3D follow each side. 3D now opens the same long side as the design (previously the select opened opposite sides in design and 3D).
 
