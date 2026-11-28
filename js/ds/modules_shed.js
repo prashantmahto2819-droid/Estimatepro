@@ -2720,7 +2720,7 @@
     P("mu_soil", "Base friction coefficient (concrete–soil)", 0.5, { min: 0.3, max: 0.6, step: 0.05, group: "Foundation" }),
     P("floor_pcc", "Floor inside: PCC 1:2:4 thickness (0 = no floor)", 0, "mm", { min: 0, max: 200, step: 25, group: "Floor & sides" }),
     P("fill_type", "Filling under the floor", "Excavated earth (CPWD 2.25)", { kind: "select", options: ["Excavated earth (CPWD 2.25)", "Brought local earth incl. royalty (CPWD 2.25(a))", "Sand (CPWD 2.27)"], group: "Floor & sides" }),
-    P("fill_t", "Filling thickness (0 = none)", 150, "mm", { min: 0, max: 600, step: 25, group: "Floor & sides" }),
+    P("fill_t", "Filling thickness (0 = none)", 200, "mm", { min: 0, max: 1500, step: 25, group: "Floor & sides", help: "Floor top is at the pedestal top (plinth). Filling = plinth height − PCC thickness, e.g. 300 − 100 = 200 mm" }),
     P("floor_finish", "Floor finish", "None (PCC only)", { kind: "select", options: ["None (PCC only)", "Neat cement punning", "CC flooring 1:2:4, 40 mm with neat cement finish"], group: "Floor & sides" }),
     P("dado_h", "Brick wall below sheeting on clad sides (0 = none)", 0, "m", { min: 0, max: 3, step: 0.15, group: "Floor & sides", help: "230 mm brick dado, plastered both faces; the sheeting starts above it" }),
     P("apron_w", "PCC apron around the shed (0 = none)", 0, "m", { min: 0, max: 2, step: 0.15, group: "Floor & sides" }),

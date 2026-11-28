@@ -264,7 +264,9 @@
       P.push(H.box(-gx, ym, 500, 500, rail + 80, rail + 400, STEEL)); P.push(H.box(gx, ym, 500, 500, rail + 80, rail + 400, STEEL)); P.push(H.box(0, ym, 1600, 1200, rail + 100, rail + 900, "steel_member"));
     }
     /* PCC floor inside the shed (Floor inside: PCC thickness), top 100 mm above ground */
-    if (c.floor > 0) { P.push(H.box(0, y0 + Ltot / 2, span, Ltot, 100 - c.floor, 100, "concrete")); if (c.fillT > 0) P.push(H.box(0, y0 + Ltot / 2, span - 20, Ltot - 20, 100 - c.floor - c.fillT, 100 - c.floor, "soil")); }
+    /* floor top at the pedestal top (plinth level, min 100 above ground); filling below it down to its thickness, at least to the ground */
+    var fTop = c.floor > 0 ? Math.max(100, pH || 0) : 0;
+    if (c.floor > 0) { P.push(H.box(0, y0 + Ltot / 2, span, Ltot, fTop - c.floor, fTop, "concrete")); if (c.fillT > 0) P.push(H.box(0, y0 + Ltot / 2, span + 200, Ltot + 200, Math.min(0, fTop - c.floor - c.fillT), fTop - c.floor, "soil")); }
     /* brick dado below the sheeting on clad sides */
     if (c.walls && c.dado > 0) {
       colX.forEach(function (x) { var side = x < 0 ? -1 : 1; if (openLong(side)) return; for (var bj = 0; bj < nb; bj++) { if (!bayClad(side, bj)) continue; P.push(H.box(x + side * 140, ys[bj] + bay / 2, 230, bay, -150, c.dado, "brick")); } });
@@ -272,7 +274,7 @@
     }
     /* racks and benches inside, in a row along the chosen side (they wrap to a second row only by reducing the gap) */
     (function () {
-      var fz = c.floor > 0 ? 100 : 0, I = c.inside; if (!I) return;
+      var fz = fTop, I = c.inside; if (!I) return;
       function along(sideName, n, Lm, Dm, each) {
         if (!(n > 0)) return; var lng = /long/.test(sideName), run = (lng ? Ltot : span) - 600, gap = Math.max(50, (run - n * Lm) / (n + 1)), stp = Lm + gap;
         if (n * Lm > run) { stp = run / n; gap = 0; }

@@ -3,6 +3,9 @@
 This file is for the people maintaining the app. It is not published with the site (see `.assetsignore`).
 The text users see is `EP_NOTES` in `js/version.js`.
 
+## 2026.11.21-z123
+- Steel shed 3D: floor top at plinth level (pedestal top, min 100 mm), filling drawn below it down to the ground (was a thin layer below ground, hidden). Racks / benches stand on the floor. Default filling 200 mm.
+
 ## 2026.11.21-z122
 - Complete steel shed: group 'Inside: racks & seating' — storage racks (n, L, D, H, shelves, side) and seating benches (n, L, seat MS sheet / BWP ply, side). Quantities: MS angle frames + sheet in kg (CPWD 10.25.2), ply seat Non-SOR, painting 13.61.1. 3D places them in a row along the chosen side.
 
