@@ -1962,6 +1962,7 @@
       if (!G.walls_open_R) wallA += G.length * G.fR * G.h2;
       var nGab = (D.inp.open_F ? 0 : 1) + (D.inp.open_B ? 0 : 1);
       wallA += nGab * (G.kind === "mono" ? G.span * (G.eave + G.h2) / 2 : G.kind === "truss" ? G.span * G.eave + G.span * G.rise / 2 : G.span * G.eave + G.span * G.rise / 2);
+      var dh = num(D.inp.dado_h) || 0; if (dh > 0) wallA = Math.max(0, wallA - (G.length * (G.fL + G.fR) + nGab * G.span) * dh);
       sh.push(["Wall cladding " + g(num(D.inp.wall_sheet_t)) + " mm TCT colour-coated", "sqm", R(wallA, 2)]);
     }
     var ridge = G.kind === "mono" ? 0 : G.length + 0.6;
@@ -2006,12 +2007,28 @@
     q.push(Q("Eave gutter – colour-coated / GI 0.6 mm, 600 mm girth, with brackets", "metre", [row("Gutters", 1, B.gut)], null, 950));
     q.push(Q("Downpipe 110 mm uPVC with clamps & shoe", "metre", [row("Downpipes", B.ndp, B.Ldp)], null, 450));
     q.push(Q("Self-drilling screws 12-14 with EPDM washers", "each", [row("Roof & wall fasteners", B.screws)], null, 8));
-    // floor inside the shed (optional)
-    var fpcc = num(D.inp.floor_pcc) || 0;
-    if (fpcc > 0) {
-      q.push(Q("Earth filling / consolidation under floor (avg 150 mm)", "cum", [row("Shed floor area", 1, G.span, G.length, 0.15)], [CPWD, "2.25"]));
-      q.push(Q("PCC 1:2:4 floor " + g(fpcc) + " mm thick", "cum", [row("Shed floor (span × length)", 1, G.span, G.length, fpcc / 1000)], [CPWD, "4.1.3"]));
+    // floor inside the shed (optional): filling, PCC, finish
+    var fpcc = num(D.inp.floor_pcc) || 0, fillT = num(D.inp.fill_t) || 0, ft = String(D.inp.fill_type || "");
+    if (fpcc > 0 && fillT > 0) {
+      var fc = /Sand/.test(ft) ? "2.27" : /brought|local earth/i.test(ft) ? "2.25(a)" : "2.25";
+      q.push(Q((/Sand/.test(ft) ? "Sand filling" : /brought|local earth/i.test(ft) ? "Filling with brought local earth (incl. royalty)" : "Filling with available excavated earth") + " under floor, " + g(fillT) + " mm, in layers, rammed & watered", "cum", [row("Shed floor area", 1, G.span, G.length, fillT / 1000)], [CPWD, fc]));
     }
+    if (fpcc > 0) q.push(Q("PCC 1:2:4 floor " + g(fpcc) + " mm thick", "cum", [row("Shed floor (span × length)", 1, G.span, G.length, fpcc / 1000)], [CPWD, "4.1.3"]));
+    var ff = String(D.inp.floor_finish || "");
+    if (fpcc > 0 && /punning/i.test(ff)) q.push(Q("Neat cement punning on floor", "sqm", [row("Shed floor", 1, G.span, G.length)], [CPWD, "13.18"]));
+    if (fpcc > 0 && /40 mm/.test(ff)) q.push(Q("Cement concrete flooring 1:2:4, 40 mm, floating coat of neat cement", "sqm", [row("Shed floor", 1, G.span, G.length)], [CPWD, "11.3.1"]));
+    // brick wall below the sheeting on the clad sides (dado) and apron around the shed
+    var dado = G.clad ? num(D.inp.dado_h) || 0 : 0;
+    if (dado > 0) {
+      var nG = (D.inp.open_F ? 0 : 1) + (D.inp.open_B ? 0 : 1), Lc = G.length * (G.fL + G.fR) + nG * G.span;
+      if (Lc > 0) {
+        q.push(Q("Brick work 230 mm in cement mortar 1:6 – dado wall below sheeting, " + g(dado) + " m high (incl. 0.15 m below GL)", "cum", [row("Clad sides, length " + f2(Lc) + " m", 1, Lc, 0.23, dado + 0.15)], [CPWD, "6.4.2"]));
+        q.push(Q("12 mm cement plaster 1:6 on dado wall (both faces)", "sqm", [row("Clad sides", 2, Lc, null, dado)], [CPWD, "13.4.2"]));
+        q.push(Q("DPC 40 mm under dado wall", "sqm", [row("Clad sides", 1, Lc, 0.23)], [CPWD, "4.10"]));
+      }
+    }
+    var apw = num(D.inp.apron_w) || 0;
+    if (apw > 0) q.push(Q("PCC 1:4:8 apron " + g(apw) + " m wide, 75 mm, around the shed", "cum", [row("Perimeter " + f2(2 * (G.span + G.length) + 4 * apw) + " m", 1, 2 * (G.span + G.length) + 4 * apw, apw, 0.075)], [CPWD, "4.1.8"]));
     // foundations
     [D.FD1, D.FD2].forEach(function (F) {
       if (!F) return;
@@ -2683,7 +2700,12 @@
     P("plinth_h", "Pedestal top above GL (plinth)", 0.3, "m", { min: 0, max: 1.0, step: 0.05, group: "Foundation" }),
     P("soil_gamma", "Unit weight of soil", 18.0, "kN/m³", { min: 14, max: 21, group: "Foundation" }),
     P("mu_soil", "Base friction coefficient (concrete–soil)", 0.5, { min: 0.3, max: 0.6, step: 0.05, group: "Foundation" }),
-    P("floor_pcc", "Floor inside: PCC 1:2:4 thickness (0 = no floor)", 0, "mm", { min: 0, max: 200, step: 25, group: "Foundation" }),
+    P("floor_pcc", "Floor inside: PCC 1:2:4 thickness (0 = no floor)", 0, "mm", { min: 0, max: 200, step: 25, group: "Floor & sides" }),
+    P("fill_type", "Filling under the floor", "Excavated earth (CPWD 2.25)", { kind: "select", options: ["Excavated earth (CPWD 2.25)", "Brought local earth incl. royalty (CPWD 2.25(a))", "Sand (CPWD 2.27)"], group: "Floor & sides" }),
+    P("fill_t", "Filling thickness (0 = none)", 150, "mm", { min: 0, max: 600, step: 25, group: "Floor & sides" }),
+    P("floor_finish", "Floor finish", "None (PCC only)", { kind: "select", options: ["None (PCC only)", "Neat cement punning", "CC flooring 1:2:4, 40 mm with neat cement finish"], group: "Floor & sides" }),
+    P("dado_h", "Brick wall below sheeting on clad sides (0 = none)", 0, "m", { min: 0, max: 3, step: 0.15, group: "Floor & sides", help: "230 mm brick dado, plastered both faces; the sheeting starts above it" }),
+    P("apron_w", "PCC apron around the shed (0 = none)", 0, "m", { min: 0, max: 2, step: 0.15, group: "Floor & sides" }),
     P("tie_beam", "Plinth / tie beams between columns", true, { kind: "bool", group: "Foundation" }),
     P("zone", "Seismic zone (IS 1893)", "II", { kind: "select", options: ZONES, group: "Site", help: "Korba / Gevra: zone II" }),
     // ---------- check mode

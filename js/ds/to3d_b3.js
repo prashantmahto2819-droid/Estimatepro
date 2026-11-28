@@ -244,11 +244,11 @@
     /* ---- wall sheeting ---- */
     if (c.walls) {
       var wo = cd + (gs2 ? gs2.B : 60) + 20;
-      colX.forEach(function (x) { var side = x < 0 ? -1 : 1; if (openLong(side)) return; var topz = isTruss ? eave : colTop(x), xo = x + side * wo; for (var bj = 0; bj < nb; bj++) { if (!bayClad(side, bj)) continue; var ya = y0 + bj * bay + 8, yb = y0 + (bj + 1) * bay - 8; P.push(H.quad([xo, ya, 0], [xo, yb, 0], [xo, yb, topz], [xo, ya, topz], "sheet_gi")); } });
+      colX.forEach(function (x) { var side = x < 0 ? -1 : 1; if (openLong(side)) return; var topz = isTruss ? eave : colTop(x), xo = x + side * wo; for (var bj = 0; bj < nb; bj++) { if (!bayClad(side, bj)) continue; var ya = y0 + bj * bay + 8, yb = y0 + (bj + 1) * bay - 8; P.push(H.quad([xo, ya, c.dado || 0], [xo, yb, c.dado || 0], [xo, yb, topz], [xo, ya, topz], "sheet_gi")); } });
       [ys[0], ys[nb]].forEach(function (y, ei) {
         if (openGable(ei)) return;
         var side = ei === 0 ? -1 : 1, yo = y + side * ((colS.B || 200) / 2 + (gs2 ? gs2.B : 60) + 20), nSeg = Math.max(2, Math.round(span / 3000));
-        for (k = 0; k < nSeg; k++) { var xa = -Lh + k * span / nSeg, xb = -Lh + (k + 1) * span / nSeg, ta = Math.min(zRoofAt(xa), zRoofAt(xb)) , tb2 = Math.max(zRoofAt(xa), zRoofAt(xb)); var za = zRoofAt(xa) - 150, zb3 = zRoofAt(xb) - 150; P.push(H.quad([xa, yo, 0], [xb, yo, 0], [xb, yo, zb3], [xa, yo, za], "sheet_gi")); }
+        for (k = 0; k < nSeg; k++) { var xa = -Lh + k * span / nSeg, xb = -Lh + (k + 1) * span / nSeg, ta = Math.min(zRoofAt(xa), zRoofAt(xb)) , tb2 = Math.max(zRoofAt(xa), zRoofAt(xb)); var za = zRoofAt(xa) - 150, zb3 = zRoofAt(xb) - 150; P.push(H.quad([xa, yo, c.dado || 0], [xb, yo, c.dado || 0], [xb, yo, zb3], [xa, yo, za], "sheet_gi")); }
       });
     }
     /* ---- crane gantry ---- */
@@ -264,7 +264,13 @@
       P.push(H.box(-gx, ym, 500, 500, rail + 80, rail + 400, STEEL)); P.push(H.box(gx, ym, 500, 500, rail + 80, rail + 400, STEEL)); P.push(H.box(0, ym, 1600, 1200, rail + 100, rail + 900, "steel_member"));
     }
     /* PCC floor inside the shed (Floor inside: PCC thickness), top 100 mm above ground */
-    if (c.floor > 0) P.push(H.box(0, y0 + Ltot / 2, span, Ltot, 100 - c.floor, 100, "concrete"));
+    if (c.floor > 0) { P.push(H.box(0, y0 + Ltot / 2, span, Ltot, 100 - c.floor, 100, "concrete")); if (c.fillT > 0) P.push(H.box(0, y0 + Ltot / 2, span - 20, Ltot - 20, 100 - c.floor - c.fillT, 100 - c.floor, "soil")); }
+    /* brick dado below the sheeting on clad sides */
+    if (c.walls && c.dado > 0) {
+      colX.forEach(function (x) { var side = x < 0 ? -1 : 1; if (openLong(side)) return; for (var bj = 0; bj < nb; bj++) { if (!bayClad(side, bj)) continue; P.push(H.box(x + side * 140, ys[bj] + bay / 2, 230, bay, -150, c.dado, "brick")); } });
+      [ys[0], ys[nb]].forEach(function (y, ei) { if (openGable(ei)) return; P.push(H.box(0, y + (ei === 0 ? -1 : 1) * 140, span, 230, -150, c.dado, "brick")); });
+    }
+    if (c.apron > 0) { var aw = c.apron; [[0, y0 - 300 - aw / 2, span + 600 + 2 * aw, aw], [0, y0 + Ltot + 300 + aw / 2, span + 600 + 2 * aw, aw], [-Lh - 300 - aw / 2, y0 + Ltot / 2, aw, Ltot + 600], [Lh + 300 + aw / 2, y0 + Ltot / 2, aw, Ltot + 600]].forEach(function (b) { P.push(H.box(b[0], b[1], b[2], b[3], -25, 50, "concrete")); }); }
     return P;
   }
 
@@ -300,7 +306,7 @@
       purlin: purlin, pSp: pm ? +pm[1] * 1000 : posn(mm(v.purlin_spacing), 600, 3000, 1500), sag: v.sag_rods !== false, sagD: num(v.sag_d, 12), eaveStrut: esS, girt: girt, gSp: gm2 ? +gm2[1] * 1000 : posn(mm(v.girt_spacing), 800, 3000, 1800),
       rodD: rd ? +rd[1] : num(v.brace_rod, 20), braceS: /X-angle|K-bracing/.test(String(v.bracing || "")) ? sec(v.brace_sec) : null,
       gableCols: gableCols, gc: sec(v.gc_sec) || sec("ISMB 250"), er: sec(v.er_sec) || sec("ISMB 200"), gcSp: posn(mm(v.gable_col_sp), 2000, 12000, 5000),
-      walls: v.clad_walls !== false, open: 0, openSides: { L: !!v.open_L, R: !!v.open_R, F: !!v.open_F, B: !!v.open_B }, cladBaysL: v.clad_bays_L, cladBaysR: v.clad_bays_R, floor: Math.max(0, num(v.floor_pcc, 0)), crane: !!v.crane, craneSpan: mm(v.crane_span), railH: mm(v.rail_h), gantry: null,
+      walls: v.clad_walls !== false, open: 0, openSides: { L: !!v.open_L, R: !!v.open_R, F: !!v.open_F, B: !!v.open_B }, cladBaysL: v.clad_bays_L, cladBaysR: v.clad_bays_R, floor: Math.max(0, num(v.floor_pcc, 0)), fillT: Math.max(0, num(v.fill_t, 150)), dado: Math.max(0, num(v.dado_h, 0) * 1000), apron: Math.max(0, num(v.apron_w, 0) * 1000), crane: !!v.crane, craneSpan: mm(v.crane_span), railH: mm(v.rail_h), gantry: null,
       top: kind === "truss" ? pickAfter(tr, "Top chord", v.top_sec) : null, bot: kind === "truss" ? pickAfter(tr, "Bottom chord", v.bot_sec) : null,
       vert: kind === "truss" ? (pickAfter(tr, "Verticals", null) || pickAfter(tr, "Web struts", v.web_sec)) : null, diag: kind === "truss" ? (pickAfter(tr, "Diagonals", null) || pickAfter(tr, "Web ties", v.web_sec)) : null };
     var gt = String(sm(res, "Crane")).match(/gantry\s*(IS\w+\s*\d+)/); if (gt) c.gantry = sec(gt[1]);

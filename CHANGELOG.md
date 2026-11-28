@@ -3,6 +3,9 @@
 This file is for the people maintaining the app. It is not published with the site (see `.assetsignore`).
 The text users see is `EP_NOTES` in `js/version.js`.
 
+## 2026.11.21-z121
+- Complete steel shed: group 'Floor & sides' — fill type (CPWD 2.25 / 2.25(a) / 2.27) and thickness, PCC 1:2:4 floor, finish (13.18 punning / 11.3.1 CC 40 mm), 230 brick dado below the sheeting on clad sides (brick 6.4.2 + plaster 13.4.2 both faces + DPC 4.10; sheeting area reduced), PCC 1:4:8 apron (4.1.8). 3D shows fill, floor, dado (sheeting starts above it) and apron.
+
 ## 2026.11.21-z120
 - Send to CAD Studio (3D model / drawings): if a drawing of the same name exists, a dialog offers 'Update it' (replaces the dsmodel and the sheets that came from Design Studio, marked e.ds; hand-drawn objects stay) or 'New copy'.
 - Complete steel shed 3D: PCC floor slab when 'Floor inside: PCC' > 0.
