@@ -294,6 +294,28 @@
     return Object.keys(out).map(Number).sort(function (a, b) { return a - b; });
   };
 
+  /* floor inside / under a shed: shared inputs and quantity items (filling, PCC 1:2:4 floor, finish, PCC apron) */
+  C.floorParams = function (group) {
+    var g = group || "Floor & sides", P = function (k, l, d, u, o) { return C.Param(Object.assign({ key: k, label: l, "default": d, unit: u || "", group: g }, o || {})); };
+    return [P("floor_pcc", "Floor: PCC 1:2:4 thickness (0 = none; pavers / CC flooring: choose under “Along with the design”)", 0, "mm", { min: 0, max: 200, step: 25 }),
+      P("fill_type", "Filling under the floor", "Excavated earth (CPWD 2.25)", "", { kind: "select", options: ["Excavated earth (CPWD 2.25)", "Brought local earth incl. royalty (CPWD 2.25(a))", "Sand (CPWD 2.27)"] }),
+      P("fill_t", "Filling thickness (0 = none)", 200, "mm", { min: 0, max: 1500, step: 25 }),
+      P("floor_finish", "Floor finish", "None (PCC only)", "", { kind: "select", options: ["None (PCC only)", "Neat cement punning", "CC flooring 1:2:4, 40 mm with neat cement finish"] }),
+      P("apron_w", "PCC apron around (0 = none)", 0, "m", { min: 0, max: 2, step: 0.15 })];
+  };
+  C.floorQty = function (Q, row, inp, W, L) {
+    /* the "Along with the design" floor (x_floor: pavers, CC flooring …) and plinth protection, when chosen, replace the PCC floor / apron here; the filling applies to either */
+    var xf = inp.x_floor && inp.x_floor !== "None", q = [], B = "CPWD_DSR_2021", t = Number(inp.floor_pcc) || 0, ft = Number(inp.fill_t) || 0, ty = String(inp.fill_type || ""), ff = String(inp.floor_finish || ""), ap = Number(inp.apron_w) || 0;
+    if (inp.x_plinth) ap = 0;
+    if ((t > 0 || xf) && ft > 0) q.push(Q((/Sand/.test(ty) ? "Sand filling" : /brought/i.test(ty) ? "Filling with brought local earth (incl. royalty)" : "Filling with available excavated earth") + " under floor, " + ft + " mm, in layers, rammed & watered", "cum", [row("Floor area", 1, W, L, ft / 1000)], [B, /Sand/.test(ty) ? "2.27" : /brought/i.test(ty) ? "2.25(a)" : "2.25"]));
+    if (xf) return q.concat(ap > 0 ? [Q("PCC 1:4:8 apron " + ap + " m wide, 75 mm, around", "cum", [row("Perimeter", 1, 2 * (W + L) + 4 * ap, ap, 0.075)], [B, "4.1.8"])] : []);
+    if (t > 0) q.push(Q("PCC 1:2:4 floor " + t + " mm thick", "cum", [row("Floor (width × length)", 1, W, L, t / 1000)], [B, "4.1.3"]));
+    if (t > 0 && /punning/i.test(ff)) q.push(Q("Neat cement punning on floor", "sqm", [row("Floor", 1, W, L)], [B, "13.18"]));
+    if (t > 0 && /40 mm/.test(ff)) q.push(Q("Cement concrete flooring 1:2:4, 40 mm, floating coat of neat cement", "sqm", [row("Floor", 1, W, L)], [B, "11.3.1"]));
+    if (ap > 0) q.push(Q("PCC 1:4:8 apron " + ap + " m wide, 75 mm, around", "cum", [row("Perimeter", 1, 2 * (W + L) + 4 * ap, ap, 0.075)], [B, "4.1.8"]));
+    return q;
+  };
+
   C.register = function (spec) {
     spec = Object.assign({ references: [], modes: ["design", "check", "thumb"] }, spec);
     /* "free" design: the user's own dimensions (check-mode inputs), bars / sections sized by the app, other checks as suggestions */

@@ -584,6 +584,7 @@
     var bbs = CM.footing_bbs("Pad footing", n_cols, ftg.L, ftg.B, ftg.D, ftg);
     q = q.concat(CM.footing_qty("Shed footings", n_cols, ftg.L, ftg.B, ftg.D, num(inp.fck), num(inp.df),
       { pedestal: [ped[0], ped[1], num(inp.df) - ftg.D / 1000 + 0.3], bbs: bbs }));
+    q = q.concat(C.floorQty(Q, row, inp, span, length));
     var plan_area = span * length;
     var steel_main = 0;
     q.slice(0, 2).forEach(function (qq) { qq.rows.forEach(function (r) { steel_main += r.nos * r.length * r.breadth; }); });
@@ -758,7 +759,7 @@
     P("open_B", "Back gable end open (no sheeting)", false, { kind: "bool", group: "Cladding & open sides" }),
     P("clad_bays_L", "Left long side – sheet only these bays (1 = front; e.g. 1 or 1,3 or 1-2; blank = all)", "", { kind: "text", group: "Cladding & open sides" }),
     P("clad_bays_R", "Right long side – sheet only these bays (blank = all)", "", { kind: "text", group: "Cladding & open sides" })
-  ].concat(M._wind_params(), [
+  ].concat(C.floorParams("Floor inside"), M._wind_params(), [
     P("purlin_spacing", "Purlin spacing (on slope)", 1.4, "m", { min: 0.8, max: 2.0, step: 0.1, group: "Purlins" }),
     P("sag_rods", "Sag rods at purlin mid-span", true, { kind: "bool", group: "Purlins" }),
     P("col_K", "Column effective length factor (in-plane)", 2.0, { min: 1.0, max: 3.0, step: 0.1, group: "Restraints",
@@ -1065,7 +1066,7 @@
       "Purlins": pur.name, "Trusses": C.pystr(n_tr) + " nos @ " + F(bay, ".2f") + " m",
       "Steel per truss": F(w_truss * 1.1, ",.0f") + " kg", "Max utilisation": F(c.max_utilisation, ".2f") };
     return C.DesignResult({ module: "steel_truss", title: "Roof truss shed", inputs: inp, calc: c, summary: summary,
-      drawings: [sheet], quantities: q, bbs: [], tables: { "Member forces": tbl }, references: STEEL_REFS });
+      drawings: [sheet], quantities: q.concat(C.floorQty(Q, row, inp, span, length)), bbs: [], tables: { "Member forces": tbl }, references: STEEL_REFS });
   };
 
   M.TRUSS_PARAMS = [
@@ -1091,7 +1092,7 @@
       group: "My sections", modes: ["check"] }),
     P("purlin_sec", "Purlin section (check mode)", "ISMC 100", { kind: "select", options: by_weight(ISMC),
       group: "My sections", modes: ["check"] })
-  ]);
+  ].concat(C.floorParams("Floor inside")));
   C.register({ id: "steel_truss", phase: 2, category: "Steel structures", name: "Industrial shed – roof truss (Pratt / Howe)", icon: "🔺",
     description: "Pin-jointed roof truss with panel-point purlins: IS 875 loads, member forces, double-angle " +
       "chords, single-angle webs, bolts, purlins, reactions.", params: M.TRUSS_PARAMS, run: M.run_truss, references: STEEL_REFS,

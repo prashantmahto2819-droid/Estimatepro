@@ -2009,16 +2009,8 @@
     q.push(Q("Eave gutter – colour-coated / GI 0.6 mm, 600 mm girth, with brackets", "metre", [row("Gutters", 1, B.gut)], null, 950));
     q.push(Q("Downpipe 110 mm uPVC with clamps & shoe", "metre", [row("Downpipes", B.ndp, B.Ldp)], null, 450));
     q.push(Q("Self-drilling screws 12-14 with EPDM washers", "each", [row("Roof & wall fasteners", B.screws)], null, 8));
-    // floor inside the shed (optional): filling, PCC, finish
-    var fpcc = num(D.inp.floor_pcc) || 0, fillT = num(D.inp.fill_t) || 0, ft = String(D.inp.fill_type || "");
-    if (fpcc > 0 && fillT > 0) {
-      var fc = /Sand/.test(ft) ? "2.27" : /brought|local earth/i.test(ft) ? "2.25(a)" : "2.25";
-      q.push(Q((/Sand/.test(ft) ? "Sand filling" : /brought|local earth/i.test(ft) ? "Filling with brought local earth (incl. royalty)" : "Filling with available excavated earth") + " under floor, " + g(fillT) + " mm, in layers, rammed & watered", "cum", [row("Shed floor area", 1, G.span, G.length, fillT / 1000)], [CPWD, fc]));
-    }
-    if (fpcc > 0) q.push(Q("PCC 1:2:4 floor " + g(fpcc) + " mm thick", "cum", [row("Shed floor (span × length)", 1, G.span, G.length, fpcc / 1000)], [CPWD, "4.1.3"]));
-    var ff = String(D.inp.floor_finish || "");
-    if (fpcc > 0 && /punning/i.test(ff)) q.push(Q("Neat cement punning on floor", "sqm", [row("Shed floor", 1, G.span, G.length)], [CPWD, "13.18"]));
-    if (fpcc > 0 && /40 mm/.test(ff)) q.push(Q("Cement concrete flooring 1:2:4, 40 mm, floating coat of neat cement", "sqm", [row("Shed floor", 1, G.span, G.length)], [CPWD, "11.3.1"]));
+    // floor inside the shed (optional): filling, PCC, finish, apron — shared with the other shed modules
+    q = q.concat(C.floorQty(Q, row, D.inp, G.span, G.length));
     // brick wall below the sheeting on the clad sides (dado) and apron around the shed
     var dado = G.clad ? num(D.inp.dado_h) || 0 : 0;
     if (dado > 0) {
@@ -2047,8 +2039,6 @@
       paintA += bnN * (nleg * 0.45 * 0.16 + (2 * (bL + bW)) * 0.16 + (ply ? 0 : 2 * bL * bW));
     }
     if (paintA > 0) q.push(Q("Painting racks / benches – primer + 2 coats synthetic enamel", "sqm", [row("Racks & benches (surface area)", 1, R(paintA, 2))], [CPWD, "13.61.1"]));
-    var apw = num(D.inp.apron_w) || 0;
-    if (apw > 0) q.push(Q("PCC 1:4:8 apron " + g(apw) + " m wide, 75 mm, around the shed", "cum", [row("Perimeter " + f2(2 * (G.span + G.length) + 4 * apw) + " m", 1, 2 * (G.span + G.length) + 4 * apw, apw, 0.075)], [CPWD, "4.1.8"]));
     // foundations
     [D.FD1, D.FD2].forEach(function (F) {
       if (!F) return;
@@ -2720,7 +2710,7 @@
     P("plinth_h", "Pedestal top above GL (plinth)", 0.3, "m", { min: 0, max: 1.0, step: 0.05, group: "Foundation" }),
     P("soil_gamma", "Unit weight of soil", 18.0, "kN/m³", { min: 14, max: 21, group: "Foundation" }),
     P("mu_soil", "Base friction coefficient (concrete–soil)", 0.5, { min: 0.3, max: 0.6, step: 0.05, group: "Foundation" }),
-    P("floor_pcc", "Floor inside: PCC 1:2:4 thickness (0 = no floor)", 0, "mm", { min: 0, max: 200, step: 25, group: "Floor & sides" }),
+    P("floor_pcc", "Floor inside: PCC 1:2:4 thickness (0 = none; pavers / CC flooring: choose under “Along with the design”)", 0, "mm", { min: 0, max: 200, step: 25, group: "Floor & sides" }),
     P("fill_type", "Filling under the floor", "Excavated earth (CPWD 2.25)", { kind: "select", options: ["Excavated earth (CPWD 2.25)", "Brought local earth incl. royalty (CPWD 2.25(a))", "Sand (CPWD 2.27)"], group: "Floor & sides" }),
     P("fill_t", "Filling thickness (0 = none)", 200, "mm", { min: 0, max: 1500, step: 25, group: "Floor & sides", help: "Floor top is at the pedestal top (plinth). Filling = plinth height − PCC thickness, e.g. 300 − 100 = 200 mm" }),
     P("floor_finish", "Floor finish", "None (PCC only)", { kind: "select", options: ["None (PCC only)", "Neat cement punning", "CC flooring 1:2:4, 40 mm with neat cement finish"], group: "Floor & sides" }),

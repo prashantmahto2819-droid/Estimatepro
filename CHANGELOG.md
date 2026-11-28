@@ -3,6 +3,10 @@
 This file is for the people maintaining the app. It is not published with the site (see `.assetsignore`).
 The text users see is `EP_NOTES` in `js/version.js`.
 
+## 2026.11.21-z128
+- Shared floor inputs / quantities (DS.core.floorParams, floorQty) used by steel_shed, steel_portal and steel_truss: filling (2.25 / 2.25(a) / 2.27), PCC 1:2:4 floor, finish, PCC apron.
+- No double counting with the 'Along with the design' extras: when x_floor is chosen its floor replaces the PCC floor / finish here (filling still applies), and x_plinth replaces the apron. 3D (steel_shed, steel_portal) shows the floor, filling and apron for either.
+
 ## 2026.11.21-z127
 - Design Studio: 'My designs' bar under the inputs — Save as… (name), open from a list (all modules), Save (overwrite the open one), Delete. Kept on this device (localStorage ep_ds_saved) with module, mode, inputs and site / basis.
 
