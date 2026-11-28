@@ -3,6 +3,11 @@
 This file is for the people maintaining the app. It is not published with the site (see `.assetsignore`).
 The text users see is `EP_NOTES` in `js/version.js`.
 
+## 2026.11.21-z116
+- Industrial shed – portal frame (PEB): new group "Cladding & open sides" (walls clad + left long side, right long side, front gable, back gable open). Open sides drop their sheeting and girts in the quantities and 3D; any open side → Cpi ±0.7 (IS 875-3 cl 7.3.2.2).
+- Complete steel shed: front / back gable end open options (sheeting area, Cpi, 3D).
+- 3D: c.openSides {L,R,F,B}; old models with c.open still work.
+
 ## 2026.11.21-z115
 - BIM quantity take-off SOR mapping fixes (found while preparing the Barpali estimate): rolling shutters (door kind shutter) → new key door_rolling, CPWD 10.6.1, and no door frame for them; steel doors → 10.5.1 (text search used to pick 9.52, a deduct item); Kota floors → 11.26.1 (was a wall-lining item); skirting → 11.41.2 (was marble veneer 8.11.1); exhaust fans → EM 1.50.1 installation (was louvre extra 1.51).
 

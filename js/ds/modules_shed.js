@@ -247,7 +247,7 @@
     var hw = G.eave / G.span, lw = G.length / G.span;
     var walls = LD.wall_cpe(hw, lw);
     var roof = LD.roof_cpe(G.slope, hw);
-    var cpi = LD.CPI[inp.perm], openish = G.walls_open_L || G.walls_open_R;
+    var cpi = LD.CPI[inp.perm], openish = G.walls_open_L || G.walls_open_R || (G.clad && (!!inp.open_F || !!inp.open_B));
     if (openish) {
       cpi = Math.max(cpi, 0.7);
       c.info("Open sides / unclad walls", "large openings → Cpi = ±0.7 (dominant opening); no wall pressure on open faces (columns only)", "IS 875-3 cl 7.3.2.2");
@@ -1947,7 +1947,8 @@
     if (G.clad) {
       if (!G.walls_open_L) wallA += G.length * G.eave;
       if (!G.walls_open_R) wallA += G.length * G.h2;
-      wallA += 2 * (G.kind === "mono" ? G.span * (G.eave + G.h2) / 2 : G.kind === "truss" ? G.span * G.eave + G.span * G.rise / 2 : G.span * G.eave + G.span * G.rise / 2);
+      var nGab = (D.inp.open_F ? 0 : 1) + (D.inp.open_B ? 0 : 1);
+      wallA += nGab * (G.kind === "mono" ? G.span * (G.eave + G.h2) / 2 : G.kind === "truss" ? G.span * G.eave + G.span * G.rise / 2 : G.span * G.eave + G.span * G.rise / 2);
       sh.push(["Wall cladding " + g(num(D.inp.wall_sheet_t)) + " mm TCT colour-coated", "sqm", R(wallA, 2)]);
     }
     var ridge = G.kind === "mono" ? 0 : G.length + 0.6;
@@ -2636,6 +2637,8 @@
     P("perm", "Wall openings (internal pressure)", "Medium (5–20 %)", { kind: "select", options: Object.keys(LD.CPI), group: "Wind" }),
     P("clad_walls", "Side & gable walls clad with sheeting", true, { kind: "bool", group: "Cladding" }),
     P("open_sides", "Open sides", OPEN[0], { kind: "select", options: OPEN, group: "Cladding" }),
+    P("open_F", "Front gable end open (no sheeting)", false, { kind: "bool", group: "Cladding" }),
+    P("open_B", "Back gable end open (no sheeting)", false, { kind: "bool", group: "Cladding" }),
     P("roof_sheet_t", "Roof sheet thickness (TCT)", "0.50", "mm", { kind: "select", options: ["0.45", "0.50", "0.60"], group: "Cladding" }),
     P("wall_sheet_t", "Wall sheet thickness (TCT)", "0.45", "mm", { kind: "select", options: ["0.45", "0.50", "0.60"], group: "Cladding" }),
     P("purlin_fam", "Purlin / girt type", PURLIN_FAM[0], { kind: "select", options: PURLIN_FAM, group: "Cladding" }),

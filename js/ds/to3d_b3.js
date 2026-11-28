@@ -198,15 +198,20 @@
     });
     /* eave struts (along y at the column tops) */
     colX.forEach(function (x) { var zt = isTruss ? eave : colTop(x); if (es2) Bd.chan([x + (x < 0 ? 1 : -1) * (colS.B * 0 + 0), y0, zt - es2.D / 2 - 5], [x, y0 + Ltot, zt - es2.D / 2 - 5], es2, 0, x < 0 ? -1 : 1); });
+    /* open sides: c.openSides {L, R, F, B} (left / right long side, front / back gable end); c.open (0/1/2) kept for old models */
+    var OS = c.openSides || { L: c.open === 2, R: c.open >= 1, F: false, B: false };
+    function openLong(side) { return side < 0 ? !!OS.L : !!OS.R; }
+    function openGable(ei) { return ei === 0 ? !!OS.F : !!OS.B; }
     /* girts: along y on both long walls, outside the columns */
     var gz0 = 1200, gSp = c.gSp, cd = (colS.D || 400) / 2;
     if (gs2) colX.forEach(function (x) {
       var side = x < 0 ? -1 : 1, topz = isTruss ? eave : colTop(x), ng = Math.max(1, Math.floor((topz - gz0) / gSp)), xo = x + side * (cd + gs2.B / 2 + 5);
-      if (c.open === 2 || (c.open === 1 && side > 0)) return;
+      if (openLong(side)) return;
       for (k = 0; k <= ng; k++) { var zg = gz0 + k * (topz - gz0) / ng - (k === ng ? gs2.D / 2 + 20 : 0); Bd.chan([xo, y0, zg], [xo, y0 + Ltot, zg], gs2, 0, side > 0 ? -1 : 1); }
     });
     /* end-wall girts (simple rails between frames, outside) */
     if (gs2 && c.walls && !gableCols) [ys[0], ys[nb]].forEach(function (y, ei) {
+      if (openGable(ei)) return;
       var side = ei === 0 ? -1 : 1, yo = y + side * ((colS.B || 200) / 2 + gs2.B / 2 + 5), ng = Math.max(1, Math.floor((eave - gz0) / gSp));
       for (k = 0; k <= ng; k++) { var zg = gz0 + k * (eave - gz0) / ng - (k === ng ? gs2.D / 2 + 20 : 0); Bd.chan([-Lh, yo, zg], [Lh, yo, zg], gs2, 0, side > 0 ? -1 : 1); }
     });
@@ -218,12 +223,13 @@
       var xa = sl.xa, xb = sl.xb, za = isTruss ? eave : zRoofAt(xa), zb2 = zRoofAt(xb), up = (c.purlin ? c.purlin.D : 100) + chordOff + 10;
       [0, nb - 1].forEach(function (bi) { var ya = ys[bi], yb = ys[bi + 1]; var o = 60; brace([xa, ya, za + up], [xb, yb, zb2 + up]); brace([xa, yb, za + up], [xb, ya, zb2 + up]); });
     });
-    colX.forEach(function (x) { var side = x < 0 ? -1 : 1, xo = x + side * (cd + 10); if (c.open === 2 || (c.open === 1 && side > 0)) return; var topz = isTruss ? eave : colTop(x); bayIdx.forEach(function (bi) { var ya = ys[bi], yb = ys[bi + 1]; brace([xo, ya, zb + 100], [xo, yb, topz - 250]); brace([xo, yb, zb + 100], [xo, ya, topz - 250]); }); });
+    colX.forEach(function (x) { var side = x < 0 ? -1 : 1, xo = x + side * (cd + 10); if (openLong(side)) return; var topz = isTruss ? eave : colTop(x); bayIdx.forEach(function (bi) { var ya = ys[bi], yb = ys[bi + 1]; brace([xo, ya, zb + 100], [xo, yb, topz - 250]); brace([xo, yb, zb + 100], [xo, ya, topz - 250]); }); });
     /* ---- wall sheeting ---- */
     if (c.walls) {
       var wo = cd + (gs2 ? gs2.B : 60) + 20;
-      colX.forEach(function (x) { var side = x < 0 ? -1 : 1; if (c.open === 2 || (c.open === 1 && side > 0)) return; var topz = isTruss ? eave : colTop(x), xo = x + side * wo; for (var bj = 0; bj < nb; bj++) { var ya = y0 + bj * bay + 8, yb = y0 + (bj + 1) * bay - 8; P.push(H.quad([xo, ya, 0], [xo, yb, 0], [xo, yb, topz], [xo, ya, topz], "sheet_gi")); } });
+      colX.forEach(function (x) { var side = x < 0 ? -1 : 1; if (openLong(side)) return; var topz = isTruss ? eave : colTop(x), xo = x + side * wo; for (var bj = 0; bj < nb; bj++) { var ya = y0 + bj * bay + 8, yb = y0 + (bj + 1) * bay - 8; P.push(H.quad([xo, ya, 0], [xo, yb, 0], [xo, yb, topz], [xo, ya, topz], "sheet_gi")); } });
       [ys[0], ys[nb]].forEach(function (y, ei) {
+        if (openGable(ei)) return;
         var side = ei === 0 ? -1 : 1, yo = y + side * ((colS.B || 200) / 2 + (gs2 ? gs2.B : 60) + 20), nSeg = Math.max(2, Math.round(span / 3000));
         for (k = 0; k < nSeg; k++) { var xa = -Lh + k * span / nSeg, xb = -Lh + (k + 1) * span / nSeg, ta = Math.min(zRoofAt(xa), zRoofAt(xb)) , tb2 = Math.max(zRoofAt(xa), zRoofAt(xb)); var za = zRoofAt(xa) - 150, zb3 = zRoofAt(xb) - 150; P.push(H.quad([xa, yo, 0], [xb, yo, 0], [xb, yo, zb3], [xa, yo, za], "sheet_gi")); }
       });
@@ -275,7 +281,7 @@
       purlin: purlin, pSp: pm ? +pm[1] * 1000 : posn(mm(v.purlin_spacing), 600, 3000, 1500), sag: v.sag_rods !== false, sagD: num(v.sag_d, 12), eaveStrut: esS, girt: girt, gSp: gm2 ? +gm2[1] * 1000 : posn(mm(v.girt_spacing), 800, 3000, 1800),
       rodD: rd ? +rd[1] : num(v.brace_rod, 20), braceS: /X-angle|K-bracing/.test(String(v.bracing || "")) ? sec(v.brace_sec) : null,
       gableCols: gableCols, gc: sec(v.gc_sec) || sec("ISMB 250"), er: sec(v.er_sec) || sec("ISMB 200"), gcSp: posn(mm(v.gable_col_sp), 2000, 12000, 5000),
-      walls: v.clad_walls !== false, open: /Both/.test(String(v.open_sides)) ? 2 : /One/.test(String(v.open_sides)) ? 1 : 0, crane: !!v.crane, craneSpan: mm(v.crane_span), railH: mm(v.rail_h), gantry: null,
+      walls: v.clad_walls !== false, open: /Both/.test(String(v.open_sides)) ? 2 : /One/.test(String(v.open_sides)) ? 1 : 0, openSides: { L: /Both/.test(String(v.open_sides)), R: /Both|One/.test(String(v.open_sides)), F: !!v.open_F, B: !!v.open_B }, crane: !!v.crane, craneSpan: mm(v.crane_span), railH: mm(v.rail_h), gantry: null,
       top: kind === "truss" ? pickAfter(tr, "Top chord", v.top_sec) : null, bot: kind === "truss" ? pickAfter(tr, "Bottom chord", v.bot_sec) : null,
       vert: kind === "truss" ? (pickAfter(tr, "Verticals", null) || pickAfter(tr, "Web struts", v.web_sec)) : null, diag: kind === "truss" ? (pickAfter(tr, "Diagonals", null) || pickAfter(tr, "Web ties", v.web_sec)) : null };
     var gt = String(sm(res, "Crane")).match(/gantry\s*(IS\w+\s*\d+)/); if (gt) c.gantry = sec(gt[1]);
@@ -296,7 +302,7 @@
     var c = { style: "portal", span: span, bay: bsp, nb: nb, eave: eave, slope: slope, rise: 0, panels: 8, trussType: "Pratt", col: colS, raf: rafS, haunch: true, haunchLen: span / 10,
       plinth: 300, df: posn(mm(v.df), 500, 6000, 1500), footL: ft.L, footB: ft.B, footD: ft.D, pedL: pL, pedB: pB, bpL: bpL, bpB: bpB, bpt: bp.t, nAnchor: bm ? +bm[1] : num(v.n_bolts, 4), anchorD: bm ? +bm[2] : num(v.bolt_d, 24), anchorLen: 950, tie: true,
       purlin: purlin, pSp: pm ? +pm[1] * 1000 : posn(mm(v.purlin_spacing), 600, 3000, 1400), sag: v.sag_rods !== false, sagD: 12, eaveStrut: purlin, girt: sec("ISMC 100"), gSp: 1800, rodD: 20, braceS: null,
-      gableCols: false, walls: v.clad_walls !== false, open: 0, crane: false };
+      gableCols: false, walls: v.clad_walls !== false, open: 0, openSides: { L: !!v.open_L, R: !!v.open_R, F: !!v.open_F, B: !!v.open_B }, crane: false };
     return { name: "Portal frame shed " + span / 1000 + " m span", parts: building(v, res, H, c) };
   });
 
