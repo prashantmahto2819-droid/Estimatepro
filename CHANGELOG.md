@@ -3,6 +3,9 @@
 This file is for the people maintaining the app. It is not published with the site (see `.assetsignore`).
 The text users see is `EP_NOTES` in `js/version.js`.
 
+## 2026.11.21-z129
+- 3D toolbar: '🌍 Ground' toggle (v3.showGround). Design Studio drawings set the natural ground level to the model's ground (bs.ngl = 0) and no longer hide the ground automatically, so footings are below the surface.
+
 ## 2026.11.21-z128
 - Shared floor inputs / quantities (DS.core.floorParams, floorQty) used by steel_shed, steel_portal and steel_truss: filling (2.25 / 2.25(a) / 2.27), PCC 1:2:4 floor, finish, PCC apron.
 - No double counting with the 'Along with the design' extras: when x_floor is chosen its floor replaces the PCC floor / finish here (filling still applies), and x_plinth replaces the apron. 3D (steel_shed, steel_portal) shows the floor, filling and apron for either.

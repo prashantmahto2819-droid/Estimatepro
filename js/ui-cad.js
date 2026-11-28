@@ -635,7 +635,7 @@
   /* Design Studio → one 3D model (dsmodel entity) in a new drawing, opened with the 3D view */
   function open3dFor(model) {
     var below = model.parts.some(function (q) { var t = q[0]; return (t === "b" || t === "t") ? q[5] < 0 : t === "c" ? q[4] < 0 : t === "p" ? q[2] < 0 : (t === "m" || t === "i") ? (q[1][2] < 0 || q[2][2] < 0) : false; });
-    setTimeout(function () { try { if (C.ed && C.ed.on3d && C.v3mode === "off") C.ed.on3d(); if (below) setTimeout(function () { if (C.v3) { C.v3.showGround = false; C.v3.dirty = true; } }, 200); } catch (er) { console.error(er); } }, 400);
+    setTimeout(function () { try { if (C.ed && C.ed.on3d && C.v3mode === "off") C.ed.on3d(); setTimeout(function () { var gb = C.root && C.root.querySelector("[data-v3t=showGround]"); if (gb && C.v3) gb.setAttribute("aria-pressed", String(!!C.v3.showGround)); }, 300); } catch (er) { console.error(er); } }, 400);
   }
   /* the drawing this design was sent to before (same name), so a changed design updates it instead of making another copy */
   async function sameNamed(name) { var L = await localIdx(); var m = L.filter(function (x) { return x.name === name; }).sort(function (a, b) { return b.updated - a.updated; })[0]; if (!m) { try { var r = await db().from("cad_drawings").select("id,name,updated_at").eq("owner", me()).eq("name", name).order("updated_at", { ascending: false }).limit(1); if (r.data && r.data[0]) m = { id: r.data[0].id }; } catch (e) {} } return m ? m.id : null; }
@@ -649,7 +649,7 @@
   }
   async function updateExisting(id, newEnts, keep) {
     var L = await loadDoc(id); if (!L) return false;
-    var d = L.data; d.ents = d.ents.filter(function (e) { return !keep(e); }).concat(newEnts);
+    var d = L.data; d.ents = d.ents.filter(function (e) { return !keep(e); }).concat(newEnts); try { EP.bim.ensure(d).ngl = 0; } catch (e) {}
     await openDrawing(id, { meta: L.meta, data: d, recovered: true }); changed(); return true;
   }
   CAD.sendModel = async function (model, name, mid) {
@@ -660,7 +660,7 @@
       S.tab = "cad"; try { history.replaceState(null, "", "#cad"); } catch (e) {}
       if (await updateExisting(old, [ent0], function (e) { return e.t === "dsmodel"; })) { window.scrollTo(0, 0); open3dFor(model); U.toast("Drawing updated with the changed design"); return; }
     }
-    var B = EP.bim, d = CAD.newDoc(name || "Design Studio 3D model", "mm"), bs = B.ensure(d), lv = bs.levels && bs.levels[0];
+    var B = EP.bim, d = CAD.newDoc(name || "Design Studio 3D model", "mm"), bs = B.ensure(d), lv = (bs.ngl = 0, bs.levels && bs.levels[0]);
     d.ents = [{ id: CAD.uid(), t: "dsmodel", p: [0, 0], rot: 0, mod: mid || "", name: model.name || name, parts: model.parts, lvl: lv ? lv.id : undefined, layer: "0" }];
     S.tab = "cad"; try { history.replaceState(null, "", "#cad"); } catch (e) {} await newDrawing(d.name, "mm", d); window.scrollTo(0, 0);
     open3dFor(model);
@@ -673,7 +673,7 @@
     var res = CAD.parseDxf(dxf.to_dxf(sheets), { unitMm: 1 }), d = CAD.newDoc(name || "Design Studio drawing", "mm");
     Object.keys(res.layers).forEach(function (k) { d.layers[k] = res.layers[k]; }); d.blocks = res.blocks; d.ents = res.ents.map(function (e) { e.id = CAD.uid(); e.ds = 1; return e; });
     if (model && model.parts && model.parts.length) {   /* the 3D model of the same design, placed to the right of the sheets */
-      var B = EP.bim, bs = B.ensure(d), lv = bs.levels && bs.levels[0], G = EP.geom, all = [], ent = { id: CAD.uid(), t: "dsmodel", p: [0, 0], rot: 0, mod: mid || "", name: model.name || name, parts: model.parts, lvl: lv ? lv.id : undefined, layer: "0" };
+      var B = EP.bim, bs = B.ensure(d), lv = (bs.ngl = 0, bs.levels && bs.levels[0]), G = EP.geom, all = [], ent = { id: CAD.uid(), t: "dsmodel", p: [0, 0], rot: 0, mod: mid || "", name: model.name || name, parts: model.parts, lvl: lv ? lv.id : undefined, layer: "0" };
       d.ents.forEach(function (e) { try { all = all.concat(G.segsOf(e, d.blocks)); } catch (er) {} });
       B.ctx.doc = { d: d }; var mb = G.bboxSegs(B.EXT.dsmodel.plan({ d: d }, ent).segs), sb = all.length ? G.bboxSegs(all) : [0, 0, 0, 0];
       ent.p = [sb[2] + 5000 - mb[0], (sb[1] + sb[3]) / 2 - (mb[1] + mb[3]) / 2]; d.ents.push(ent);
@@ -681,7 +681,7 @@
     S.tab = "cad"; try { history.replaceState(null, "", "#cad"); } catch (e) {}
     if (upd) {   /* replace what came from Design Studio (sheets + model), keep what was drawn by hand on other layers */
       var gen = {}; d.ents.forEach(function (e) { gen[e.layer] = 1; });
-      var L1 = await loadDoc(old); if (L1) { Object.keys(d.layers).forEach(function (k) { L1.data.layers[k] = d.layers[k]; }); Object.keys(d.blocks || {}).forEach(function (k) { L1.data.blocks[k] = d.blocks[k]; }); var flagged = L1.data.ents.some(function (e) { return e.ds; }); L1.data.ents = L1.data.ents.filter(function (e) { return !(e.t === "dsmodel" || e.ds || (!flagged && gen[e.layer])); }).concat(d.ents);
+      var L1 = await loadDoc(old); if (L1) { try { EP.bim.ensure(L1.data).ngl = 0; } catch (e) {} Object.keys(d.layers).forEach(function (k) { L1.data.layers[k] = d.layers[k]; }); Object.keys(d.blocks || {}).forEach(function (k) { L1.data.blocks[k] = d.blocks[k]; }); var flagged = L1.data.ents.some(function (e) { return e.ds; }); L1.data.ents = L1.data.ents.filter(function (e) { return !(e.t === "dsmodel" || e.ds || (!flagged && gen[e.layer])); }).concat(d.ents);
         await openDrawing(old, { meta: L1.meta, data: L1.data, recovered: true }); changed(); window.scrollTo(0, 0); if (model && model.parts && model.parts.length) open3dFor(model); U.toast("Drawing updated with the changed design"); return; }
     }
     await newDrawing(d.name, "mm", d); window.scrollTo(0, 0); if (model && model.parts && model.parts.length) open3dFor(model); U.toast("Opened in CAD Studio — edit, dimension, plot or take off quantities");
