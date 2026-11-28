@@ -101,7 +101,7 @@
       });
       h += "</div></details>";
     });
-    h += '<div class="row" style="gap:8px;flex-wrap:wrap;margin-top:6px"><button type="button" class="btn ghost sm" id="ds-reset">↺ Reset inputs</button><button type="button" class="btn ghost sm" id="ds-save">💾 Save inputs (.json)</button><label class="btn ghost sm" style="cursor:pointer">📂 Load inputs<input type="file" id="ds-load" accept=".json" hidden></label></div></div>';
+    h += '<div class="row" style="gap:8px;flex-wrap:wrap;margin-top:6px"><button type="button" class="btn ghost sm" id="ds-reset">↺ Reset inputs</button>' + ((spec().presets || []).map(function (pz, i) { return '<button type="button" class="btn sec sm" data-dspreset="' + i + '" title="' + esc(pz.help || "") + '">' + esc(pz.name) + '</button>'; }).join("")) + '<button type="button" class="btn ghost sm" id="ds-save">💾 Save inputs (.json)</button><label class="btn ghost sm" style="cursor:pointer">📂 Load inputs<input type="file" id="ds-load" accept=".json" hidden></label></div></div>';
 
     var res = run();
     if (!res) return h + '<div class="panel" style="padding:14px;border-left:4px solid var(--danger)"><strong>Design could not be completed with these inputs:</strong> ' + esc(D.runErr) + "</div>";
@@ -513,6 +513,7 @@
     if (ds.dsfc) { D.fc = +ds.dsfc; D.sub = "fc"; U.render(); return; }
     var res = D.res, mid = D.mid;
     if (t.id === "ds-reset") { delete D.inputs[mid]; persist(); U.render(); return; }
+    if (t.dataset.dspreset != null) { var pz = (spec().presets || [])[+t.dataset.dspreset]; if (pz) { D.inputs[mid] = Object.assign({}, D.inputs[mid] || {}, pz.set); if (pz.mode) D.modes[mid] = pz.mode; persist(); U.render(); U.toast(pz.name + " applied — the changed inputs are in Style / Cladding / Connections / My sections"); } return; }
     if (t.id === "ds-save") { dl(JSON.stringify({ module: mid, mode: mode(), inputs: values() }, null, 1), mid + "_inputs.json", "application/json"); return; }
     if (!res) return;
     if (t.id === "ds-pdf" || t.id === "ds-pdf2") { dl(new Blob([DS.drawing.to_pdf(res.drawings)], { type: "application/pdf" }), mid + "_drawings.pdf"); return; }

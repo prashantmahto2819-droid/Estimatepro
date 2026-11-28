@@ -3,6 +3,9 @@
 This file is for the people maintaining the app. It is not published with the site (see `.assetsignore`).
 The text users see is `EP_NOTES` in `js/version.js`.
 
+## 2026.11.21-z126
+- Design Studio: modules can carry presets (spec.presets: name, help, mode, set) shown as buttons beside Reset inputs. Complete steel shed: Light PEB, Light small shed (ISMC + angles, free design), Standard.
+
 ## 2026.11.21-z125
 - Complete steel shed truss (check / free design): top chord, bottom chord and knee brace accept '1-ISA …' (single angle) and ISMC besides two angles b/b and rolled I; web members accept ISMC 75–150. Member check, analysis stiffness, BOM and 3D follow.
 

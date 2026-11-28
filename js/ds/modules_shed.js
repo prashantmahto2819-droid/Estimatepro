@@ -2780,6 +2780,14 @@
   ];
 
   C.register({ id: "steel_shed", phase: 2, category: "Steel structures", name: "Complete steel shed – footing to roof", icon: "🏗️",
+    presets: [
+      { name: "⚡ Light PEB", help: "Tapered built-up frames, cold-formed Z purlins & girts, E350 steel, no gable columns – the lightest frame this module designs", mode: "design",
+        set: { style: STYLES[1], purlin_fam: PURLIN_FAM[1], steel: "E350 (IS 2062)", gable: GABLE[0], haunch: false } },
+      { name: "🪶 Light small shed (ISMC + angles)", help: "Truss of single angles on ISMC 150 columns, angle purlins, no plinth beams; the app upsizes only what fails (Free design)", mode: "free",
+        set: { style: STYLES[3], base: "Pinned", col_sec: "ISMC 150", top_sec: "1-ISA 65x65x6", bot_sec: "1-ISA 65x65x6", web_sec: "ISA 50x50x6", kb_sec: "1-ISA 50x50x6", purlin_fam: PURLIN_FAM[2], purlin_sec: "ISA 50x50x6", purlin_edge_sec: "ISA 50x50x6", girt_sec: "ISA 50x50x6", es_sec: "ISMC 75", tie_beam: false, bp_t: 0, ftg_L: 0, ftg_D: 0, ftg_dia: 0 } },
+      { name: "🏭 Standard (rolled I-sections)", help: "Back to the rolled-section portal with ISMC purlins and E250 steel", mode: "design",
+        set: { style: STYLES[0], purlin_fam: PURLIN_FAM[0], steel: "E250 (IS 2062)", haunch: true } }
+    ],
     description: "Every member, plate, bolt, weld and footing of an industrial / mine shed: portal (rolled or tapered PEB), truss (Pratt / Howe / Fink) " +
       "or mono-slope; IS 875 wind with local zones, dust & crane loads, frame analysis, IS 800 member & connection design (knee, apex, cleats, bracing, " +
       "base plate, anchor bolts, shear key), pedestal + footing with stability checks, complete BOM, quantities, BBS and A3 drawings.",
