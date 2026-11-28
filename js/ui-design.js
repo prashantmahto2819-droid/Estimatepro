@@ -344,16 +344,32 @@
       [["open", "📂 Open estimate" + (canOpen ? ": " + est.name : ""), !canOpen], ["other", "🗂️ Another of my estimates", !others.length], ["new", "➕ New estimate", false]].map(function (x) { return '<button type="button" data-dsdest="' + x[0] + '" aria-pressed="' + (D.dest === x[0]) + '"' + (x[2] ? " disabled" : "") + ">" + esc(x[1]) + "</button>"; }).join("") + "</div>";
     var partSel = function (doc) { return '<label class="fld"><span class="lbl">Part</span><select class="in" id="ds-part"><option value="__new"' + (D.part === "__new" || !D.part ? " selected" : "") + ">New part: Design – " + esc(res.title) + "</option>" + doc.parts.map(function (p) { return '<option value="' + esc(p.id) + '"' + (D.part === p.id ? " selected" : "") + ">Existing: " + esc(p.name) + "</option>"; }).join("") + "</select></label>"; };
     h += '<div class="row" style="gap:8px;flex-wrap:wrap;align-items:flex-end;margin-top:8px">';
+    var tgtDoc = D.dest === "open" ? (canOpen ? est.doc : null) : D.dest === "other" ? ((others.filter(function (x) { return x.id === D.destEst; })[0] || {}).doc || null) : null, pv = tgtDoc ? prevDesign(tgtDoc) : null;
+    var updBtn = pv ? '<button type="button" class="btn pri" id="ds-updq"' + (D.adding ? " disabled" : "") + ' title="Replaces the quantities this design put in the estimate earlier with the present ones">🔄 Update the estimate (replace earlier quantities of this design — part “' + esc((tgtDoc.parts.filter(function (p) { return p.id === pv.part; })[0] || {}).name || "") + '”)</button>' : "";
     if (D.dest === "open") h += partSel(est.doc);
     else if (D.dest === "other") { var oe = others.filter(function (x) { return x.id === D.destEst; })[0]; h += '<label class="fld"><span class="lbl">Estimate</span><select class="in" id="ds-destest">' + others.map(function (x) { return '<option value="' + esc(x.id) + '"' + (x.id === D.destEst ? " selected" : "") + ">" + esc(x.name || "Untitled estimate") + "</option>"; }).join("") + "</select></label>" + (oe ? partSel(oe.doc) : ""); }
     else h += '<label class="fld grow" style="min-width:240px"><span class="lbl">Name of the new estimate</span><input class="in" id="ds-newname" value="' + esc(D.newName || ("Design – " + res.title + (project() ? " – " + project() : "")).slice(0, 90)) + '"></label>';
-    h += '<label class="fld"><span class="lbl">CPWD items from</span><select class="in" id="ds-cpwd">' + [["cpwd23", "DSOR 2023"], ["cpwd", "DSR 2021"]].filter(function (x) { return EP.BOOKS[x[0]]; }).map(function (x) { return '<option value="' + x[0] + '"' + (D.cpwd === x[0] ? " selected" : "") + ">" + x[1] + "</option>"; }).join("") + '</select></label><button type="button" class="btn pri" id="ds-addq"' + (D.adding ? " disabled" : "") + ">" + (D.adding ? "Adding…" : "➕ Add quantities (with measurements)") + "</button></div></div>";
+    h += '<label class="fld"><span class="lbl">CPWD items from</span><select class="in" id="ds-cpwd">' + [["cpwd23", "DSOR 2023"], ["cpwd", "DSR 2021"]].filter(function (x) { return EP.BOOKS[x[0]]; }).map(function (x) { return '<option value="' + x[0] + '"' + (D.cpwd === x[0] ? " selected" : "") + ">" + x[1] + "</option>"; }).join("") + '</select></label><button type="button" class="btn pri" id="ds-addq"' + (D.adding ? " disabled" : "") + ">" + (D.adding ? "Adding…" : "➕ Add quantities (with measurements)") + "</button>" + updBtn + "</div></div>";
     if (D.added) h += '<div class="ds-msg" style="border-color:var(--ok)">✅ ' + esc(D.added) + ' <button type="button" class="linkbtn" id="ds-openest">Open the estimate →</button></div>';
     return h + '<p class="muted" style="font-size:12px">SOR-linked items use the schedule rate; an item already in the part gets the new measurement rows added to it (one item once per part). Others come in as Non-SOR items at the indicative rate — edit the rate or make an analysis. A new estimate gets your default header / firm.</p>';
   }
-  function applyQty(res, pid) {
-    var added = 0, merged = 0;
+  /* the part an earlier send of this design went to (if that part is still there) */
+  function prevDesign(doc) { var L = ((doc && doc.designs) || []).filter(function (x) { return x.module === D.mid && doc.parts.some(function (p) { return p.id === x.part; }); }); return L.length ? L[L.length - 1] : null; }
+  function applyQty(res, pid, update) {
+    var added = 0, merged = 0, removed = 0;
     U.est.change(function (d) {
+      var prev = update ? prevDesign(d) : null;
+      if (prev) {   /* take out what the earlier send put in: items tagged with this design, its rows merged into other items; an untagged (older) send is recognised by its own "Design – …" part */
+        pid = prev.part; var tagged = d.items.some(function (i) { return i.part === pid && (i.ds === D.mid || (i.meas || []).some(function (r) { return r.ds === D.mid; })); });
+        var pn = (d.parts.filter(function (p) { return p.id === pid; })[0] || {}).name || "";
+        d.items = d.items.filter(function (i) {
+          if (i.part !== pid) return true;
+          if (i.ds === D.mid || (!tagged && /^Design – /.test(pn))) { removed++; return false; }
+          if (i.meas) i.meas = i.meas.filter(function (r) { return r.ds !== D.mid; });
+          return true;
+        });
+        d.designs = (d.designs || []).filter(function (x) { return !(x.module === D.mid && x.part === pid); });
+      }
       if (!pid || pid === "__new" || !d.parts.some(function (p) { return p.id === pid; })) { pid = EP.uid(); d.parts.push({ id: pid, name: ("Design – " + res.title).slice(0, 60) }); }
       res.quantities.forEach(function (q) {
         var m = mapItem(q), rows = measRows(q);
@@ -361,17 +377,17 @@
         if (m && m.f) rows = rows.map(function (r) { if (r.k === "h") return r; return Object.assign({}, r, { n: "(" + (r.n || "1") + ")*" + m.f }); });
         if (m) {
           var ex = U.est.dupe(d, pid, m.b, m.c);
-          if (ex) { ex.meas = (ex.meas || []).concat([{ k: "h", d: "From Design Studio: " + res.title }]).concat(rows); merged++; return; }
-          d.items.push({ id: EP.uid(), part: pid, b: m.b, c: m.c, q: "", rem: "", meas: [{ k: "h", d: q.description }].concat(rows) });
-        } else d.items.push({ id: EP.uid(), part: pid, b: "x", x: { desc: q.description, unit: q.unit, sor: q.rate ? String(DS.core.pyround(q.rate, 2)) : "", an: "", src: "Design Studio — indicative rate, replace with quotation / analysis" }, q: "", rem: q.note || "", meas: rows });
+          if (ex) { ex.meas = (ex.meas || []).concat([{ k: "h", d: "From Design Studio: " + res.title, ds: D.mid }]).concat(ex.ds === D.mid ? rows : rows.map(function (r) { return Object.assign({}, r, { ds: D.mid }); })); merged++; return; }
+          d.items.push({ id: EP.uid(), part: pid, ds: D.mid, b: m.b, c: m.c, q: "", rem: "", meas: [{ k: "h", d: q.description }].concat(rows) });
+        } else d.items.push({ id: EP.uid(), part: pid, ds: D.mid, b: "x", x: { desc: q.description, unit: q.unit, sor: q.rate ? String(DS.core.pyround(q.rate, 2)) : "", an: "", src: "Design Studio — indicative rate, replace with quotation / analysis" }, q: "", rem: q.note || "", meas: rows });
         added++;
       });
       d.designs = (d.designs || []).concat([{ module: D.mid, mode: mode(), site: ctx().site, title: res.title, inputs: values(), status: res.status, at: new Date().toISOString(), part: pid }]);
     }, false);
     S.est.part = pid;
-    return { added: added, merged: merged };
+    return { added: added, merged: merged, removed: removed };
   }
-  async function addQty() {
+  async function addQty(update) {
     var res = D.res; if (!res || D.adding) return;
     var sel = document.getElementById("ds-part"), pid = sel ? sel.value : "__new", dest = D.dest;
     D.adding = true; D.added = ""; U.render();
@@ -384,8 +400,8 @@
         var id = await U.est.create(nm, nd); if (!id || !S.est.cur || S.est.cur.id !== id) throw new Error("Couldn't create the estimate");
         pid = S.est.cur.doc.parts[0].id; D.newName = "";
       } else if (!S.est.cur || U.est.ro()) throw new Error("Open an estimate first");
-      var r = applyQty(res, pid);
-      D.added = r.added + " items added" + (r.merged ? " (" + r.merged + " merged into existing items)" : "") + " to “" + (S.est.cur.name || "estimate") + "” – part “" + ((S.est.cur.doc.parts.filter(function (p) { return p.id === S.est.part; })[0] || {}).name || "") + "”.";
+      var r = applyQty(res, pid, !!update);
+      D.added = (update ? "Estimate updated: " + r.removed + " earlier items replaced, " : "") + r.added + " items added" + (r.merged ? " (" + r.merged + " merged into existing items)" : "") + " to “" + (S.est.cur.name || "estimate") + "” – part “" + ((S.est.cur.doc.parts.filter(function (p) { return p.id === S.est.part; })[0] || {}).name || "") + "”.";
       D.dest = "open"; D.part = S.est.part;
       U.toast(D.added);
     } catch (e) { U.toast(e.message || String(e)); }
@@ -508,6 +524,7 @@
     if (t.id === "ds-xls") { try { var x = DS.report.excel_report(res, project(), mode(), company()); dl(x.blob, mid + "_calculation.xlsx"); } catch (er) { console.error(er); U.toast("Couldn't create the workbook: " + er.message); } return; }
     if (t.id === "ds-html") { dl(new Blob([DS.report.html_report(res, project(), mode(), true, company())], { type: "text/html" }), mid + "_report.html"); return; }
     if (t.id === "ds-addq") { addQty(); return; }
+    if (t.id === "ds-updq") { addQty(true); return; }
     if (t.id === "ds-dg") { startDiag(); U.render(); return; }
     if (t.id === "ds-site-reset") { D.siteCfg = {}; persist(); U.render(); return; }
     if (t.id === "ds-bbs-reset") { D.bbsCfg = {}; persist(); U.render(); return; }

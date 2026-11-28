@@ -3,6 +3,9 @@
 This file is for the people maintaining the app. It is not published with the site (see `.assetsignore`).
 The text users see is `EP_NOTES` in `js/version.js`.
 
+## 2026.11.21-z124
+- Design Studio → Quantities: items and merged rows sent to an estimate are tagged with the module (ds). When the estimate already holds this design, a button 'Update the estimate' removes those and adds the present quantities into the same part (older untagged sends: the design's own 'Design – …' part is replaced).
+
 ## 2026.11.21-z123
 - Steel shed 3D: floor top at plinth level (pedestal top, min 100 mm), filling drawn below it down to the ground (was a thin layer below ground, hidden). Racks / benches stand on the floor. Default filling 200 mm.
 
