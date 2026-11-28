@@ -637,7 +637,29 @@
     var below = model.parts.some(function (q) { var t = q[0]; return (t === "b" || t === "t") ? q[5] < 0 : t === "c" ? q[4] < 0 : t === "p" ? q[2] < 0 : (t === "m" || t === "i") ? (q[1][2] < 0 || q[2][2] < 0) : false; });
     setTimeout(function () { try { if (C.ed && C.ed.on3d && C.v3mode === "off") C.ed.on3d(); if (below) setTimeout(function () { if (C.v3) { C.v3.showGround = false; C.v3.dirty = true; } }, 200); } catch (er) { console.error(er); } }, 400);
   }
+  /* the drawing this design was sent to before (same name), so a changed design updates it instead of making another copy */
+  async function sameNamed(name) { var L = await localIdx(); var m = L.filter(function (x) { return x.name === name; }).sort(function (a, b) { return b.updated - a.updated; })[0]; if (!m) { try { var r = await db().from("cad_drawings").select("id,name,updated_at").eq("owner", me()).eq("name", name).order("updated_at", { ascending: false }).limit(1); if (r.data && r.data[0]) m = { id: r.data[0].id }; } catch (e) {} } return m ? m.id : null; }
+  function askUpdate(name) {
+    return new Promise(function (res) {
+      var d = document.getElementById("cad-gdlg"); if (!d) { d = document.createElement("div"); d.id = "cad-gdlg"; d.className = "cad-dlg"; document.body.appendChild(d); }
+      d.hidden = false; d.innerHTML = "<div class='cad-dlgbox' role='dialog' aria-modal='true'><h3>Update the drawing?</h3><p class='small'>“" + esc(name) + "” is already in CAD Studio. Update it with this design (the 3D model / sheets are replaced; anything you drew by hand on your own layers stays), or open a new copy?</p><div class='row' style='gap:8px;justify-content:flex-end;margin-top:10px'><button type='button' class='btn sec' data-upd='new'>New copy</button><button type='button' class='btn pri' data-upd='yes'>Update it</button></div></div>";
+      d.onclick = function (ev) { var b = ev.target.closest("button"); if (ev.target !== d && !(b && b.dataset.upd)) return; d.hidden = true; res(!!(b && b.dataset.upd === "yes")); };
+      setTimeout(function () { var f = d.querySelector("[data-upd=yes]"); if (f) f.focus(); }, 30);
+    });
+  }
+  async function updateExisting(id, newEnts, keep) {
+    var L = await loadDoc(id); if (!L) return false;
+    var d = L.data; d.ents = d.ents.filter(function (e) { return !keep(e); }).concat(newEnts);
+    await openDrawing(id, { meta: L.meta, data: d, recovered: true }); changed(); return true;
+  }
   CAD.sendModel = async function (model, name, mid) {
+    var old = await sameNamed(name || "Design Studio 3D model");
+    if (old && await askUpdate(name)) {
+      var L0 = await loadDoc(old), prev = L0 && L0.data.ents.filter(function (e) { return e.t === "dsmodel"; })[0];
+      var ent0 = { id: prev ? prev.id : CAD.uid(), t: "dsmodel", p: prev ? prev.p : [0, 0], rot: prev ? prev.rot : 0, mod: mid || "", name: model.name || name, parts: model.parts, lvl: prev ? prev.lvl : undefined, layer: prev ? prev.layer : "0" };
+      S.tab = "cad"; try { history.replaceState(null, "", "#cad"); } catch (e) {}
+      if (await updateExisting(old, [ent0], function (e) { return e.t === "dsmodel"; })) { window.scrollTo(0, 0); open3dFor(model); U.toast("Drawing updated with the changed design"); return; }
+    }
     var B = EP.bim, d = CAD.newDoc(name || "Design Studio 3D model", "mm"), bs = B.ensure(d), lv = bs.levels && bs.levels[0];
     d.ents = [{ id: CAD.uid(), t: "dsmodel", p: [0, 0], rot: 0, mod: mid || "", name: model.name || name, parts: model.parts, lvl: lv ? lv.id : undefined, layer: "0" }];
     S.tab = "cad"; try { history.replaceState(null, "", "#cad"); } catch (e) {} await newDrawing(d.name, "mm", d); window.scrollTo(0, 0);
@@ -647,15 +669,22 @@
   CAD.openSheets = async function (sheets, name, model, mid) {
     var DS = window.DS || (EP.DS); var dxf = (window.DS && window.DS.drawing ? window.DS.drawing : null);
     if (!dxf) { U.toast("Drawing engine not ready"); return; }
+    var old = await sameNamed(name || "Design Studio drawing"), upd = old && await askUpdate(name);
     var res = CAD.parseDxf(dxf.to_dxf(sheets), { unitMm: 1 }), d = CAD.newDoc(name || "Design Studio drawing", "mm");
-    Object.keys(res.layers).forEach(function (k) { d.layers[k] = res.layers[k]; }); d.blocks = res.blocks; d.ents = res.ents.map(function (e) { e.id = CAD.uid(); return e; });
+    Object.keys(res.layers).forEach(function (k) { d.layers[k] = res.layers[k]; }); d.blocks = res.blocks; d.ents = res.ents.map(function (e) { e.id = CAD.uid(); e.ds = 1; return e; });
     if (model && model.parts && model.parts.length) {   /* the 3D model of the same design, placed to the right of the sheets */
       var B = EP.bim, bs = B.ensure(d), lv = bs.levels && bs.levels[0], G = EP.geom, all = [], ent = { id: CAD.uid(), t: "dsmodel", p: [0, 0], rot: 0, mod: mid || "", name: model.name || name, parts: model.parts, lvl: lv ? lv.id : undefined, layer: "0" };
       d.ents.forEach(function (e) { try { all = all.concat(G.segsOf(e, d.blocks)); } catch (er) {} });
       B.ctx.doc = { d: d }; var mb = G.bboxSegs(B.EXT.dsmodel.plan({ d: d }, ent).segs), sb = all.length ? G.bboxSegs(all) : [0, 0, 0, 0];
       ent.p = [sb[2] + 5000 - mb[0], (sb[1] + sb[3]) / 2 - (mb[1] + mb[3]) / 2]; d.ents.push(ent);
     }
-    S.tab = "cad"; try { history.replaceState(null, "", "#cad"); } catch (e) {} await newDrawing(d.name, "mm", d); window.scrollTo(0, 0); if (model && model.parts && model.parts.length) open3dFor(model); U.toast("Opened in CAD Studio — edit, dimension, plot or take off quantities");
+    S.tab = "cad"; try { history.replaceState(null, "", "#cad"); } catch (e) {}
+    if (upd) {   /* replace what came from Design Studio (sheets + model), keep what was drawn by hand on other layers */
+      var gen = {}; d.ents.forEach(function (e) { gen[e.layer] = 1; });
+      var L1 = await loadDoc(old); if (L1) { Object.keys(d.layers).forEach(function (k) { L1.data.layers[k] = d.layers[k]; }); Object.keys(d.blocks || {}).forEach(function (k) { L1.data.blocks[k] = d.blocks[k]; }); var flagged = L1.data.ents.some(function (e) { return e.ds; }); L1.data.ents = L1.data.ents.filter(function (e) { return !(e.t === "dsmodel" || e.ds || (!flagged && gen[e.layer])); }).concat(d.ents);
+        await openDrawing(old, { meta: L1.meta, data: L1.data, recovered: true }); changed(); window.scrollTo(0, 0); if (model && model.parts && model.parts.length) open3dFor(model); U.toast("Drawing updated with the changed design"); return; }
+    }
+    await newDrawing(d.name, "mm", d); window.scrollTo(0, 0); if (model && model.parts && model.parts.length) open3dFor(model); U.toast("Opened in CAD Studio — edit, dimension, plot or take off quantities");
   };
 
   /* ================= the tab ================= */

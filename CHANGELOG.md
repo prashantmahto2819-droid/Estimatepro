@@ -3,6 +3,10 @@
 This file is for the people maintaining the app. It is not published with the site (see `.assetsignore`).
 The text users see is `EP_NOTES` in `js/version.js`.
 
+## 2026.11.21-z120
+- Send to CAD Studio (3D model / drawings): if a drawing of the same name exists, a dialog offers 'Update it' (replaces the dsmodel and the sheets that came from Design Studio, marked e.ds; hand-drawn objects stay) or 'New copy'.
+- Complete steel shed 3D: PCC floor slab when 'Floor inside: PCC' > 0.
+
 ## 2026.11.21-z119
 - Complete steel shed and portal shed: 'sheet only these bays' text for each long side (1 = front bay; 1,3 / 1-2; blank = all) — cladding area, girts, sag rods, Cpi (partly open → dominant opening) and 3D follow. Core: DS.core.bayList().
 - Complete steel shed: gable wind posts (and F2 footings) only when the span exceeds the max. gable post spacing and a gable is clad (a 3 m shed had two extra posts).
