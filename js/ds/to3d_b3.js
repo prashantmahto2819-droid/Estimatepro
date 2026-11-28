@@ -79,7 +79,8 @@
       },
       /* a double angle back-to-back (gusset gap 10) or a single angle, centred on the line a–b */
       angles: function (a, b, s, roll, bottom) {
-        if (!s) return; var L1 = s.a, uTop = bottom ? L1 * 0.3 : L1 * 0.7;
+        if (!s) return; if (s.k === "C") return B.chan(a, b, s, roll, -1); if (s.k === "2C") return B.chan2(a, b, s, roll, s.box); if (s.k === "I") return B.ibeam(a, b, { B: s.B, tf: s.tf, tw: s.tw, D: s.D, D2: s.D }, roll, 0);
+        var L1 = s.a, uTop = bottom ? L1 * 0.3 : L1 * 0.7;
         if (s.dbl) { B.angle(a, b, s, roll, -5, -1, uTop, bottom); B.angle(a, b, s, roll, 5, 1, uTop, bottom); } else B.angle(a, b, s, roll, -s.t / 2, 1, uTop, bottom);
       },
       rod: function (a, b, d) { if (len3(a, b) > 5) put(H.member(a, b, d, d, STEEL, 0)); },

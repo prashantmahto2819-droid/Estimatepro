@@ -100,6 +100,7 @@
     if (/^Z /.test(name)) { var v = name.slice(2).split("x").map(Number); return M.zsec(v[0], v[1], v[2], v[3]); }
     if (/^RD /.test(name)) { var d = Number(name.slice(3)); return { name: name, family: "ROD", d: d, A: Math.PI * d * d / 4, w: d * d / 162 }; }
     if (/^2-/.test(name)) { var s = SC.double_angle(name.slice(2)); s.name = name; return s; }
+    if (/^1-ISA/.test(name)) return section(name.slice(2));
     return section(name);
   }
   M.sec_of = sec_of;
@@ -926,7 +927,7 @@
     var Lp = G.raf_len / G.nh, Lbot = G.span / (G.n_pan || 4);
     var trussA = {}, des = {}, colName = mode === "check" ? inp.col_sec : "ISMB 250", kbName = "ISA 65x65x6";
     var selfw = (G.span / 3 + 5) * 10 / 1000;
-    function secsT() { return { col: function () { return section(colName); }, raf: null, truss: trussA, kb: SC.double_angle(kbName), truss_kN_m2: selfw }; }
+    function secsT() { return { col: function () { return section(colName); }, raf: null, truss: trussA, kb: /^1-/.test(kbName) ? section(kbName.slice(2)) : /^IS(MB|HB|MC)/.test(kbName) ? section(kbName) : SC.double_angle(kbName), truss_kN_m2: selfw }; }
     function forces(A0) {
       var fr = {};
       Object.keys(A0.model.mem.truss).forEach(function (gname) {
@@ -942,8 +943,9 @@
       return fr;
     }
     function memCheck(cc, gname, name0, fr, record) {
-      var isI = /^IS[MH]B/.test(name0);
-      var dbl = !isI && (gname === "Top chord" || gname === "Bottom chord" || gname === "Knee brace" || /^2-/.test(name0)), name = name0.replace(/^2-/, "");
+      /* chords / knee brace are two angles back to back unless the name says otherwise: "1-ISA …" = one angle, ISMC / ISMB / ISHB = one rolled section */
+      var isI = /^IS(MB|HB|MC)/.test(name0), one = /^1-/.test(name0);
+      var dbl = !isI && !one && (gname === "Top chord" || gname === "Bottom chord" || gname === "Knee brace" || /^2-/.test(name0)), name = name0.replace(/^[12]-/, "");
       var sec = isI ? Object.assign({}, section(name), { t: section(name).tf, leg: section(name).b }) : dbl ? SC.double_angle(name) : section(name);
       var Lz = gname === "Top chord" ? Lp : fr.L, Ly = gname === "Top chord" ? Math.min(G.ps, Lp) : gname === "Bottom chord" ? 2 * Lbot : fr.L;
       var rz = isI ? sec.rz : dbl ? sec.rxx : sec.rvv, ry = isI ? sec.ry : dbl ? sec.ryy : sec.rvv;
@@ -985,7 +987,7 @@
         var nm = gv || firstOk(LST, function (n) { return memCheck(new Calc("s"), gn, n, fr[gn]).ok; }) || last(LST);
         if (!des[gn] || des[gn].name !== nm) chg = true;
         var sc = memCheck(new Calc("s"), gn, nm, fr[gn]);
-        des[gn] = { name: nm, label: sc.dbl ? "2-" + nm.replace(/^2-/, "") + " b/b" : nm, isI: sc.isI, sec: sc.sec, w: sc.sec.w, fr: fr[gn], dbl: sc.dbl };
+        des[gn] = { name: nm, label: sc.dbl ? "2-" + nm.replace(/^2-/, "") + " b/b" : nm.replace(/^1-/, ""), isI: sc.isI, sec: sc.sec, w: sc.sec.w, fr: fr[gn], dbl: sc.dbl };
         if (gn === "Knee brace") kbName = nm; else trussA[gn] = sc.sec.A;
       });
       if (mode !== "check") {
@@ -2665,7 +2667,7 @@
   /* small sheds (switch rooms, stores, cycle stands) are often framed in channels: single ISMC and two ISMC (box / back to back) */
   var MAINS = M.ROLLED.slice().concat(SC.by_weight(SC.ISMC), DBLC.map(function (n) { return "2-" + n + " box"; }), DBLC.map(function (n) { return "2-" + n + " b/b"; }));
   var PURL_ALL = SC.by_weight(SC.ISMC).concat(M.ZNAMES, SC.by_weight(SC.ISA));
-  var ANG_ALL = SC.by_weight(SC.ISA);
+  var ANG_ALL = SC.by_weight(SC.ISA), ANG1 = ANG_ALL.map(function (n) { return "1-" + n; });
   var CHK = ["check"];
   M.PARAMS = [
     P("style", "Framing system (style / pattern)", STYLES[0], { kind: "select", options: STYLES, group: "Style" }),
@@ -2746,12 +2748,12 @@
     P("peb_b", "PEB flange width", 200, "mm", { kind: "int", min: 150, max: 400, group: "My sections", modes: CHK }),
     P("peb_tf", "PEB flange thickness", 12, "mm", { kind: "int", min: 6, max: 32, group: "My sections", modes: CHK }),
     P("peb_tw", "PEB web thickness", 6, "mm", { kind: "int", min: 4, max: 16, group: "My sections", modes: CHK }),
-    P("top_sec", "Truss top chord (2 angles, or rolled I)", "ISA 75x75x8", { kind: "select", options: ANG_ALL.concat(SC.by_weight(SC.ISMB), SC.by_weight(SC.ISHB)), group: "My sections", modes: CHK }),
-    P("bot_sec", "Truss bottom chord (2 angles)", "ISA 65x65x6", { kind: "select", options: ANG_ALL, group: "My sections", modes: CHK }),
-    P("web_sec", "Truss web members (single angle, or 2-… for double)", "ISA 65x65x6", { kind: "select", options: ANG_ALL.concat(ANG_ALL.map(function (n) { return "2-" + n; })), group: "My sections", modes: CHK }),
+    P("top_sec", "Truss top chord (2 angles; 1-… = single angle; or ISMC / I)", "ISA 75x75x8", { kind: "select", options: ANG_ALL.concat(ANG1, SC.by_weight(SC.ISMC), SC.by_weight(SC.ISMB), SC.by_weight(SC.ISHB)), group: "My sections", modes: CHK }),
+    P("bot_sec", "Truss bottom chord (2 angles; 1-… = single angle; or ISMC)", "ISA 65x65x6", { kind: "select", options: ANG_ALL.concat(ANG1, SC.by_weight(SC.ISMC)), group: "My sections", modes: CHK }),
+    P("web_sec", "Truss web members (single angle, or 2-… for double)", "ISA 65x65x6", { kind: "select", options: ANG_ALL.concat(ANG_ALL.map(function (n) { return "2-" + n; }), SC.by_weight(SC.ISMC).slice(0, 4)), group: "My sections", modes: CHK }),
     P("purlin_sec", "Purlin section", "ISMC 125", { kind: "select", options: PURL_ALL, group: "My sections", modes: CHK }),
     P("purlin_edge_sec", "Purlin section in edge / ridge zone", "ISMC 150", { kind: "select", options: PURL_ALL, group: "My sections", modes: CHK }),
-    P("kb_sec", "Truss knee brace (2 angles)", "ISA 75x75x8", { kind: "select", options: ANG_ALL, group: "My sections", modes: CHK }),
+    P("kb_sec", "Truss knee brace (2 angles; 1-… = single angle; or ISMC)", "ISA 75x75x8", { kind: "select", options: ANG_ALL.concat(ANG1, SC.by_weight(SC.ISMC)), group: "My sections", modes: CHK }),
     P("girt_sec", "Girt section", "ISMC 100", { kind: "select", options: PURL_ALL, group: "My sections", modes: CHK }),
     P("sag_d", "Sag rod dia", 12, "mm", { kind: "select", options: [12, 16, 20], group: "My sections", modes: CHK }),
     P("brace_rod", "Bracing rod dia (X-rod)", 20, "mm", { kind: "select", options: [16, 20, 24, 30], group: "My sections", modes: CHK }),

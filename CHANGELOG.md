@@ -3,6 +3,9 @@
 This file is for the people maintaining the app. It is not published with the site (see `.assetsignore`).
 The text users see is `EP_NOTES` in `js/version.js`.
 
+## 2026.11.21-z125
+- Complete steel shed truss (check / free design): top chord, bottom chord and knee brace accept '1-ISA …' (single angle) and ISMC besides two angles b/b and rolled I; web members accept ISMC 75–150. Member check, analysis stiffness, BOM and 3D follow.
+
 ## 2026.11.21-z124
 - Design Studio → Quantities: items and merged rows sent to an estimate are tagged with the module (ds). When the estimate already holds this design, a button 'Update the estimate' removes those and adds the present quantities into the same part (older untagged sends: the design's own 'Design – …' part is replaced).
 
